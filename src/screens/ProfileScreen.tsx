@@ -1,305 +1,141 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { AppBadge, AppCard, AppScreen } from '../components/ui';
+import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
+
 export default function ProfileScreen({ navigation }: any) {
+  const { width } = useWindowDimensions();
+  const wide = width >= layout.breakpoints.tablet;
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.title}>Meu Perfil</Text>
-
-      {/* Perfil */}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <MaterialCommunityIcons
-            name="account"
-            size={48}
-            color="#555"
-          />
-        </View>
-
-        <View style={styles.profileInfo}>
-          <Text style={styles.name}>
-            Usuário GEMN
-          </Text>
-
-          <Text style={styles.email}>
-            usuario@gemn.com
-          </Text>
-
-          <View style={styles.member}>
-            <MaterialCommunityIcons
-              name="check-circle"
-              size={16}
-              color="#1B5E20"
-            />
-
-            <Text style={styles.memberText}>
-              Membro GEMN
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Carteira */}
-      <View style={styles.wallet}>
+    <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
+      <View style={styles.headerRow}>
         <View>
-          <Text style={styles.walletLabel}>
-            Minha carteira
-          </Text>
-
-          <Text style={styles.walletValue}>
-            R$ 150,00
-          </Text>
+          <Text style={styles.eyebrow}>Comunidade Mundo Novo</Text>
+          <Text style={styles.title}>Meu perfil</Text>
         </View>
-
-        <View style={styles.coin}>
-          <MaterialCommunityIcons
-            name="cash-multiple"
-            size={28}
-            color="#555"
-          />
-
-          <Text style={styles.coinValue}>
-            50 GEMN
-          </Text>
+        <View style={styles.headerIcon}>
+          <MaterialCommunityIcons name="account-outline" size={22} color={colors.primary} />
         </View>
       </View>
 
-      {/* Minha conta */}
-      <Text style={styles.sectionTitle}>
-        Minha conta
-      </Text>
+      <View style={[styles.overview, wide && styles.overviewWide]}>
+        <AppCard elevated={wide} style={[styles.profileCard, wide && styles.profileCardWide]}>
+          <View style={styles.avatar}>
+            <MaterialCommunityIcons name="account" size={42} color={colors.primary} />
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={styles.name}>Usuário GEMN</Text>
+            <Text style={styles.email}>usuario@gemn.com</Text>
+            <AppBadge label="MEMBRO GEMN" variant="success" />
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
+        </AppCard>
 
-      <View style={styles.menu}>
+        <AppCard elevated={wide} style={[styles.wallet, wide && styles.walletWide]}>
+          <View>
+            <Text style={styles.walletLabel}>Minha carteira</Text>
+            <Text style={styles.walletValue}>R$ 150,00</Text>
+          </View>
+          <View style={styles.coin}>
+            <View style={styles.coinIcon}>
+              <MaterialCommunityIcons name="star-four-points" size={20} color={colors.secondary} />
+            </View>
+            <Text style={styles.coinValue}>50 GEMN</Text>
+          </View>
+        </AppCard>
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <View>
+          <Text style={styles.sectionTitle}>Minha conta</Text>
+          <Text style={styles.sectionSubtitle}>Acesse seus recursos e preferências</Text>
+        </View>
+      </View>
+
+      <AppCard padding={0} elevated={wide} style={styles.menu}>
         <MenuItem
           icon="clipboard-text-outline"
           title="Meus pedidos"
           subtitle="Acompanhe suas compras"
+          featured
           onPress={() => navigation.navigate('Orders')}
         />
-
         <MenuItem
           icon="store-outline"
           title="Meus produtos"
           subtitle="Produtos publicados por você"
+          featured
           onPress={() => navigation.navigate('MyProducts')}
-
         />
-
-        <MenuItem
-          icon="heart-outline"
-          title="Favoritos"
-          subtitle="Produtos que você salvou"
-        />
-
-        <MenuItem
-          icon="wallet-outline"
-          title="Minha carteira"
-          subtitle="Saldo e movimentações"
-        />
-
-        <MenuItem
-          icon="cog-outline"
-          title="Configurações"
-          subtitle="Preferências da sua conta"
-        />
-      </View>
-    </ScrollView>
+        <MenuItem icon="heart-outline" title="Favoritos" subtitle="Produtos que você salvou" />
+        <MenuItem icon="wallet-outline" title="Minha carteira" subtitle="Saldo e movimentações" />
+        <MenuItem icon="cog-outline" title="Configurações" subtitle="Preferências da sua conta" last />
+      </AppCard>
+    </AppScreen>
   );
 }
 
-function MenuItem({
-  icon,
-  title,
-  subtitle,
-  onPress,
-}: {
+function MenuItem({ icon, title, subtitle, onPress, featured = false, last = false }: {
   icon: any;
   title: string;
   subtitle: string;
   onPress?: () => void;
+  featured?: boolean;
+  last?: boolean;
 }) {
   return (
     <TouchableOpacity
-      style={styles.menuItem}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !onPress }}
+      style={[styles.menuItem, !last && styles.menuItemBorder]}
       onPress={onPress}
       disabled={!onPress}
     >
-      <View style={styles.menuIcon}>
-        <MaterialCommunityIcons
-          name={icon}
-          size={24}
-          color="#555"
-        />
+      <View style={[styles.menuIcon, featured && styles.menuIconFeatured]}>
+        <MaterialCommunityIcons name={icon} size={22} color={featured ? colors.primary : colors.textSecondary} />
       </View>
-
       <View style={styles.menuText}>
-        <Text style={styles.menuTitle}>
-          {title}
-        </Text>
-
-        <Text style={styles.menuSubtitle}>
-          {subtitle}
-        </Text>
+        <Text style={styles.menuTitle}>{title}</Text>
+        <Text style={styles.menuSubtitle}>{subtitle}</Text>
       </View>
-
-      <MaterialCommunityIcons
-        name="chevron-right"
-        size={24}
-        color="#999"
-      />
+      <MaterialCommunityIcons name="chevron-right" size={22} color={featured ? colors.primary : colors.textMuted} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F7F7F7',
-  },
-
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 24,
-  },
-
-  profileCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: '#EDEDED',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  profileInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-
-  name: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-
-  email: {
-    fontSize: 14,
-    color: '#777',
-    marginTop: 4,
-  },
-
-  member: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-
-  memberText: {
-    fontSize: 13,
-    color: '#1B5E20',
-    fontWeight: '600',
-    marginLeft: 5,
-  },
-
-  wallet: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 20,
-    marginTop: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  walletLabel: {
-    fontSize: 13,
-    color: '#777',
-  },
-
-  walletValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginTop: 5,
-  },
-
-  coin: {
-    alignItems: 'center',
-  },
-
-  coinValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 30,
-    marginBottom: 14,
-  },
-
-  menu: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-
-  menuItem: {
-    minHeight: 76,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-  },
-
-  menuIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F1F1F1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  menuText: {
-    flex: 1,
-    marginLeft: 14,
-  },
-
-  menuTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-
-  menuSubtitle: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 3,
-  },
+  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  eyebrow: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
+  title: { ...typography.heading1, color: colors.text },
+  headerIcon: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  overview: { gap: spacing.md },
+  overviewWide: { flexDirection: 'row', alignItems: 'stretch' },
+  profileCard: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  profileCardWide: { flex: 1 },
+  avatar: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  profileInfo: { flex: 1, marginLeft: spacing.md, gap: spacing.xs },
+  name: { ...typography.heading3, color: colors.text },
+  email: { ...typography.bodySmall, color: colors.textSecondary },
+  wallet: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.border },
+  walletWide: { width: 300, flexShrink: 0 },
+  walletLabel: { ...typography.caption, color: colors.textSecondary },
+  walletValue: { ...typography.heading2, color: colors.text, marginTop: spacing.xs },
+  coin: { alignItems: 'center', gap: spacing.xs },
+  coinIcon: { width: 42, height: 42, borderRadius: radius.full, backgroundColor: colors.secondaryLight, alignItems: 'center', justifyContent: 'center' },
+  coinValue: { ...typography.caption, color: colors.text, fontWeight: '600' },
+  sectionHeader: { marginTop: spacing.xs },
+  sectionTitle: { ...typography.heading2, color: colors.text },
+  sectionSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },
+  menu: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
+  menuItem: { minHeight: 76, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface },
+  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  menuIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
+  menuIconFeatured: { backgroundColor: colors.primaryLight },
+  menuText: { flex: 1, marginLeft: spacing.md, gap: 2 },
+  menuTitle: { ...typography.label, color: colors.text },
+  menuSubtitle: { ...typography.caption, color: colors.textSecondary },
 });
