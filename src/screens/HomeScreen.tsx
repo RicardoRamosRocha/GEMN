@@ -1,325 +1,122 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AppBadge, AppCard, AppInput, AppScreen } from '../components/ui';
+import { CategoryChip } from '../components/CategoryChip';
+import { ProductCard } from '../components/ProductCard';
+import { WalletCard } from '../components/WalletCard';
+import { colors, layout, radius, spacing, typography } from '../theme/tokens';
+
+const categories = [
+  { icon: 'food-apple-outline' as const, label: 'Comida' },
+  { icon: 'tools' as const, label: 'Serviços' },
+  { icon: 'tshirt-crew-outline' as const, label: 'Moda' },
+  { icon: 'package-variant-closed' as const, label: 'Outros' },
+];
+
+const highlights = [
+  { icon: 'food-apple' as const, name: 'Cesta de frutas', price: 'R$ 30,00', seller: 'Mundo Novo', category: 'Comida', coinPrice: '15 GEMN', rating: '4.9' },
+  { icon: 'tshirt-crew' as const, name: 'Camiseta', price: 'R$ 45,00', seller: 'GEMN Store', category: 'Moda', coinPrice: '22 GEMN', rating: '4.8' },
+];
 
 export default function HomeScreen({ navigation }: any) {
-  return (
-  <SafeAreaView style={styles.container}>
-    <ScrollView
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Cabeçalho */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.logo}>GEMN</Text>
-          <Text style={styles.subtitle}>Comunidade Mundo Novo</Text>
-        </View>
+  const { width } = useWindowDimensions();
+  const desktop = width >= layout.breakpoints.desktop;
+  const tablet = width >= layout.breakpoints.tablet;
+  const horizontalPadding = tablet ? layout.desktopHorizontalPadding : layout.mobileHorizontalPadding;
+  const contentWidth = Math.min(width - horizontalPadding * 2, layout.contentMaxWidth - horizontalPadding * 2);
+  const productGap = desktop ? spacing.lg : spacing.md;
+  const productWidth = tablet ? (contentWidth - productGap) / 2 : contentWidth;
 
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <MaterialCommunityIcons
-            name="account-circle-outline"
-            size={34}
-            color="#333"
-          />
+  return (
+    <AppScreen scroll contentContainerStyle={styles.content}>
+      <View style={styles.headerRow}>
+        <View style={styles.greetingBlock}>
+          <Text style={styles.greeting}>Olá, Ricardo</Text>
+          <View style={styles.communityLine}><View style={styles.communityDot} /><Text style={styles.community}>Comunidade Mundo Novo</Text></View>
+        </View>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Abrir perfil" style={styles.profileButton} onPress={() => navigation.navigate('Perfil', { screen: 'ProfileHome' })}>
+          <MaterialCommunityIcons name="account-outline" size={23} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* Busca */}
-      <View style={styles.searchContainer}>
-        <MaterialCommunityIcons
-          name="magnify"
-          size={24}
-          color="#777"
-        />
-
-        <TextInput
-          placeholder="Buscar produtos ou serviços..."
-          placeholderTextColor="#888"
-          style={styles.searchInput}
-        />
-      </View>
-
-      {/* Carteira */}
-      <View style={styles.wallet}>
-        <View>
-          <Text style={styles.walletLabel}>Sua carteira</Text>
-          <Text style={styles.walletValue}>R$ 150,00</Text>
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}>
+          <MaterialCommunityIcons name="magnify" size={21} color={colors.textSecondary} />
+          <AppInput accessibilityLabel="Buscar produtos ou serviços" placeholder={tablet ? 'Buscar produtos ou serviços' : 'Buscar na comunidade'} containerStyle={styles.searchInputWrap} inputStyle={styles.searchInput} returnKeyType="search" />
         </View>
-
-        <View style={styles.coins}>
-          <MaterialCommunityIcons
-            name="cash-multiple"
-            size={24}
-            color="#D89B00"
-          />
-
-          <View>
-            <Text style={styles.coinValue}>50</Text>
-            <Text style={styles.coinLabel}>Moedas sociais</Text>
-          </View>
-        </View>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtros" style={styles.filterButton}>
+          <MaterialCommunityIcons name="tune-variant" size={20} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
-      {/* Categorias */}
-      <Text style={styles.sectionTitle}>Categorias</Text>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categories}
-      >
-        <Category
-          icon="food"
-          label="Comida"
-        />
-
-        <Category
-          icon="tools"
-          label="Serviços"
-        />
-
-        <Category
-          icon="tshirt-crew-outline"
-          label="Moda"
-        />
-
-        <Category
-          icon="package-variant-closed"
-          label="Outros"
-        />
-      </ScrollView>
-
-      {/* Produtos */}
-      <Text style={styles.sectionTitle}>
-        Produtos em destaque
-      </Text>
-
-      <View style={styles.products}>
-        <ProductCard
-          icon="food-apple"
-          name="Cesta de frutas"
-          price="R$ 30,00"
-          onPress={() => navigation.navigate('Product')}
-        />
-
-        <ProductCard
-          icon="tshirt-crew"
-          name="Camiseta"
-          price="R$ 45,00"
-          onPress={() => navigation.navigate('Product')}
-        />
-      </View>
-    </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function Category({
-  icon,
-  label,
-}: {
-  icon: any;
-  label: string;
-}) {
-  return (
-    <TouchableOpacity style={styles.category}>
-      <MaterialCommunityIcons
-        name={icon}
-        size={28}
-        color="#333"
-      />
-
-      <Text style={styles.categoryText}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function ProductCard({
-  icon,
-  name,
-  price,
-  onPress,
-}: {
-  icon: any;
-  name: string;
-  price: string;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={styles.productCard}
-      onPress={onPress}
-    >
-      <View style={styles.productImage}>
-        <MaterialCommunityIcons
-          name={icon}
-          size={60}
-          color="#555"
-        />
+      <View style={[styles.topGrid, desktop && styles.topGridDesktop]}>
+        <WalletCard />
+        {tablet ? <AppCard style={styles.welcomeCard}>
+          <AppBadge label="DA COMUNIDADE, PARA A COMUNIDADE" variant="success" />
+          <Text style={styles.welcomeTitle}>Boas trocas começam por aqui.</Text>
+          <Text style={styles.welcomeBody}>Descubra produtos e serviços de quem empreende perto de você.</Text>
+        </AppCard> : null}
       </View>
 
-      <Text style={styles.productName}>{name}</Text>
+      <View style={styles.sectionHeader}>
+        <View><Text style={styles.sectionTitle}>{tablet ? 'Explore por categoria' : 'Categorias'}</Text>{tablet ? <Text style={styles.sectionSub}>Encontre o que precisa na comunidade</Text> : null}</View>
+      </View>
+      {tablet ? (
+        <View style={styles.categoryGrid}>{categories.map((item) => <CategoryChip key={item.label} icon={item.icon} label={item.label} compact />)}</View>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>{categories.map((item) => <CategoryChip key={item.label} icon={item.icon} label={item.label} />)}</ScrollView>
+      )}
 
-      <Text style={styles.productPrice}>{price}</Text>
-    </TouchableOpacity>
+      <View style={[styles.sectionHeader, styles.highlightHeader]}>
+        <View><Text style={styles.sectionTitle}>{tablet ? 'Feito por aqui' : 'Destaques'}</Text>{tablet ? <Text style={styles.sectionSub}>Destaques de empreendedores locais</Text> : null}</View>
+        <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' })} style={styles.seeAll}><Text style={styles.seeAllText}>Explorar</Text><MaterialCommunityIcons name="arrow-right" size={16} color={colors.primary} /></TouchableOpacity>
+      </View>
+      <View style={[styles.productGrid, desktop && styles.productGridDesktop]}>
+        {highlights.map((product) => <View key={product.name} style={[styles.productCell, { width: productWidth }]}><ProductCard {...product} onPress={() => navigation.navigate('Product', { name: product.name, price: product.price, icon: product.icon })} /></View>)}
+      </View>
+
+      {tablet ? <AppCard style={styles.communityNote}>
+        <View style={styles.noteIcon}><MaterialCommunityIcons name="account-group-outline" size={22} color={colors.primary} /></View>
+        <View style={styles.noteCopy}><Text style={styles.noteTitle}>Cada compra fortalece a comunidade</Text><Text style={styles.noteBody}>Apoie quem empreende em Mundo Novo e faça a economia local circular.</Text></View>
+      </AppCard> : null}
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F7F7F7',
-  },
-
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-
-  logo: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#1B5E20',
-  },
-
-  subtitle: {
-    fontSize: 14,
-    color: '#777',
-    marginTop: 2,
-  },
-
-  profileButton: {
-    padding: 4,
-  },
-
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    height: 52,
-    marginBottom: 20,
-  },
-
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    marginLeft: 8,
-  },
-
-  wallet: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 18,
-    padding: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-
-  walletLabel: {
-    fontSize: 13,
-    color: '#777',
-  },
-
-  walletValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginTop: 4,
-    color: '#1B5E20',
-  },
-
-  coins: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  coinValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginLeft: 8,
-  },
-
-  coinLabel: {
-    fontSize: 11,
-    color: '#777',
-    marginLeft: 8,
-  },
-
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 14,
-  },
-
-  categories: {
-    marginBottom: 28,
-  },
-
-  category: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 14,
-    width: 100,
-    alignItems: 'center',
-    marginRight: 12,
-  },
-
-  categoryText: {
-    fontSize: 13,
-    marginTop: 8,
-    fontWeight: '600',
-  },
-
-  products: {
-    flexDirection: 'row',
-    gap: 14,
-  },
-
-  productCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 18,
-    padding: 12,
-    width: '48%',
-  },
-
-  productImage: {
-    height: 130,
-    borderRadius: 14,
-    backgroundColor: '#EEEEEE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-
-  productName: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-
-  productPrice: {
-    fontSize: 17,
-    fontWeight: '800',
-    marginTop: 6,
-  },
+  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  greetingBlock: { gap: spacing.xs },
+  greeting: { ...typography.heading1, color: colors.text },
+  communityLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  communityDot: { width: 7, height: 7, borderRadius: radius.full, backgroundColor: colors.primary },
+  community: { ...typography.bodySmall, color: colors.textSecondary },
+  profileButton: { width: 46, height: 46, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  searchRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
+  searchBox: { flex: 1, minHeight: 52, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, gap: spacing.sm },
+  searchInputWrap: { flex: 1 },
+  searchInput: { borderWidth: 0, backgroundColor: 'transparent', minHeight: 48, paddingHorizontal: 0 },
+  filterButton: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  topGrid: { gap: spacing.md },
+  topGridDesktop: { flexDirection: 'row', alignItems: 'stretch' },
+  welcomeCard: { flex: 1, justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  welcomeTitle: { ...typography.heading3, color: colors.text, marginTop: spacing.xs },
+  welcomeBody: { ...typography.bodySmall, color: colors.textSecondary },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xs },
+  sectionTitle: { ...typography.heading2, color: colors.text },
+  sectionSub: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
+  categoryScroll: { gap: spacing.sm, paddingRight: spacing.md },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  highlightHeader: { marginTop: spacing.sm },
+  seeAll: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44, paddingHorizontal: spacing.xs },
+  seeAllText: { ...typography.label, color: colors.primary },
+  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  productGridDesktop: { gap: spacing.lg },
+  productCell: {},
+  communityNote: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.primaryLight },
+  noteIcon: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  noteCopy: { flex: 1, gap: spacing.xs },
+  noteTitle: { ...typography.label, color: colors.text },
+  noteBody: { ...typography.bodySmall, color: colors.textSecondary },
 });

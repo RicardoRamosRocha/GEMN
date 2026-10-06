@@ -92,6 +92,8 @@ export default function ProfileScreen({ navigation }: any) {
           icon="store-outline"
           title="Meus produtos"
           subtitle="Produtos publicados por você"
+          onPress={() => navigation.navigate('MyProducts')}
+
         />
 
         <MenuItem

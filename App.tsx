@@ -10,6 +10,9 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import MarketplaceScreen from './src/screens/MarketplaceScreen';
 import OrderConfirmationScreen from './src/screens/OrderConfirmationScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
+import MyProductsScreen from './src/screens/MyProductsScreen';
+import CreateProductScreen from './src/screens/CreateProductScreen';
+import { ProductsProvider } from './src/context/ProductsContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -78,20 +81,31 @@ function ProfileStack() {
         component={OrdersScreen}
         options={{ title: 'Meus pedidos' }}
       />
+      <Stack.Screen
+  name="MyProducts"
+  component={MyProductsScreen}
+  options={{ title: 'Meus produtos' }}
+/>
+      <Stack.Screen
+        name="CreateProduct"
+        component={CreateProductScreen}
+        options={{ title: 'Cadastro do anúncio' }}
+      />
     </Stack.Navigator>
   );
 }
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: '#1B5E20',
-          tabBarInactiveTintColor: '#777',
-        }}
-      >
+    <ProductsProvider>
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={{
+            headerShown: false,
+            tabBarActiveTintColor: '#1B5E20',
+            tabBarInactiveTintColor: '#777',
+          }}
+        >
         <Tab.Screen
           name="Início"
           component={HomeStack}
@@ -130,7 +144,8 @@ export default function App() {
             ),
           }}
         />
-      </Tab.Navigator>
-    </NavigationContainer>
+        </Tab.Navigator>
+      </NavigationContainer>
+    </ProductsProvider>
   );
 }
