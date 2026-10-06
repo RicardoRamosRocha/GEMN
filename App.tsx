@@ -4,11 +4,12 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-
 import HomeScreen from './src/screens/HomeScreen';
 import ProductScreen from './src/screens/ProductScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import MarketplaceScreen from './src/screens/MarketplaceScreen';
+import OrderConfirmationScreen from './src/screens/OrderConfirmationScreen';
+import OrdersScreen from './src/screens/OrdersScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -26,6 +27,56 @@ function HomeStack() {
         name="Product"
         component={ProductScreen}
         options={{ title: 'Produto' }}
+      />
+      <Stack.Screen
+        name="OrderConfirmation"
+        component={OrderConfirmationScreen}
+        options={{
+          title: 'Pedido confirmado',
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function MarketplaceStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="MarketplaceHome"
+        component={MarketplaceScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="Product"
+        component={ProductScreen}
+        options={{ title: 'Produto' }}
+      />
+      <Stack.Screen
+        name="OrderConfirmation"
+        component={OrderConfirmationScreen}
+        options={{
+          title: 'Pedido confirmado',
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function ProfileStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="ProfileHome"
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="Orders"
+        component={OrdersScreen}
+        options={{ title: 'Meus pedidos' }}
       />
     </Stack.Navigator>
   );
@@ -56,7 +107,7 @@ export default function App() {
 
         <Tab.Screen
           name="Marketplace"
-          component={MarketplaceScreen}
+          component={MarketplaceStack}
           options={{
             tabBarIcon: () => (
               <MaterialCommunityIcons
@@ -69,7 +120,7 @@ export default function App() {
 
         <Tab.Screen
           name="Perfil"
-          component={ProfileScreen}
+          component={ProfileStack}
           options={{
             tabBarIcon: () => (
               <MaterialCommunityIcons
