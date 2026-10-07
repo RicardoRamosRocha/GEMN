@@ -2,12 +2,23 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { AppBadge, AppCard, AppScreen } from '../components/ui';
+import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 
 export default function ProfileScreen({ navigation }: any) {
+  const { user, signOut } = useAuth();
   const { width } = useWindowDimensions();
   const wide = width >= layout.breakpoints.tablet;
+  const [signOutError, setSignOutError] = React.useState('');
+  const displayName = user?.user_metadata?.nome_completo || 'Usuário GEMN';
+  const email = user?.email || 'E-mail não informado';
+
+  async function handleSignOut() {
+    setSignOutError('');
+    const result = await signOut();
+    if (result.error) setSignOutError(result.error);
+  }
 
   return (
     <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
@@ -27,8 +38,8 @@ export default function ProfileScreen({ navigation }: any) {
             <MaterialCommunityIcons name="account" size={42} color={colors.primary} />
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.name}>Usuário GEMN</Text>
-            <Text style={styles.email}>usuario@gemn.com</Text>
+            <Text style={styles.name}>{displayName}</Text>
+            <Text style={styles.email}>{email}</Text>
             <AppBadge label="MEMBRO GEMN" variant="success" />
           </View>
           <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
@@ -74,6 +85,9 @@ export default function ProfileScreen({ navigation }: any) {
         <MenuItem icon="wallet-outline" title="Minha carteira" subtitle="Saldo e movimentações" />
         <MenuItem icon="cog-outline" title="Configurações" subtitle="Preferências da sua conta" last />
       </AppCard>
+
+      {signOutError ? <Text accessibilityRole="alert" style={styles.signOutError}>{signOutError}</Text> : null}
+      <AppButton title="Sair" variant="outline" onPress={handleSignOut} style={styles.signOutButton} />
     </AppScreen>
   );
 }
@@ -138,4 +152,6 @@ const styles = StyleSheet.create({
   menuText: { flex: 1, marginLeft: spacing.md, gap: 2 },
   menuTitle: { ...typography.label, color: colors.text },
   menuSubtitle: { ...typography.caption, color: colors.textSecondary },
+  signOutError: { ...typography.bodySmall, color: colors.error, textAlign: 'center' },
+  signOutButton: { marginTop: spacing.xs },
 });

@@ -1,4 +1,5 @@
 import React from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -13,9 +14,25 @@ import OrdersScreen from './src/screens/OrdersScreen';
 import MyProductsScreen from './src/screens/MyProductsScreen';
 import CreateProductScreen from './src/screens/CreateProductScreen';
 import { ProductsProvider } from './src/context/ProductsContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
+import { colors } from './src/theme/tokens';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+const AuthStack = createNativeStackNavigator();
+
+function AuthNavigator() {
+  return (
+    <NavigationContainer>
+      <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+        <AuthStack.Screen name="Login" component={LoginScreen} />
+        <AuthStack.Screen name="Register" component={RegisterScreen} />
+      </AuthStack.Navigator>
+    </NavigationContainer>
+  );
+}
 
 function HomeStack() {
   return (
@@ -95,7 +112,7 @@ function ProfileStack() {
   );
 }
 
-export default function App() {
+function AuthenticatedApp() {
   return (
     <ProductsProvider>
       <NavigationContainer>
@@ -149,3 +166,35 @@ export default function App() {
     </ProductsProvider>
   );
 }
+
+function AuthLoadingScreen() {
+  return (
+    <View style={styles.loadingScreen}>
+      <ActivityIndicator size="large" color={colors.primary} />
+    </View>
+  );
+}
+
+function AppContent() {
+  const { session, loading } = useAuth();
+
+  if (loading) return <AuthLoadingScreen />;
+  return session ? <AuthenticatedApp /> : <AuthNavigator />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  loadingScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+});
