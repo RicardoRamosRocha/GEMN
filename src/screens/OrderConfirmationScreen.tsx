@@ -97,7 +97,7 @@ export default function OrderConfirmationScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.actions}>
-          <AppButton title="Continuar comprando" onPress={() => navigation.navigate('MarketplaceHome')} style={styles.primaryButton} />
+          <AppButton title="Continuar comprando" onPress={() => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' })} style={styles.primaryButton} />
           <AppButton title="Voltar" variant="outline" onPress={() => navigation.goBack()} style={styles.secondaryButton} />
         </View>
       </View>
