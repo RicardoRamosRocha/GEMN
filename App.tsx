@@ -13,6 +13,7 @@ import OrderConfirmationScreen from './src/screens/OrderConfirmationScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import MyProductsScreen from './src/screens/MyProductsScreen';
 import CreateProductScreen from './src/screens/CreateProductScreen';
+import SellerApplicationScreen from './src/screens/SellerApplicationScreen';
 import { ProductsProvider } from './src/context/ProductsContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
@@ -107,6 +108,11 @@ function ProfileStack() {
         name="CreateProduct"
         component={CreateProductScreen}
         options={{ title: 'Cadastro do anúncio' }}
+      />
+      <Stack.Screen
+        name="SellerApplication"
+        component={SellerApplicationScreen}
+        options={{ title: 'Quero vender no GEMN' }}
       />
     </Stack.Navigator>
   );

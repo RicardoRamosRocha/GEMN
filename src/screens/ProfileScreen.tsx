@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 
 export default function ProfileScreen({ navigation }: any) {
@@ -11,8 +12,18 @@ export default function ProfileScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
   const wide = width >= layout.breakpoints.tablet;
   const [signOutError, setSignOutError] = React.useState('');
+  const [isSeller, setIsSeller] = React.useState(false);
   const displayName = user?.user_metadata?.nome_completo || 'Usuário GEMN';
   const email = user?.email || 'E-mail não informado';
+
+  React.useEffect(() => {
+    let mounted = true;
+    if (!user) return () => { mounted = false; };
+    supabase.from('sellers').select('id').eq('user_id', user.id).eq('status', 'ativo').maybeSingle().then(({ data }) => {
+      if (mounted) setIsSeller(Boolean(data));
+    });
+    return () => { mounted = false; };
+  }, [user]);
 
   async function handleSignOut() {
     setSignOutError('');
@@ -40,7 +51,7 @@ export default function ProfileScreen({ navigation }: any) {
           <View style={styles.profileInfo}>
             <Text style={styles.name}>{displayName}</Text>
             <Text style={styles.email}>{email}</Text>
-            <AppBadge label="MEMBRO GEMN" variant="success" />
+            <AppBadge label={isSeller ? 'MEMBRO GEMN' : 'CLIENTE'} variant={isSeller ? 'success' : 'neutral'} />
           </View>
           <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
         </AppCard>
@@ -81,6 +92,15 @@ export default function ProfileScreen({ navigation }: any) {
           featured
           onPress={() => navigation.navigate('MyProducts')}
         />
+        {!isSeller ? (
+          <MenuItem
+            icon="store-plus-outline"
+            title="Quero vender no GEMN"
+            subtitle="Solicite autorização para vender"
+            featured
+            onPress={() => navigation.navigate('SellerApplication')}
+          />
+        ) : null}
         <MenuItem icon="heart-outline" title="Favoritos" subtitle="Produtos que você salvou" />
         <MenuItem icon="wallet-outline" title="Minha carteira" subtitle="Saldo e movimentações" />
         <MenuItem icon="cog-outline" title="Configurações" subtitle="Preferências da sua conta" last />
