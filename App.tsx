@@ -14,6 +14,9 @@ import OrdersScreen from './src/screens/OrdersScreen';
 import MyProductsScreen from './src/screens/MyProductsScreen';
 import CreateProductScreen from './src/screens/CreateProductScreen';
 import SellerApplicationScreen from './src/screens/SellerApplicationScreen';
+import AdminHomeScreen from './src/screens/AdminHomeScreen';
+import AdminSellerApplicationsScreen from './src/screens/AdminSellerApplicationsScreen';
+import AdminSellerApplicationDetailScreen from './src/screens/AdminSellerApplicationDetailScreen';
 import { ProductsProvider } from './src/context/ProductsContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
@@ -113,6 +116,21 @@ function ProfileStack() {
         name="SellerApplication"
         component={SellerApplicationScreen}
         options={{ title: 'Quero vender no GEMN' }}
+      />
+      <Stack.Screen
+        name="AdminHome"
+        component={AdminHomeScreen}
+        options={{ title: 'Administração' }}
+      />
+      <Stack.Screen
+        name="AdminSellerApplications"
+        component={AdminSellerApplicationsScreen}
+        options={{ title: 'Solicitações de vendedores' }}
+      />
+      <Stack.Screen
+        name="AdminSellerApplicationDetail"
+        component={AdminSellerApplicationDetailScreen}
+        options={{ title: 'Análise da solicitação' }}
       />
     </Stack.Navigator>
   );

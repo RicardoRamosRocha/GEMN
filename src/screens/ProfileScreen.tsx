@@ -13,14 +13,20 @@ export default function ProfileScreen({ navigation }: any) {
   const wide = width >= layout.breakpoints.tablet;
   const [signOutError, setSignOutError] = React.useState('');
   const [isSeller, setIsSeller] = React.useState(false);
+  const [isAdmin, setIsAdmin] = React.useState(false);
   const displayName = user?.user_metadata?.nome_completo || 'Usuário GEMN';
   const email = user?.email || 'E-mail não informado';
 
   React.useEffect(() => {
     let mounted = true;
     if (!user) return () => { mounted = false; };
-    supabase.from('sellers').select('id').eq('user_id', user.id).eq('status', 'ativo').maybeSingle().then(({ data }) => {
-      if (mounted) setIsSeller(Boolean(data));
+    Promise.all([
+      supabase.from('sellers').select('id').eq('user_id', user.id).eq('status', 'ativo').maybeSingle(),
+      supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+    ]).then(([sellerResult, profileResult]) => {
+      if (!mounted) return;
+      setIsSeller(Boolean(sellerResult.data));
+      setIsAdmin(Boolean(profileResult.data?.is_admin));
     });
     return () => { mounted = false; };
   }, [user]);
@@ -99,6 +105,15 @@ export default function ProfileScreen({ navigation }: any) {
             subtitle="Solicite autorização para vender"
             featured
             onPress={() => navigation.navigate('SellerApplication')}
+          />
+        ) : null}
+        {isAdmin ? (
+          <MenuItem
+            icon="shield-account-outline"
+            title="Administração"
+            subtitle="Analise solicitações de vendedores"
+            featured
+            onPress={() => navigation.navigate('AdminHome')}
           />
         ) : null}
         <MenuItem icon="heart-outline" title="Favoritos" subtitle="Produtos que você salvou" />
