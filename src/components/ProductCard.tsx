@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppBadge, AppCard } from './ui';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
@@ -7,16 +7,16 @@ import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 export type ProductCardProps = {
   icon: IconName; category: string; name: string; price: string; seller: string;
-  coinPrice?: string; rating?: string; onPress: () => void;
+  coinPrice?: string; rating?: string; imageUrl?: string; onPress: () => void;
 };
 
-export function ProductCard({ icon, category, name, price, seller, coinPrice, rating, onPress }: ProductCardProps) {
+export function ProductCard({ icon, category, name, price, seller, coinPrice, rating, imageUrl, onPress }: ProductCardProps) {
   const compact = useWindowDimensions().width < layout.breakpoints.tablet;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`${name}, ${price}`} onPress={onPress} style={({ pressed }) => [styles.pressable, compact && styles.pressableCompact, pressed && styles.pressed]}>
       <AppCard padding={0} style={[styles.card, compact && styles.cardCompact]}>
         <View style={[styles.visual, compact && styles.visualCompact]}>
-          <View style={[styles.iconDisc, compact && styles.iconDiscCompact]}><MaterialCommunityIcons name={icon} size={compact ? 30 : 38} color={colors.primary} /></View>
+          {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : <View style={[styles.iconDisc, compact && styles.iconDiscCompact]}><MaterialCommunityIcons name={icon} size={compact ? 30 : 38} color={colors.primary} /></View>}
           {!compact ? <View style={styles.category}><AppBadge label={category} /></View> : null}
         </View>
         <View style={[styles.info, compact && styles.infoCompact]}>
@@ -40,6 +40,7 @@ const styles = StyleSheet.create({
   cardCompact: { flexDirection: 'row', minHeight: 112, height: 'auto', alignItems: 'stretch' },
   visual: { height: 142, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
   visualCompact: { width: 96, minHeight: 110, height: 'auto', flexShrink: 0 },
+  image: { width: '100%', height: '100%', minHeight: 110, resizeMode: 'cover' },
   iconDisc: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   iconDiscCompact: { width: 54, height: 54 },
   category: { position: 'absolute', left: spacing.sm, bottom: spacing.sm },

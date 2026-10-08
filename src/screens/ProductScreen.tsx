@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
@@ -28,7 +28,7 @@ export default function ProductScreen({ route, navigation }: any) {
         <View style={[styles.detailsColumn, wide && styles.detailsColumnWide]}>
           <AppCard padding={0} style={[styles.productCard, wide && styles.productCardWide]}>
             <View style={[styles.productVisual, wide && styles.productVisualWide]}>
-              <View style={styles.iconDisc}><MaterialCommunityIcons name={icon} size={wide ? 72 : 60} color={colors.primary} /></View>
+              {listing?.imageUrl ? <Image source={{ uri: listing.imageUrl }} style={styles.productImage} /> : <View style={styles.iconDisc}><MaterialCommunityIcons name={icon} size={wide ? 72 : 60} color={colors.primary} /></View>}
               <AppBadge label="DA COMUNIDADE" variant="success" />
             </View>
             <View style={styles.productCopy}>
@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
   productCardWide: { flexDirection: 'row' },
   productVisual: { minHeight: 212, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center', gap: spacing.md, position: 'relative' },
   productVisualWide: { width: '42%', minHeight: 300 },
+  productImage: { width: '100%', height: '100%', minHeight: 212, resizeMode: 'cover' },
   iconDisc: { width: 116, height: 116, borderRadius: radius.full, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...shadows.subtle },
   productCopy: { flex: 1, padding: spacing.lg, gap: spacing.sm },
   productName: { ...typography.heading1, color: colors.text },

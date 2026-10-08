@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import type { ImagePickerAsset } from 'expo-image-picker';
 
 import { AppBadge, AppButton, AppCard, AppInput, AppScreen } from '../components/ui';
-import { useProducts, type GemnProduct, type ListingStatus, type ProductType } from '../context/ProductsContext';
+import { useProducts, type GemnProduct, type ListingImage, type ListingStatus, type ProductType } from '../context/ProductsContext';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 
 type FormField = 'name' | 'description' | 'category' | 'price' | 'gemnValue';
 type FormErrors = Partial<Record<FormField, string>>;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 function parseAmount(value: string) {
   return Number(value.trim().replace(',', '.'));
@@ -31,6 +35,8 @@ export default function CreateProductScreen({ navigation, route }: any) {
   const [confirmationStatus, setConfirmationStatus] = useState<ListingStatus>('ativo');
   const [isPublishing, setIsPublishing] = useState(false);
   const [publicationError, setPublicationError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<ImagePickerAsset | null>(null);
+  const [savedListingId, setSavedListingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!editingProduct) return;
@@ -74,11 +80,21 @@ export default function CreateProductScreen({ navigation, route }: any) {
       ...(acceptsGemn ? { gemnValue: parseAmount(gemnValue) } : {}),
       status,
     };
+    const image: ListingImage | undefined = selectedImage ? {
+      uri: selectedImage.uri,
+      fileName: selectedImage.fileName,
+      fileSize: selectedImage.fileSize,
+      mimeType: selectedImage.mimeType,
+      file: selectedImage.file,
+    } : undefined;
     const result = isEditing && editingProduct
-      ? await updateProduct(editingProduct.id, payload)
-      : await addProduct(payload);
+      ? await updateProduct(editingProduct.id, payload, image)
+      : savedListingId
+        ? await updateProduct(savedListingId, payload, image)
+        : await addProduct(payload, image);
     setIsPublishing(false);
     if (result.error) {
+      if (!isEditing && result.product) setSavedListingId(result.product.id);
       setPublicationError(result.error);
       return;
     }
@@ -93,6 +109,31 @@ export default function CreateProductScreen({ navigation, route }: any) {
 
   function clearError(field: FormField) {
     setErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  async function chooseImage() {
+    setPublicationError(null);
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1 });
+    } catch {
+      setPublicationError('Não foi possível abrir a galeria de imagens. Tente novamente.');
+      return;
+    }
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    const mimeType = (asset.mimeType ?? asset.file?.type)?.toLowerCase().split(';')[0] ?? '';
+    const extension = asset.fileName?.toLowerCase().split('.').pop();
+    const inferredMimeType = mimeType || (extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg' : extension ? `image/${extension}` : '');
+    if (!ALLOWED_IMAGE_TYPES.has(inferredMimeType)) {
+      setPublicationError('Escolha uma imagem JPEG, PNG ou WebP.');
+      return;
+    }
+    if (asset.fileSize !== undefined && asset.fileSize > MAX_IMAGE_SIZE) {
+      setPublicationError('A imagem deve ter no máximo 5 MB.');
+      return;
+    }
+    setSelectedImage({ ...asset, mimeType: inferredMimeType });
   }
 
   return (
@@ -237,6 +278,15 @@ export default function CreateProductScreen({ navigation, route }: any) {
             <FieldError message={errors.gemnValue} />
           </View>
         )}
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Foto principal (opcional)</Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={selectedImage || editingProduct?.imageUrl ? 'Trocar foto principal' : 'Escolher foto principal'} onPress={() => { void chooseImage(); }} style={styles.imagePicker}>
+            {selectedImage ? <Image source={{ uri: selectedImage.uri }} style={styles.imagePreview} /> : editingProduct?.imageUrl ? <Image source={{ uri: editingProduct.imageUrl }} style={styles.imagePreview} /> : <View style={styles.imagePlaceholder}><MaterialCommunityIcons name="image-plus" size={34} color={colors.primary} /><Text style={styles.imagePlaceholderText}>Adicionar uma foto</Text></View>}
+            <View style={styles.imagePickerAction}><MaterialCommunityIcons name="camera-outline" size={18} color={colors.primary} /><Text style={styles.imagePickerText}>{selectedImage || editingProduct?.imageUrl ? 'Trocar foto' : 'Escolher foto'}</Text></View>
+          </TouchableOpacity>
+          <Text style={styles.helperText}>JPEG, PNG ou WebP • até 5 MB</Text>
+        </View>
       </AppCard>
 
       {publicationError ? <Text style={[styles.errorText, styles.formError]}>{publicationError}</Text> : null}
@@ -308,6 +358,12 @@ const styles = StyleSheet.create({
   gemnHelper: { ...typography.caption, color: colors.textSecondary },
   errorText: { ...typography.caption, color: colors.error, marginTop: spacing.xs },
   helperText: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
+  imagePicker: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surfaceMuted },
+  imagePreview: { width: '100%', height: 180, resizeMode: 'cover' },
+  imagePlaceholder: { height: 180, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+  imagePlaceholderText: { ...typography.bodySmall, color: colors.textSecondary },
+  imagePickerAction: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface },
+  imagePickerText: { ...typography.label, color: colors.primary },
   formError: { width: '100%', maxWidth: 760, alignSelf: 'center', textAlign: 'center' },
   publishButton: { width: '100%', maxWidth: 760, alignSelf: 'center', minHeight: 54 },
   actions: { width: '100%', maxWidth: 760, alignSelf: 'center', flexDirection: 'row', gap: spacing.sm },

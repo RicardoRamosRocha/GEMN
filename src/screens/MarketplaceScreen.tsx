@@ -68,7 +68,7 @@ export default function MarketplaceScreen({ navigation }: any) {
       <View style={[styles.productGrid, desktop && styles.productGridDesktop]}>
         {visibleProducts.map((product) => {
           const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-          return <View key={product.id} style={[styles.productCell, { width: productWidth }]}><ProductCard icon={product.icon} category={product.category} name={product.name} price={price} coinPrice={product.gemnValue !== undefined ? `${product.gemnValue.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? 'Comunidade GEMN'} onPress={() => navigation.navigate('Product', { listing: product })} /></View>;
+          return <View key={product.id} style={[styles.productCell, { width: productWidth }]}><ProductCard icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={product.gemnValue !== undefined ? `${product.gemnValue.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? 'Comunidade GEMN'} onPress={() => navigation.navigate('Product', { listing: product })} /></View>;
         })}
       </View>
     </AppScreen>
