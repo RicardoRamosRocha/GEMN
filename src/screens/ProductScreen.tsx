@@ -7,10 +7,13 @@ import { colors, layout, radius, shadows, spacing, typography } from '../theme/t
 export default function ProductScreen({ route, navigation }: any) {
   const { width } = useWindowDimensions();
   const wide = width >= layout.breakpoints.tablet;
-  const { name = 'Produto Exemplo', price = 'R$ 50,00', icon = 'package-variant-closed' } = route?.params ?? {};
+  const listing = route?.params?.listing;
+  const name = listing?.name ?? route?.params?.name ?? 'Produto Exemplo';
+  const numericPrice = listing?.price ?? (Number(String(route?.params?.price ?? '50').replace('R$', '').replace(/\./g, '').replace(',', '.')) || 50);
+  const price = numericPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const icon = listing?.icon ?? route?.params?.icon ?? 'package-variant-closed';
   const [quantity, setQuantity] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<'money' | 'gemn'>('money');
-  const numericPrice = Number(price.replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0;
   const total = numericPrice * quantity;
   const formattedTotal = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const gemnTotal = quantity * 10;
@@ -30,15 +33,15 @@ export default function ProductScreen({ route, navigation }: any) {
             </View>
             <View style={styles.productCopy}>
               <Text style={styles.productName}>{name}</Text>
-              <View style={styles.sellerLine}><MaterialCommunityIcons name="store-outline" size={16} color={colors.textSecondary} /><Text style={styles.sellerName}>Comunidade Mundo Novo</Text></View>
+              <View style={styles.sellerLine}><MaterialCommunityIcons name="store-outline" size={16} color={colors.textSecondary} /><Text style={styles.sellerName}>{listing?.sellerName ?? 'Comunidade Mundo Novo'}</Text></View>
               <View style={styles.priceRow}><Text style={styles.price}>{price}</Text><View style={styles.rating}><MaterialCommunityIcons name="star" size={16} color={colors.secondary} /><Text style={styles.ratingText}>4,8</Text><Text style={styles.reviews}>(12)</Text></View></View>
-              <View style={styles.gemnLine}><MaterialCommunityIcons name="star-four-points" size={15} color="#886512" /><Text style={styles.gemnText}>Pagamento disponível em GEMN</Text></View>
+              {listing?.acceptsGemn !== false ? <View style={styles.gemnLine}><MaterialCommunityIcons name="star-four-points" size={15} color="#886512" /><Text style={styles.gemnText}>Pagamento disponível em GEMN</Text></View> : null}
             </View>
           </AppCard>
 
           <View style={styles.aboutSection}>
             <Text style={styles.sectionTitle}>Sobre o produto</Text>
-            <Text style={styles.description}>Cesta com frutas frescas selecionadas, produzidas por membros da comunidade GEMN. Uma ótima opção para sua família.</Text>
+            <Text style={styles.description}>{listing?.description ?? 'Confira os detalhes deste anúncio da comunidade GEMN.'}</Text>
             <View style={styles.locationLine}><MaterialCommunityIcons name="map-marker-outline" size={18} color={colors.textSecondary} /><Text style={styles.locationText}>Belo Horizonte - MG</Text></View>
           </View>
         </View>

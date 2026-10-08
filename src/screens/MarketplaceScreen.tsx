@@ -1,26 +1,17 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AppCard, AppHeader, AppInput, AppScreen } from '../components/ui';
+import { AppButton, AppCard, AppHeader, AppInput, AppScreen } from '../components/ui';
 import { CategoryChip } from '../components/CategoryChip';
 import { ProductCard } from '../components/ProductCard';
+import { useProducts } from '../context/ProductsContext';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
-
-const products = [
-  { icon: 'food-apple' as const, category: 'Comida', name: 'Cesta de frutas', price: 'R$ 30,00', coinPrice: '15 GEMN', rating: '4.9', seller: 'Mundo Novo' },
-  { icon: 'tshirt-crew' as const, category: 'Moda', name: 'Camiseta exclusiva', price: 'R$ 45,00', coinPrice: '22 GEMN', rating: '4.8', seller: 'GEMN Store' },
-  { icon: 'tools' as const, category: 'Serviços', name: 'Serviço de manutenção', price: 'R$ 80,00', coinPrice: '40 GEMN', rating: '5.0', seller: 'João Serviços' },
-  { icon: 'cake-variant' as const, category: 'Comida', name: 'Bolo caseiro', price: 'R$ 35,00', coinPrice: '18 GEMN', rating: '4.9', seller: 'Sabor da Comunidade' },
-];
 
 const categories = [
   { icon: 'apps' as const, label: 'Todas' },
-  { icon: 'food-apple-outline' as const, label: 'Comida' },
-  { icon: 'tools' as const, label: 'Serviços' },
-  { icon: 'tshirt-crew-outline' as const, label: 'Moda' },
-  { icon: 'home-outline' as const, label: 'Casa' },
-  { icon: 'car-outline' as const, label: 'Veículos' },
 ];
+
+const categoryIcons = ['food-apple-outline', 'tools', 'tshirt-crew-outline', 'home-outline', 'car-outline'] as const;
 
 export default function MarketplaceScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
@@ -31,6 +22,15 @@ export default function MarketplaceScreen({ navigation }: any) {
   const contentWidth = Math.min(width - horizontalPadding * 2, layout.contentMaxWidth - horizontalPadding * 2);
   const productGap = desktop ? spacing.lg : spacing.md;
   const productWidth = (contentWidth - productGap * (columns - 1)) / columns;
+  const { marketplaceProducts, marketplaceLoading, marketplaceError, refreshMarketplaceProducts, categories: activeCategories } = useProducts();
+  const [search, setSearch] = React.useState('');
+  const [selectedCategory, setSelectedCategory] = React.useState('Todas');
+  const visibleProducts = marketplaceProducts.filter((product) => {
+    const matchesCategory = selectedCategory === 'Todas' || product.category === selectedCategory;
+    const query = search.trim().toLocaleLowerCase();
+    return matchesCategory && (!query || `${product.name} ${product.description} ${product.sellerName ?? ''}`.toLocaleLowerCase().includes(query));
+  });
+  const marketplaceCategories = [categories[0], ...activeCategories.map((item, index) => ({ icon: categoryIcons[index % categoryIcons.length], label: item.name }))];
 
   return (
     <AppScreen scroll contentContainerStyle={styles.content}>
@@ -40,14 +40,14 @@ export default function MarketplaceScreen({ navigation }: any) {
       </View>
 
       <View style={styles.searchRow}>
-        <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={21} color={colors.textSecondary} /><AppInput accessibilityLabel="Buscar no marketplace" placeholder="O que você procura?" containerStyle={styles.searchInputWrap} inputStyle={styles.searchInput} returnKeyType="search" /></View>
+        <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={21} color={colors.textSecondary} /><AppInput accessibilityLabel="Buscar no marketplace" placeholder="O que você procura?" value={search} onChangeText={setSearch} containerStyle={styles.searchInputWrap} inputStyle={styles.searchInput} returnKeyType="search" /></View>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtros" style={styles.filterButton}><MaterialCommunityIcons name="tune-variant" size={20} color={colors.white} /></TouchableOpacity>
       </View>
 
       <View style={styles.filterSection}>
         {tablet ? <Text style={styles.eyebrow}>CATEGORIAS</Text> : null}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>
-          {categories.map((category, index) => <CategoryChip key={category.label} icon={category.icon} label={category.label} compact={index !== 0} />)}
+          {marketplaceCategories.map((category, index) => <CategoryChip key={category.label} icon={category.icon} label={category.label} compact={index !== 0} onPress={() => setSelectedCategory(category.label)} selected={selectedCategory === category.label} />)}
         </ScrollView>
       </View>
 
@@ -58,12 +58,18 @@ export default function MarketplaceScreen({ navigation }: any) {
       </AppCard> : null}
 
       <View style={styles.resultsHeader}>
-        <View><Text style={styles.resultsTitle}>{tablet ? 'Produtos e serviços' : 'Para você'}</Text>{tablet ? <Text style={styles.resultsCount}>{products.length} opções para descobrir</Text> : null}</View>
+          <View><Text style={styles.resultsTitle}>{tablet ? 'Produtos e serviços' : 'Para você'}</Text>{tablet ? <Text style={styles.resultsCount}>{visibleProducts.length} opções para descobrir</Text> : null}</View>
         {tablet ? <TouchableOpacity accessibilityRole="button" style={styles.sortButton}><MaterialCommunityIcons name="sort-variant" size={17} color={colors.textSecondary} /><Text style={styles.sortText}>Relevância</Text><MaterialCommunityIcons name="chevron-down" size={16} color={colors.textSecondary} /></TouchableOpacity> : null}
       </View>
 
+      {marketplaceError ? <AppCard style={styles.errorCard}><Text style={styles.errorText}>{marketplaceError}</Text><AppButton title="Tentar novamente" variant="outline" onPress={() => { void refreshMarketplaceProducts(); }} /></AppCard> : null}
+      {marketplaceLoading ? <Text style={styles.helperText}>Carregando anúncios publicados...</Text> : null}
+      {!marketplaceLoading && !marketplaceError && visibleProducts.length === 0 ? <Text style={styles.helperText}>Nenhum anúncio publicado encontrado.</Text> : null}
       <View style={[styles.productGrid, desktop && styles.productGridDesktop]}>
-        {products.map((product) => <View key={product.name} style={[styles.productCell, { width: productWidth }]}><ProductCard {...product} onPress={() => navigation.navigate('Product', { name: product.name, price: product.price, icon: product.icon })} /></View>)}
+        {visibleProducts.map((product) => {
+          const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          return <View key={product.id} style={[styles.productCell, { width: productWidth }]}><ProductCard icon={product.icon} category={product.category} name={product.name} price={price} coinPrice={product.gemnValue !== undefined ? `${product.gemnValue.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? 'Comunidade GEMN'} onPress={() => navigation.navigate('Product', { listing: product })} /></View>;
+        })}
       </View>
     </AppScreen>
   );
@@ -100,4 +106,7 @@ const styles = StyleSheet.create({
   productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   productGridDesktop: { gap: spacing.lg },
   productCell: { minWidth: 0 },
+  errorCard: { borderWidth: 1, borderColor: colors.error, gap: spacing.sm },
+  errorText: { ...typography.bodySmall, color: colors.error },
+  helperText: { ...typography.bodySmall, color: colors.textSecondary },
 });

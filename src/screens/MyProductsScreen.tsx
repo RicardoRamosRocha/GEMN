@@ -1,15 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
-import { useProducts } from '../context/ProductsContext';
+import { useProducts, type ListingStatus } from '../context/ProductsContext';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
 export default function MyProductsScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
   const wide = width >= layout.breakpoints.tablet;
-  const { products } = useProducts();
+  const { products, productsLoading, productsError, refreshProducts, updateProductStatus } = useProducts();
+  const [busyProductId, setBusyProductId] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState<string | null>(null);
+
+  async function handleStatusChange(id: string, status: ListingStatus) {
+    if (busyProductId) return;
+    setOperationError(null);
+    setBusyProductId(id);
+    const result = await updateProductStatus(id, status);
+    setBusyProductId(null);
+    if (result.error) setOperationError(result.error);
+  }
 
   return (
     <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
@@ -20,7 +31,7 @@ export default function MyProductsScreen({ navigation }: any) {
           <Text style={styles.subtitle}>Gerencie seus produtos e serviços</Text>
         </View>
         <View style={styles.counter}>
-          <Text style={styles.counterValue}>{products.length}</Text>
+          <Text style={styles.counterValue}>{productsLoading ? '—' : products.length}</Text>
           <Text style={styles.counterLabel}>anúncios</Text>
         </View>
       </View>
@@ -38,6 +49,16 @@ export default function MyProductsScreen({ navigation }: any) {
         </View>
       </View>
 
+      {productsError ? (
+        <AppCard style={styles.errorCard}>
+          <Text style={styles.errorText}>{productsError}</Text>
+          <AppButton title="Tentar novamente" variant="outline" onPress={() => { void refreshProducts(); }} style={styles.retryButton} />
+        </AppCard>
+      ) : null}
+
+      {productsLoading ? <Text style={styles.helperText}>Carregando seus anúncios...</Text> : null}
+      {operationError ? <Text style={styles.errorText}>{operationError}</Text> : null}
+
       <View style={[styles.productsGrid, wide && styles.productsGridWide]}>
         {products.map((product) => (
           <View key={product.id} style={[styles.productWrapper, wide && styles.productWrapperWide]}>
@@ -53,13 +74,24 @@ export default function MyProductsScreen({ navigation }: any) {
 
               <View style={styles.badgesRow}>
                 <AppBadge label={product.type} variant="neutral" />
-                <AppBadge label={product.active ? 'Ativo' : 'Inativo'} variant={product.active ? 'success' : 'neutral'} />
+                <AppBadge label={product.status === 'rascunho' ? 'Rascunho' : product.active ? 'Ativo' : 'Inativo'} variant={product.active ? 'success' : product.status === 'rascunho' ? 'warning' : 'neutral'} />
               </View>
 
               <Text style={styles.productName}>{product.name}</Text>
               <Text style={styles.productPrice}>
                 {product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </Text>
+              <View style={styles.actionsRow}>
+                <AppButton title="Editar" variant="outline" onPress={() => navigation.navigate('CreateProduct', { product })} disabled={busyProductId !== null} style={styles.actionButton} />
+                <AppButton
+                  title={product.status === 'ativo' ? 'Desativar' : 'Ativar'}
+                  variant={product.status === 'ativo' ? 'secondary' : 'primary'}
+                  onPress={() => { void handleStatusChange(product.id, product.status === 'ativo' ? 'inativo' : 'ativo'); }}
+                  loading={busyProductId === product.id}
+                  disabled={busyProductId !== null && busyProductId !== product.id}
+                  style={styles.actionButton}
+                />
+              </View>
             </AppCard>
           </View>
         ))}
@@ -69,7 +101,7 @@ export default function MyProductsScreen({ navigation }: any) {
         <View style={styles.infoIcon}>
           <MaterialCommunityIcons name="information-outline" size={20} color={colors.primary} />
         </View>
-        <Text style={styles.infoText}>Seus produtos e serviços podem ser encontrados no Marketplace GEMN.</Text>
+        <Text style={styles.infoText}>Anúncios ativos podem ser encontrados no Marketplace GEMN. Rascunhos e inativos ficam disponíveis somente nesta área.</Text>
       </AppCard>
     </AppScreen>
   );
@@ -103,4 +135,10 @@ const styles = StyleSheet.create({
   infoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight, borderWidth: 1, borderColor: colors.primaryLight },
   infoIcon: { width: 38, height: 38, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   infoText: { flex: 1, ...typography.bodySmall, color: colors.textSecondary, marginLeft: spacing.md },
+  errorCard: { borderWidth: 1, borderColor: colors.error, gap: spacing.sm },
+  errorText: { ...typography.bodySmall, color: colors.error },
+  helperText: { ...typography.bodySmall, color: colors.textSecondary },
+  retryButton: { alignSelf: 'flex-start' },
+  actionsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  actionButton: { flex: 1, minHeight: 44, paddingHorizontal: spacing.sm },
 });
