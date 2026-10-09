@@ -291,8 +291,8 @@ export default function CreateProductScreen({ navigation, route }: any) {
 
       {publicationError ? <Text style={[styles.errorText, styles.formError]}>{publicationError}</Text> : null}
       <View style={[styles.actions, wide && styles.publishActionsWide]}>
-        {!isEditing ? <AppButton title="Salvar rascunho" variant="outline" onPress={() => { void handlePublish('rascunho'); }} loading={isPublishing} disabled={categoriesLoading || categories.length === 0} style={styles.draftButton} /> : null}
-        <AppButton title={isEditing ? 'Salvar alterações' : 'Publicar anúncio'} onPress={() => { void handlePublish(isEditing ? editingProduct?.status : 'ativo'); }} loading={isPublishing} disabled={categoriesLoading || categories.length === 0} style={styles.publishButton} />
+        {!isEditing ? <AppButton title="Salvar rascunho" variant="outline" fullWidth={!wide} onPress={() => { void handlePublish('rascunho'); }} loading={isPublishing} disabled={categoriesLoading || categories.length === 0} style={[styles.draftButton, wide && styles.actionButtonWide]} /> : null}
+        <AppButton title={isEditing ? 'Salvar alterações' : 'Publicar anúncio'} fullWidth={!wide} onPress={() => { void handlePublish(isEditing ? editingProduct?.status : 'ativo'); }} loading={isPublishing} disabled={categoriesLoading || categories.length === 0} style={[styles.publishButton, wide && styles.actionButtonWide]} />
       </View>
 
       <Modal visible={showConfirmation} transparent animationType="fade" onRequestClose={closeConfirmation}>
@@ -306,7 +306,7 @@ export default function CreateProductScreen({ navigation, route }: any) {
             <Text style={styles.confirmationMessage}>
               {confirmationStatus === 'ativo' ? 'A alteração foi confirmada pelo Supabase e o anúncio está disponível para a comunidade.' : 'A alteração foi confirmada pelo Supabase e o anúncio permanece disponível somente para você.'}
             </Text>
-            <AppButton title="Voltar para Meus produtos" onPress={closeConfirmation} style={styles.confirmationButton} />
+            <AppButton title="Voltar para Meus produtos" fullWidth onPress={closeConfirmation} style={styles.confirmationButton} />
           </AppCard>
         </View>
       </Modal>
@@ -365,10 +365,11 @@ const styles = StyleSheet.create({
   imagePickerAction: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface },
   imagePickerText: { ...typography.label, color: colors.primary },
   formError: { width: '100%', maxWidth: 760, alignSelf: 'center', textAlign: 'center' },
-  publishButton: { width: '100%', maxWidth: 760, alignSelf: 'center', minHeight: 54 },
-  actions: { width: '100%', maxWidth: 760, alignSelf: 'center', flexDirection: 'row', gap: spacing.sm },
-  publishActionsWide: { marginTop: spacing.xs },
-  draftButton: { flex: 1, minHeight: 54 },
+  publishButton: { minHeight: 52 },
+  actions: { width: '100%', maxWidth: 760, alignSelf: 'center', flexDirection: 'column', alignItems: 'stretch', gap: spacing.sm },
+  publishActionsWide: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: spacing.xs },
+  actionButtonWide: { width: 240, maxWidth: 240 },
+  draftButton: { minHeight: 52 },
   publishButtonWide: { marginTop: spacing.xs },
   modalBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.45)', padding: spacing.lg },
   confirmationCard: { width: '100%', maxWidth: 400, alignItems: 'center', padding: spacing.xl, ...shadows.floating },

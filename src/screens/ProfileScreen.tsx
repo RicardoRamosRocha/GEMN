@@ -6,6 +6,7 @@ import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
+import { WalletCard } from '../components/WalletCard';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, signOut } = useAuth();
@@ -14,7 +15,7 @@ export default function ProfileScreen({ navigation }: any) {
   const [signOutError, setSignOutError] = React.useState('');
   const [isSeller, setIsSeller] = React.useState(false);
   const [isAdmin, setIsAdmin] = React.useState(false);
-  const displayName = user?.user_metadata?.nome_completo || 'Usuário GEMN';
+  const displayName = user?.user_metadata?.nome_completo?.trim() || 'Usuário GEMN';
   const email = user?.email || 'E-mail não informado';
 
   React.useEffect(() => {
@@ -38,7 +39,7 @@ export default function ProfileScreen({ navigation }: any) {
   }
 
   return (
-    <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
+    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.eyebrow}>Comunidade Mundo Novo</Text>
@@ -62,18 +63,7 @@ export default function ProfileScreen({ navigation }: any) {
           <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
         </AppCard>
 
-        <AppCard elevated={wide} style={[styles.wallet, wide && styles.walletWide]}>
-          <View>
-            <Text style={styles.walletLabel}>Minha carteira</Text>
-            <Text style={styles.walletValue}>R$ 150,00</Text>
-          </View>
-          <View style={styles.coin}>
-            <View style={styles.coinIcon}>
-              <MaterialCommunityIcons name="star-four-points" size={20} color={colors.secondary} />
-            </View>
-            <Text style={styles.coinValue}>50 GEMN</Text>
-          </View>
-        </AppCard>
+        <View style={[styles.walletWrap, wide && styles.walletWrapWide]}><WalletCard /></View>
       </View>
 
       <View style={styles.sectionHeader}>
@@ -116,9 +106,9 @@ export default function ProfileScreen({ navigation }: any) {
             onPress={() => navigation.navigate('AdminHome')}
           />
         ) : null}
-        <MenuItem icon="heart-outline" title="Favoritos" subtitle="Produtos que você salvou" />
-        <MenuItem icon="wallet-outline" title="Minha carteira" subtitle="Saldo e movimentações" />
-        <MenuItem icon="cog-outline" title="Configurações" subtitle="Preferências da sua conta" last />
+        <MenuItem icon="heart-outline" title="Favoritos" subtitle="Em desenvolvimento" />
+        <MenuItem icon="wallet-outline" title="Minha carteira" subtitle="Em desenvolvimento" />
+        <MenuItem icon="cog-outline" title="Configurações" subtitle="Em desenvolvimento" last />
       </AppCard>
 
       {signOutError ? <Text accessibilityRole="alert" style={styles.signOutError}>{signOutError}</Text> : null}
@@ -139,24 +129,24 @@ function MenuItem({ icon, title, subtitle, onPress, featured = false, last = fal
     <TouchableOpacity
       accessibilityRole="button"
       accessibilityState={{ disabled: !onPress }}
-      style={[styles.menuItem, !last && styles.menuItemBorder]}
+      style={[styles.menuItem, !last && styles.menuItemBorder, !onPress && styles.menuItemDisabled]}
       onPress={onPress}
       disabled={!onPress}
     >
-      <View style={[styles.menuIcon, featured && styles.menuIconFeatured]}>
-        <MaterialCommunityIcons name={icon} size={22} color={featured ? colors.primary : colors.textSecondary} />
+      <View style={[styles.menuIcon, featured && styles.menuIconFeatured, !onPress && styles.menuIconDisabled]}>
+        <MaterialCommunityIcons name={icon} size={22} color={featured ? colors.primary : colors.textMuted} />
       </View>
       <View style={styles.menuText}>
         <Text style={styles.menuTitle}>{title}</Text>
         <Text style={styles.menuSubtitle}>{subtitle}</Text>
       </View>
-      <MaterialCommunityIcons name="chevron-right" size={22} color={featured ? colors.primary : colors.textMuted} />
+      <MaterialCommunityIcons name={onPress ? 'chevron-right' : 'clock-outline'} size={19} color={onPress && featured ? colors.primary : colors.textMuted} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   eyebrow: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
   title: { ...typography.heading1, color: colors.text },
@@ -165,25 +155,22 @@ const styles = StyleSheet.create({
   overviewWide: { flexDirection: 'row', alignItems: 'stretch' },
   profileCard: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   profileCardWide: { flex: 1 },
-  avatar: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 68, height: 68, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   profileInfo: { flex: 1, marginLeft: spacing.md, gap: spacing.xs },
   name: { ...typography.heading3, color: colors.text },
   email: { ...typography.bodySmall, color: colors.textSecondary },
-  wallet: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.border },
-  walletWide: { width: 300, flexShrink: 0 },
-  walletLabel: { ...typography.caption, color: colors.textSecondary },
-  walletValue: { ...typography.heading2, color: colors.text, marginTop: spacing.xs },
-  coin: { alignItems: 'center', gap: spacing.xs },
-  coinIcon: { width: 42, height: 42, borderRadius: radius.full, backgroundColor: colors.secondaryLight, alignItems: 'center', justifyContent: 'center' },
-  coinValue: { ...typography.caption, color: colors.text, fontWeight: '600' },
+  walletWrap: { width: '100%' },
+  walletWrapWide: { width: 332, flexShrink: 0 },
   sectionHeader: { marginTop: spacing.xs },
   sectionTitle: { ...typography.heading2, color: colors.text },
   sectionSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },
   menu: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
-  menuItem: { minHeight: 76, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface },
+  menuItem: { minHeight: 70, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface },
+  menuItemDisabled: { backgroundColor: '#FAFAFB' },
   menuItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   menuIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
   menuIconFeatured: { backgroundColor: colors.primaryLight },
+  menuIconDisabled: { backgroundColor: colors.surfaceMuted, opacity: 0.7 },
   menuText: { flex: 1, marginLeft: spacing.md, gap: 2 },
   menuTitle: { ...typography.label, color: colors.text },
   menuSubtitle: { ...typography.caption, color: colors.textSecondary },

@@ -8,21 +8,24 @@ type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 export type ProductCardProps = {
   icon: IconName; category: string; name: string; price: string; seller: string;
   coinPrice?: string; rating?: string; imageUrl?: string; onPress: () => void;
+  layout?: 'default' | 'marketplace';
 };
 
-export function ProductCard({ icon, category, name, price, seller, coinPrice, rating, imageUrl, onPress }: ProductCardProps) {
+export function ProductCard({ icon, category, name, price, seller, coinPrice, rating, imageUrl, onPress, layout: cardLayout = 'default' }: ProductCardProps) {
   const compact = useWindowDimensions().width < layout.breakpoints.tablet;
+  const marketplace = cardLayout === 'marketplace';
+  const [imageFailed, setImageFailed] = React.useState(false);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${name}, ${price}`} onPress={onPress} style={({ pressed }) => [styles.pressable, compact && styles.pressableCompact, pressed && styles.pressed]}>
-      <AppCard padding={0} style={[styles.card, compact && styles.cardCompact]}>
-        <View style={[styles.visual, compact && styles.visualCompact]}>
-          {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : <View style={[styles.iconDisc, compact && styles.iconDiscCompact]}><MaterialCommunityIcons name={icon} size={compact ? 30 : 38} color={colors.primary} /></View>}
-          {!compact ? <View style={styles.category}><AppBadge label={category} /></View> : null}
+    <Pressable accessibilityRole="button" accessibilityLabel={`${name}, ${price}`} onPress={onPress} style={({ pressed }) => [styles.pressable, compact && !marketplace && styles.pressableCompact, pressed && styles.pressed]}>
+      <AppCard padding={0} style={[styles.card, compact && !marketplace && styles.cardCompact, marketplace && styles.marketplaceCard]}>
+        <View style={[styles.visual, compact && !marketplace && styles.visualCompact, marketplace && styles.marketplaceVisual]}>
+          {imageUrl && !imageFailed ? <Image source={{ uri: imageUrl }} style={styles.image} onError={() => setImageFailed(true)} /> : <View style={[styles.iconDisc, compact && !marketplace && styles.iconDiscCompact, marketplace && styles.marketplaceIconDisc]}><MaterialCommunityIcons name={icon} size={compact || marketplace ? 30 : 38} color={colors.primary} /></View>}
+          {!compact || marketplace ? <View style={styles.category}><AppBadge label={category} /></View> : null}
         </View>
-        <View style={[styles.info, compact && styles.infoCompact]}>
-          <Text style={[styles.name, compact && styles.nameCompact]} numberOfLines={compact ? 1 : 2}>{name}</Text>
+        <View style={[styles.info, compact && !marketplace && styles.infoCompact, marketplace && styles.marketplaceInfo]}>
+          <Text style={[styles.name, compact && !marketplace && styles.nameCompact, marketplace && styles.marketplaceName]} numberOfLines={marketplace ? 2 : compact ? 1 : 2}>{name}</Text>
           <View style={styles.sellerRow}><MaterialCommunityIcons name="store-outline" size={compact ? 12 : 14} color={colors.textSecondary} /><Text style={[styles.seller, compact && styles.sellerCompact]} numberOfLines={1}>{seller}</Text></View>
-          <View style={[styles.bottomRow, compact && styles.bottomRowCompact]}>
+          <View style={[styles.bottomRow, compact && !marketplace && styles.bottomRowCompact, marketplace && styles.marketplaceBottomRow]}>
             <View style={styles.priceBlock}><Text style={[styles.price, compact && styles.priceCompact]}>{price}</Text>{coinPrice ? (compact ? <View style={styles.gemnBadge}><MaterialCommunityIcons name="star-four-points" size={11} color="#886512" /><Text style={styles.gemnText}>GEMN</Text></View> : <View style={styles.coinRow}><MaterialCommunityIcons name="star-four-points" size={12} color="#886512" /><Text style={styles.coin}>{coinPrice}</Text></View>) : null}</View>
             {!compact && rating ? <View style={styles.rating}><MaterialCommunityIcons name="star" size={14} color={colors.secondary} /><Text style={styles.ratingText}>{rating}</Text></View> : null}
           </View>
@@ -40,7 +43,13 @@ const styles = StyleSheet.create({
   cardCompact: { flexDirection: 'row', minHeight: 112, height: 'auto', alignItems: 'stretch' },
   visual: { height: 142, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
   visualCompact: { width: 96, minHeight: 110, height: 'auto', flexShrink: 0 },
-  image: { width: '100%', height: '100%', minHeight: 110, resizeMode: 'cover' },
+  marketplaceCard: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg },
+  marketplaceVisual: { aspectRatio: 1 },
+  marketplaceIconDisc: { width: 62, height: 62 },
+  marketplaceInfo: { padding: spacing.md, minWidth: 0, flex: 0, flexGrow: 0, flexShrink: 1 },
+  marketplaceName: { ...typography.body, color: colors.text, fontWeight: '700', minHeight: 0 },
+  marketplaceBottomRow: { marginTop: spacing.sm },
+  image: { width: '100%', height: '100%', resizeMode: 'cover' },
   iconDisc: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   iconDiscCompact: { width: 54, height: 54 },
   category: { position: 'absolute', left: spacing.sm, bottom: spacing.sm },

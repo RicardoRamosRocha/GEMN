@@ -38,8 +38,9 @@ export default function MyProductsScreen({ navigation }: any) {
 
       <AppButton
         title="Adicionar produto ou serviço"
+        fullWidth={!wide}
         onPress={() => navigation.navigate('CreateProduct')}
-        style={styles.addButton}
+        style={[styles.addButton, wide && styles.addButtonWide]}
       />
 
       <View style={styles.sectionHeader}>
@@ -117,7 +118,8 @@ const styles = StyleSheet.create({
   counter: { minWidth: 68, minHeight: 68, borderRadius: radius.lg, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   counterValue: { ...typography.heading3, color: colors.primary },
   counterLabel: { ...typography.caption, color: colors.primary, marginTop: 1 },
-  addButton: { width: '100%', minHeight: 52 },
+  addButton: { minHeight: 52 },
+  addButtonWide: { width: 240, maxWidth: 240 },
   sectionHeader: { marginTop: spacing.xs },
   sectionTitle: { ...typography.heading2, color: colors.text },
   sectionSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },
@@ -140,5 +142,5 @@ const styles = StyleSheet.create({
   helperText: { ...typography.bodySmall, color: colors.textSecondary },
   retryButton: { alignSelf: 'flex-start' },
   actionsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  actionButton: { flex: 1, minHeight: 44, paddingHorizontal: spacing.sm },
+  actionButton: { flex: 1, minHeight: 48, paddingHorizontal: spacing.sm },
 });

@@ -1,11 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AppBadge, AppButton, AppCard, AppInput, AppScreen } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { colors, radius, spacing, typography } from '../theme/tokens';
+import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
 type MemberType = 'empreendedor' | 'empresa';
 type ApplicationStatus = 'form' | 'pending' | 'approved' | 'rejected';
@@ -15,6 +15,8 @@ const initialValues: FormValues = { nomeNegocio: '', documento: '', responsavel:
 
 export default function SellerApplicationScreen() {
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const wide = width >= layout.breakpoints.tablet;
   const [status, setStatus] = React.useState<ApplicationStatus>('form');
   const [memberType, setMemberType] = React.useState<MemberType>('empreendedor');
   const [values, setValues] = React.useState(initialValues);
@@ -109,7 +111,7 @@ export default function SellerApplicationScreen() {
         <AppInput label="Categoria" value={values.categoria} onChangeText={(value) => updateValue('categoria', value)} error={errors.categoria} placeholder="Ex.: alimentação, moda, serviços" />
         <AppInput label="Descrição" value={values.descricao} onChangeText={(value) => updateValue('descricao', value)} error={errors.descricao} placeholder="Apresente seu negócio" multiline />
         {errorMessage ? <Text accessibilityRole="alert" style={styles.error}>{errorMessage}</Text> : null}
-        <AppButton title="Enviar solicitação" onPress={submitApplication} loading={submitting} style={styles.submitButton} />
+        <AppButton title="Enviar solicitação" fullWidth={!wide} onPress={submitApplication} loading={submitting} style={[styles.submitButton, wide && styles.submitButtonWide]} />
       </AppCard>
     </AppScreen>
   );
@@ -124,5 +126,5 @@ function StatusView({ icon, title, message, badge, badgeVariant }: { icon: any; 
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md }, intro: { ...typography.body, color: colors.textSecondary }, sectionTitle: { ...typography.heading3, color: colors.text, marginTop: spacing.sm }, typeRow: { flexDirection: 'row', gap: spacing.sm }, typeOption: { flex: 1, minHeight: 52, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, color: colors.textSecondary, textAlign: 'center', textAlignVertical: 'center', ...typography.label }, typeOptionSelected: { borderColor: colors.primary, backgroundColor: colors.primaryLight, color: colors.primary }, formCard: { gap: spacing.md, borderWidth: 1, borderColor: colors.border }, rejectedCard: { gap: spacing.sm, borderWidth: 1, borderColor: '#E8D8B7' }, rejectedText: { ...typography.bodySmall, color: colors.text }, note: { ...typography.caption, color: colors.textSecondary }, error: { ...typography.bodySmall, color: colors.error }, submitButton: { marginTop: spacing.xs }, loading: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xxl }, statusScreen: { alignItems: 'center', justifyContent: 'center', gap: spacing.md }, statusIcon: { width: 88, height: 88, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }, statusTitle: { ...typography.heading2, color: colors.text, textAlign: 'center' }, statusMessage: { ...typography.body, color: colors.textSecondary, textAlign: 'center', maxWidth: 480 },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md }, intro: { ...typography.body, color: colors.textSecondary }, sectionTitle: { ...typography.heading3, color: colors.text, marginTop: spacing.sm }, typeRow: { flexDirection: 'row', gap: spacing.sm }, typeOption: { flex: 1, minHeight: 52, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, color: colors.textSecondary, textAlign: 'center', textAlignVertical: 'center', ...typography.label }, typeOptionSelected: { borderColor: colors.primary, backgroundColor: colors.primaryLight, color: colors.primary }, formCard: { gap: spacing.md, borderWidth: 1, borderColor: colors.border }, rejectedCard: { gap: spacing.sm, borderWidth: 1, borderColor: '#E8D8B7' }, rejectedText: { ...typography.bodySmall, color: colors.text }, note: { ...typography.caption, color: colors.textSecondary }, error: { ...typography.bodySmall, color: colors.error }, submitButton: { marginTop: spacing.xs, minHeight: 52 }, submitButtonWide: { maxWidth: 320 }, loading: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xxl }, statusScreen: { alignItems: 'center', justifyContent: 'center', gap: spacing.md }, statusIcon: { width: 88, height: 88, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }, statusTitle: { ...typography.heading2, color: colors.text, textAlign: 'center' }, statusMessage: { ...typography.body, color: colors.textSecondary, textAlign: 'center', maxWidth: 480 },
 });

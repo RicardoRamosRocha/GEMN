@@ -20,14 +20,15 @@ export const radius = {
 } as const;
 
 export const typography = {
-  display: { fontSize: 36, lineHeight: 44, fontWeight: '700' as const },
-  heading1: { fontSize: 30, lineHeight: 38, fontWeight: '700' as const },
-  heading2: { fontSize: 24, lineHeight: 32, fontWeight: '700' as const },
-  heading3: { fontSize: 18, lineHeight: 26, fontWeight: '600' as const },
-  body: { fontSize: 16, lineHeight: 24, fontWeight: '400' as const },
-  bodySmall: { fontSize: 14, lineHeight: 20, fontWeight: '400' as const },
-  label: { fontSize: 14, lineHeight: 20, fontWeight: '600' as const },
-  caption: { fontSize: 12, lineHeight: 16, fontWeight: '400' as const },
+  display: { fontFamily: 'Outfit_800ExtraBold', fontSize: 32, lineHeight: 40, fontWeight: '800' as const },
+  heading1: { fontFamily: 'Outfit_800ExtraBold', fontSize: 28, lineHeight: 36, fontWeight: '800' as const },
+  heading2: { fontFamily: 'Outfit_700Bold', fontSize: 22, lineHeight: 28, fontWeight: '700' as const },
+  heading3: { fontFamily: 'Outfit_700Bold', fontSize: 18, lineHeight: 24, fontWeight: '700' as const },
+  heading4: { fontFamily: 'Outfit_600SemiBold', fontSize: 15, lineHeight: 20, fontWeight: '600' as const },
+  body: { fontFamily: 'Geist_400Regular', fontSize: 14, lineHeight: 21, fontWeight: '400' as const },
+  bodySmall: { fontFamily: 'Geist_400Regular', fontSize: 14, lineHeight: 20, fontWeight: '400' as const },
+  label: { fontFamily: 'Geist_600SemiBold', fontSize: 11, lineHeight: 16, fontWeight: '600' as const },
+  caption: { fontFamily: 'Geist_500Medium', fontSize: 12, lineHeight: 16, fontWeight: '500' as const },
 } as const;
 
 // Android uses elevation; Web uses the matching boxShadow declaration.
@@ -35,17 +36,17 @@ export const shadows = {
   subtle: {
     elevation: 1,
     shadowColor: '#17251C', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3,
-    boxShadow: '0px 1px 3px rgba(23, 37, 28, 0.05)',
+    boxShadow: '0px 1px 3px rgba(17, 24, 39, 0.05)',
   },
   card: {
     elevation: 2,
     shadowColor: '#17251C', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 7,
-    boxShadow: '0px 2px 7px rgba(23, 37, 28, 0.07)',
+    boxShadow: '0px 2px 7px rgba(17, 24, 39, 0.07)',
   },
   floating: {
     elevation: 5,
     shadowColor: '#17251C', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.12, shadowRadius: 12,
-    boxShadow: '0px 5px 12px rgba(23, 37, 28, 0.12)',
+    boxShadow: '0px 5px 12px rgba(17, 24, 39, 0.12)',
   },
 } as const;
 

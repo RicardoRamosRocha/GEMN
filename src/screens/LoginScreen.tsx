@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { AppButton, AppCard, AppInput, AppScreen } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
-import { colors, radius, spacing, typography } from '../theme/tokens';
+import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
 export default function LoginScreen({ navigation }: any) {
+  const { width } = useWindowDimensions();
+  const wide = width >= layout.breakpoints.tablet;
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,9 +34,9 @@ export default function LoginScreen({ navigation }: any) {
   }
 
   return (
-    <AppScreen scroll contentContainerStyle={styles.content}>
+    <AppScreen scroll maxWidth={440} contentContainerStyle={styles.content}>
       <View style={styles.brandMark}><Text style={styles.brandText}>G</Text></View>
-      <Text style={styles.eyebrow}>Comunidade Mundo Novo</Text>
+      <Text style={styles.eyebrow}>MUNDO NOVO</Text>
       <Text style={styles.title}>Bem-vindo ao GEMN</Text>
       <Text style={styles.subtitle}>Entre para explorar o marketplace e acompanhar seus pedidos.</Text>
 
@@ -48,6 +50,7 @@ export default function LoginScreen({ navigation }: any) {
           autoCapitalize="none"
           autoCorrect={false}
           textContentType="emailAddress"
+          icon="email-outline"
           containerStyle={styles.field}
         />
         <AppInput
@@ -57,10 +60,11 @@ export default function LoginScreen({ navigation }: any) {
           placeholder="Sua senha"
           secureTextEntry
           textContentType="password"
+          icon="lock-outline"
           containerStyle={styles.field}
         />
         {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-        <AppButton title="Entrar" onPress={handleSubmit} loading={submitting} style={styles.button} />
+        <AppButton title="Entrar" variant="accent" fullWidth={!wide} onPress={handleSubmit} loading={submitting} style={[styles.button, wide && styles.buttonWide]} />
       </AppCard>
 
       <View style={styles.registerRow}>
@@ -74,16 +78,17 @@ export default function LoginScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, justifyContent: 'center', paddingTop: spacing.xxl, paddingBottom: spacing.xxl },
+  content: { flexGrow: 1, justifyContent: 'center', paddingTop: spacing.xl, paddingBottom: spacing.xl },
   brandMark: { width: 56, height: 56, borderRadius: radius.full, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
   brandText: { color: colors.white, fontSize: 30, fontWeight: '700' },
   eyebrow: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
   title: { ...typography.heading1, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.xl },
-  card: { borderWidth: 1, borderColor: colors.border },
+  subtitle: { ...typography.body, color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.lg },
+  card: { width: '100%', borderWidth: 1, borderColor: colors.border },
   field: { marginBottom: spacing.md },
   error: { ...typography.bodySmall, color: colors.error, marginBottom: spacing.md },
   button: { marginTop: spacing.xs },
+  buttonWide: { width: 320, maxWidth: 320 },
   registerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg },
   registerText: { ...typography.bodySmall, color: colors.textSecondary },
   registerLink: { ...typography.label, color: colors.primary },

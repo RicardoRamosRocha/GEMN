@@ -4,10 +4,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
-export function CategoryChip({ icon, label, compact = false, onPress, selected = false }: { icon: IconName; label: string; compact?: boolean; onPress?: () => void; selected?: boolean }) {
+const tones = ['#F1F5FF', '#FFF3EA', '#EFFBF7', '#FFF8E8'] as const;
+
+export function CategoryChip({ icon, label, compact = false, onPress, selected = false, tone = 0 }: { icon: IconName; label: string; compact?: boolean; onPress?: () => void; selected?: boolean; tone?: number }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} accessibilityState={{ selected }} style={[styles.chip, compact && styles.compact, selected && styles.selected]}>
-      <View style={[styles.iconWrap, compact && styles.compactIcon]}><MaterialCommunityIcons name={icon} size={compact ? 18 : 20} color={colors.primary} /></View>
+    <Pressable accessibilityRole="button" onPress={onPress} accessibilityState={{ selected }} style={[styles.chip, compact && styles.compact, !selected && !compact && { backgroundColor: tones[tone % tones.length] }, selected && styles.selected]}>
+      <View style={[styles.iconWrap, compact && styles.compactIcon, !selected && !compact && { backgroundColor: colors.white }]}><MaterialCommunityIcons name={icon} size={compact ? 18 : 20} color={colors.primary} /></View>
       <Text style={styles.label} numberOfLines={1}>{label}</Text>
     </Pressable>
   );

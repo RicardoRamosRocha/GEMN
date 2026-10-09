@@ -1,121 +1,113 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AppBadge, AppCard, AppInput, AppScreen } from '../components/ui';
-import { CategoryChip } from '../components/CategoryChip';
-import { ProductCard } from '../components/ProductCard';
+
+import { AppCard, AppScreen } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
+import { colors, radius, spacing, typography } from '../theme/tokens';
 import { WalletCard } from '../components/WalletCard';
-import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
-const categories = [
-  { icon: 'food-apple-outline' as const, label: 'Comida' },
-  { icon: 'tools' as const, label: 'Serviços' },
-  { icon: 'tshirt-crew-outline' as const, label: 'Moda' },
-  { icon: 'package-variant-closed' as const, label: 'Outros' },
-];
-
-const highlights = [
-  { icon: 'food-apple' as const, name: 'Cesta de frutas', price: 'R$ 30,00', seller: 'Mundo Novo', category: 'Comida', coinPrice: '15 GEMN', rating: '4.9' },
-  { icon: 'tshirt-crew' as const, name: 'Camiseta', price: 'R$ 45,00', seller: 'GEMN Store', category: 'Moda', coinPrice: '22 GEMN', rating: '4.8' },
-];
+type QuickAction = {
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+};
 
 export default function HomeScreen({ navigation }: any) {
-  const { width } = useWindowDimensions();
-  const desktop = width >= layout.breakpoints.desktop;
-  const tablet = width >= layout.breakpoints.tablet;
-  const horizontalPadding = tablet ? layout.desktopHorizontalPadding : layout.mobileHorizontalPadding;
-  const contentWidth = Math.min(width - horizontalPadding * 2, layout.contentMaxWidth - horizontalPadding * 2);
-  const productGap = desktop ? spacing.lg : spacing.md;
-  const productWidth = tablet ? (contentWidth - productGap) / 2 : contentWidth;
+  const { user } = useAuth();
+  const fullName = user?.user_metadata?.nome_completo?.trim();
+  const firstName = fullName?.split(/\s+/)[0] || 'membro GEMN';
+
+  const quickActions: QuickAction[] = [
+    { icon: 'storefront-outline', title: 'Marketplace', subtitle: 'Descubra negócios', onPress: () => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' }) },
+    { icon: 'clipboard-text-outline', title: 'Meus pedidos', subtitle: 'Acompanhe compras', onPress: () => navigation.navigate('Perfil', { screen: 'Orders' }) },
+    { icon: 'account-circle-outline', title: 'Minha conta', subtitle: 'Perfil e preferências', onPress: () => navigation.navigate('Perfil', { screen: 'ProfileHome' }) },
+  ];
 
   return (
-    <AppScreen scroll contentContainerStyle={styles.content}>
+    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
         <View style={styles.greetingBlock}>
-          <Text style={styles.greeting}>Olá, Ricardo</Text>
-          <View style={styles.communityLine}><View style={styles.communityDot} /><Text style={styles.community}>Comunidade Mundo Novo</Text></View>
+          <Text style={styles.eyebrow}>Comunidade Mundo Novo</Text>
+          <Text style={styles.greeting}>Olá, {firstName}</Text>
         </View>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Abrir perfil" style={styles.profileButton} onPress={() => navigation.navigate('Perfil', { screen: 'ProfileHome' })}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" style={styles.profileButton} onPress={() => navigation.navigate('Perfil', { screen: 'ProfileHome' })}>
           <MaterialCommunityIcons name="account-outline" size={23} color={colors.primary} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
-      <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
-          <MaterialCommunityIcons name="magnify" size={21} color={colors.textSecondary} />
-          <AppInput accessibilityLabel="Buscar produtos ou serviços" placeholder={tablet ? 'Buscar produtos ou serviços' : 'Buscar na comunidade'} containerStyle={styles.searchInputWrap} inputStyle={styles.searchInput} returnKeyType="search" />
+      <WalletCard />
+
+      <View style={styles.communityBanner}>
+        <View style={styles.bannerOrb} />
+        <MaterialCommunityIcons name="account-group-outline" size={30} color={colors.white} style={styles.bannerIcon} />
+        <View style={styles.bannerCopy}>
+          <Text style={styles.bannerKicker}>NOSSA COMUNIDADE</Text>
+          <Text style={styles.bannerTitle}>Juntos, fortalecemos quem empreende.</Text>
+          <Text style={styles.bannerBody}>Conecte-se com os membros e ajude a movimentar a Comunidade Mundo Novo.</Text>
         </View>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtros" style={styles.filterButton}>
-          <MaterialCommunityIcons name="tune-variant" size={20} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={[styles.topGrid, desktop && styles.topGridDesktop]}>
-        <WalletCard />
-        {tablet ? <AppCard style={styles.welcomeCard}>
-          <AppBadge label="DA COMUNIDADE, PARA A COMUNIDADE" variant="success" />
-          <Text style={styles.welcomeTitle}>Boas trocas começam por aqui.</Text>
-          <Text style={styles.welcomeBody}>Descubra produtos e serviços de quem empreende perto de você.</Text>
-        </AppCard> : null}
       </View>
 
       <View style={styles.sectionHeader}>
-        <View><Text style={styles.sectionTitle}>{tablet ? 'Explore por categoria' : 'Categorias'}</Text>{tablet ? <Text style={styles.sectionSub}>Encontre o que precisa na comunidade</Text> : null}</View>
-      </View>
-      {tablet ? (
-        <View style={styles.categoryGrid}>{categories.map((item) => <CategoryChip key={item.label} icon={item.icon} label={item.label} compact />)}</View>
-      ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>{categories.map((item) => <CategoryChip key={item.label} icon={item.icon} label={item.label} />)}</ScrollView>
-      )}
-
-      <View style={[styles.sectionHeader, styles.highlightHeader]}>
-        <View><Text style={styles.sectionTitle}>{tablet ? 'Feito por aqui' : 'Destaques'}</Text>{tablet ? <Text style={styles.sectionSub}>Destaques de empreendedores locais</Text> : null}</View>
-        <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' })} style={styles.seeAll}><Text style={styles.seeAllText}>Explorar</Text><MaterialCommunityIcons name="arrow-right" size={16} color={colors.primary} /></TouchableOpacity>
-      </View>
-      <View style={[styles.productGrid, desktop && styles.productGridDesktop]}>
-        {highlights.map((product) => <View key={product.name} style={[styles.productCell, { width: productWidth }]}><ProductCard {...product} onPress={() => navigation.navigate('Product', { name: product.name, price: product.price, icon: product.icon })} /></View>)}
+        <View>
+          <Text style={styles.sectionTitle}>Acessos rápidos</Text>
+          <Text style={styles.sectionSubtitle}>O que você quer fazer hoje?</Text>
+        </View>
       </View>
 
-      {tablet ? <AppCard style={styles.communityNote}>
-        <View style={styles.noteIcon}><MaterialCommunityIcons name="account-group-outline" size={22} color={colors.primary} /></View>
-        <View style={styles.noteCopy}><Text style={styles.noteTitle}>Cada compra fortalece a comunidade</Text><Text style={styles.noteBody}>Apoie quem empreende em Mundo Novo e faça a economia local circular.</Text></View>
-      </AppCard> : null}
+      <View style={styles.quickActions}>
+        {quickActions.map((action) => <QuickActionCard key={action.title} {...action} />)}
+      </View>
+
+      <AppCard style={styles.communityNote}>
+        <View style={styles.noteIcon}><MaterialCommunityIcons name="heart-outline" size={22} color={colors.secondary} /></View>
+        <View style={styles.noteCopy}><Text style={styles.noteTitle}>Um espaço feito por nós</Text><Text style={styles.noteBody}>Encontre, acompanhe e apoie as iniciativas dos membros da nossa comunidade.</Text></View>
+      </AppCard>
     </AppScreen>
   );
 }
 
+function QuickActionCard({ icon, title, subtitle, onPress }: QuickAction) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={`${title}. ${subtitle}`} onPress={onPress} style={({ pressed }) => [styles.quickActionPressable, pressed && styles.pressed]}>
+      <AppCard padding={spacing.md} style={styles.quickActionCard}>
+        <View style={styles.quickActionIcon}><MaterialCommunityIcons name={icon} size={22} color={colors.primary} /></View>
+        <Text style={styles.quickActionTitle} numberOfLines={1}>{title}</Text>
+        <Text style={styles.quickActionSubtitle} numberOfLines={2}>{subtitle}</Text>
+        <MaterialCommunityIcons name="arrow-right" size={17} color={colors.primary} style={styles.quickActionArrow} />
+      </AppCard>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   greetingBlock: { gap: spacing.xs },
+  eyebrow: { ...typography.caption, color: colors.textSecondary },
   greeting: { ...typography.heading1, color: colors.text },
-  communityLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  communityDot: { width: 7, height: 7, borderRadius: radius.full, backgroundColor: colors.primary },
-  community: { ...typography.bodySmall, color: colors.textSecondary },
   profileButton: { width: 46, height: 46, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
-  searchRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
-  searchBox: { flex: 1, minHeight: 52, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, gap: spacing.sm },
-  searchInputWrap: { flex: 1 },
-  searchInput: { borderWidth: 0, backgroundColor: 'transparent', minHeight: 48, paddingHorizontal: 0 },
-  filterButton: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  topGrid: { gap: spacing.md },
-  topGridDesktop: { flexDirection: 'row', alignItems: 'stretch' },
-  welcomeCard: { flex: 1, justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
-  welcomeTitle: { ...typography.heading3, color: colors.text, marginTop: spacing.xs },
-  welcomeBody: { ...typography.bodySmall, color: colors.textSecondary },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xs },
+  communityBanner: { minHeight: 180, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: colors.primary, padding: spacing.lg, position: 'relative', justifyContent: 'center' },
+  bannerOrb: { position: 'absolute', width: 178, height: 178, borderRadius: 89, right: -62, top: -64, backgroundColor: colors.secondary },
+  bannerIcon: { position: 'absolute', right: spacing.lg, top: spacing.lg, opacity: 0.9 },
+  bannerCopy: { maxWidth: 600, paddingRight: spacing.md, gap: spacing.xs, zIndex: 1 },
+  bannerKicker: { ...typography.label, color: '#C9D9FF', letterSpacing: 0.8 },
+  bannerTitle: { ...typography.heading2, color: colors.white, maxWidth: 500 },
+  bannerBody: { ...typography.bodySmall, color: '#E8F0FF', maxWidth: 500 },
+  sectionHeader: { marginTop: spacing.xs },
   sectionTitle: { ...typography.heading2, color: colors.text },
-  sectionSub: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
-  categoryScroll: { gap: spacing.sm, paddingRight: spacing.md },
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  highlightHeader: { marginTop: spacing.sm },
-  seeAll: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44, paddingHorizontal: spacing.xs },
-  seeAllText: { ...typography.label, color: colors.primary },
-  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  productGridDesktop: { gap: spacing.lg },
-  productCell: {},
-  communityNote: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.primaryLight },
-  noteIcon: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  sectionSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },
+  quickActions: { flexDirection: 'row', gap: spacing.sm, width: '100%' },
+  quickActionPressable: { flex: 1, minWidth: 0 },
+  pressed: { opacity: 0.82 },
+  quickActionCard: { minHeight: 146, borderWidth: 1, borderColor: colors.border, gap: spacing.xs, position: 'relative' },
+  quickActionIcon: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight, marginBottom: spacing.xs },
+  quickActionTitle: { ...typography.heading4, color: colors.text },
+  quickActionSubtitle: { ...typography.caption, color: colors.textSecondary, paddingRight: spacing.sm },
+  quickActionArrow: { position: 'absolute', right: spacing.md, bottom: spacing.md },
+  communityNote: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.secondaryLight },
+  noteIcon: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white },
   noteCopy: { flex: 1, gap: spacing.xs },
   noteTitle: { ...typography.label, color: colors.text },
   noteBody: { ...typography.bodySmall, color: colors.textSecondary },

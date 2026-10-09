@@ -96,9 +96,9 @@ export default function OrderConfirmationScreen({ route, navigation }: any) {
           </AppCard>
         </View>
 
-        <View style={styles.actions}>
-          <AppButton title="Continuar comprando" onPress={() => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' })} style={styles.primaryButton} />
-          <AppButton title="Voltar" variant="outline" onPress={() => navigation.goBack()} style={styles.secondaryButton} />
+        <View style={[styles.actions, wide && styles.actionsWide]}>
+          <AppButton title="Continuar comprando" fullWidth={!wide} onPress={() => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' })} style={[styles.primaryButton, wide && styles.actionButtonWide]} />
+          <AppButton title="Voltar" variant="outline" fullWidth={!wide} onPress={() => navigation.goBack()} style={[styles.secondaryButton, wide && styles.actionButtonWide]} />
         </View>
       </View>
     </AppScreen>
@@ -142,6 +142,8 @@ const styles = StyleSheet.create({
   stepTitle: { ...typography.label, color: colors.text },
   stepText: { ...typography.caption, color: colors.textSecondary, marginTop: 1 },
   actions: { gap: spacing.sm, marginTop: spacing.xs },
-  primaryButton: { width: '100%' },
-  secondaryButton: { width: '100%' },
+  actionsWide: { flexDirection: 'row', justifyContent: 'center' },
+  primaryButton: {},
+  secondaryButton: {},
+  actionButtonWide: { width: 200, maxWidth: 200 },
 });
