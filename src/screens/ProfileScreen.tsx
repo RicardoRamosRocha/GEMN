@@ -11,7 +11,7 @@ import { WalletCard } from '../components/WalletCard';
 export default function ProfileScreen({ navigation }: any) {
   const { user, signOut } = useAuth();
   const { width } = useWindowDimensions();
-  const wide = width >= layout.breakpoints.tablet;
+  const desktop = width >= layout.breakpoints.desktop;
   const [signOutError, setSignOutError] = React.useState('');
   const [isSeller, setIsSeller] = React.useState(false);
   const [isAdmin, setIsAdmin] = React.useState(false);
@@ -39,31 +39,31 @@ export default function ProfileScreen({ navigation }: any) {
   }
 
   return (
-    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
+    <AppScreen maxWidth={desktop ? 1180 : layout.contentMaxWidth} scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={[styles.content, desktop && styles.contentDesktop]}>
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.eyebrow}>Comunidade Mundo Novo</Text>
-          <Text style={styles.title}>Meu perfil</Text>
+          <Text style={[styles.title, desktop && styles.titleDesktop]}>Meu perfil</Text>
         </View>
         <View style={styles.headerIcon}>
           <MaterialCommunityIcons name="account-outline" size={22} color={colors.primary} />
         </View>
       </View>
 
-      <View style={[styles.overview, wide && styles.overviewWide]}>
-        <AppCard elevated={wide} style={[styles.profileCard, wide && styles.profileCardWide]}>
-          <View style={styles.avatar}>
-            <MaterialCommunityIcons name="account" size={42} color={colors.primary} />
+      <View style={[styles.overview, desktop && styles.overviewDesktop, desktop && styles.overviewWide]}>
+        <AppCard elevated={desktop} style={[styles.profileCard, desktop && styles.profileCardWide]}>
+          <View style={[styles.avatar, desktop && styles.avatarWide]}>
+            <MaterialCommunityIcons name="account" size={desktop ? 46 : 42} color={colors.primary} />
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.name}>{displayName}</Text>
+            <Text style={[styles.name, desktop && styles.nameDesktop]}>{displayName}</Text>
             <Text style={styles.email}>{email}</Text>
             <AppBadge label={isSeller ? 'MEMBRO GEMN' : 'CLIENTE'} variant={isSeller ? 'success' : 'neutral'} />
           </View>
           <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
         </AppCard>
 
-        <View style={[styles.walletWrap, wide && styles.walletWrapWide]}><WalletCard /></View>
+        <View style={[styles.walletWrap, desktop && styles.walletWrapWide]}><WalletCard /></View>
       </View>
 
       <View style={styles.sectionHeader}>
@@ -73,7 +73,7 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
       </View>
 
-      <AppCard padding={0} elevated={wide} style={styles.menu}>
+      <AppCard padding={0} elevated={desktop} style={styles.menu}>
         <MenuItem
           icon="clipboard-text-outline"
           title="Meus pedidos"
@@ -125,20 +125,23 @@ function MenuItem({ icon, title, subtitle, onPress, featured = false, last = fal
   featured?: boolean;
   last?: boolean;
 }) {
+  const { width } = useWindowDimensions();
+  const desktop = width >= layout.breakpoints.desktop;
+
   return (
     <TouchableOpacity
       accessibilityRole="button"
       accessibilityState={{ disabled: !onPress }}
-      style={[styles.menuItem, !last && styles.menuItemBorder, !onPress && styles.menuItemDisabled]}
+      style={[styles.menuItem, desktop && styles.menuItemDesktop, !last && styles.menuItemBorder, !onPress && styles.menuItemDisabled]}
       onPress={onPress}
       disabled={!onPress}
     >
-      <View style={[styles.menuIcon, featured && styles.menuIconFeatured, !onPress && styles.menuIconDisabled]}>
-        <MaterialCommunityIcons name={icon} size={22} color={featured ? colors.primary : colors.textMuted} />
+      <View style={[styles.menuIcon, desktop && styles.menuIconDesktop, featured && styles.menuIconFeatured, !onPress && styles.menuIconDisabled]}>
+        <MaterialCommunityIcons name={icon} size={desktop ? 24 : 22} color={featured ? colors.primary : colors.textMuted} />
       </View>
       <View style={styles.menuText}>
-        <Text style={styles.menuTitle}>{title}</Text>
-        <Text style={styles.menuSubtitle}>{subtitle}</Text>
+        <Text style={[styles.menuTitle, desktop && styles.menuTitleDesktop]}>{title}</Text>
+        <Text style={[styles.menuSubtitle, desktop && styles.menuSubtitleDesktop]}>{subtitle}</Text>
       </View>
       <MaterialCommunityIcons name={onPress ? 'chevron-right' : 'clock-outline'} size={19} color={onPress && featured ? colors.primary : colors.textMuted} />
     </TouchableOpacity>
@@ -147,33 +150,42 @@ function MenuItem({ icon, title, subtitle, onPress, featured = false, last = fal
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
+  contentDesktop: { paddingTop: spacing.xl, gap: spacing.xl },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   eyebrow: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
   title: { ...typography.heading1, color: colors.text },
+  titleDesktop: { fontSize: 30, lineHeight: 38 },
   headerIcon: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   overview: { gap: spacing.md },
+  overviewDesktop: { gap: spacing.lg },
   overviewWide: { flexDirection: 'row', alignItems: 'stretch' },
   profileCard: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   profileCardWide: { flex: 1 },
   avatar: { width: 68, height: 68, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  avatarWide: { width: 76, height: 76 },
   profileInfo: { flex: 1, marginLeft: spacing.md, gap: spacing.xs },
   name: { ...typography.heading3, color: colors.text },
+  nameDesktop: { fontSize: 20, lineHeight: 26 },
   email: { ...typography.bodySmall, color: colors.textSecondary },
   walletWrap: { width: '100%' },
-  walletWrapWide: { width: 332, flexShrink: 0 },
+  walletWrapWide: { width: 360, flexShrink: 0 },
   sectionHeader: { marginTop: spacing.xs },
   sectionTitle: { ...typography.heading2, color: colors.text },
   sectionSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },
   menu: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
   menuItem: { minHeight: 70, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface },
+  menuItemDesktop: { minHeight: 80, paddingHorizontal: spacing.lg },
   menuItemDisabled: { backgroundColor: '#FAFAFB' },
   menuItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   menuIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
+  menuIconDesktop: { width: 48, height: 48 },
   menuIconFeatured: { backgroundColor: colors.primaryLight },
   menuIconDisabled: { backgroundColor: colors.surfaceMuted, opacity: 0.7 },
-  menuText: { flex: 1, marginLeft: spacing.md, gap: 2 },
+  menuText: { flex: 1, marginLeft: spacing.md, gap: spacing.xs },
   menuTitle: { ...typography.label, color: colors.text },
+  menuTitleDesktop: { ...typography.heading4 },
   menuSubtitle: { ...typography.caption, color: colors.textSecondary },
+  menuSubtitleDesktop: { ...typography.bodySmall },
   signOutError: { ...typography.bodySmall, color: colors.error, textAlign: 'center' },
   signOutButton: { marginTop: spacing.xs },
 });

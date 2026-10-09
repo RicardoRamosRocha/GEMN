@@ -14,7 +14,7 @@ export function WalletCard() {
       </View>
       <View style={styles.divider} />
       <View style={styles.gemnBlock}>
-        <View style={styles.gemnIcon}><MaterialCommunityIcons name="star-four-points" size={17} color="#886512" /></View>
+        <View style={styles.gemnIcon}><MaterialCommunityIcons name="star-four-points" size={18} color="#886512" /></View>
         <View style={styles.gemnCopy}><Text style={styles.gemnLabel}>Moeda social GEMN · demonstrativo</Text><Text style={styles.gemnValue}>50 GEMN</Text></View>
       </View>
       <Text style={styles.disclaimer}>Valores exibidos apenas para representação visual.</Text>
@@ -28,12 +28,12 @@ const styles = StyleSheet.create({
   heading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   label: { ...typography.caption, color: '#DCE7FF', fontWeight: '700', letterSpacing: 0.8 },
   moneyLabel: { ...typography.caption, color: '#C9D9FF', marginTop: spacing.sm },
-  money: { ...typography.display, color: colors.white },
+  money: { ...typography.display, fontSize: 36, lineHeight: 44, color: colors.white },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.22)', marginVertical: spacing.md },
   gemnBlock: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   gemnIcon: { width: 38, height: 38, borderRadius: radius.md, backgroundColor: colors.secondary, alignItems: 'center', justifyContent: 'center' },
   gemnCopy: { gap: 2 },
-  gemnLabel: { ...typography.caption, color: '#E8F0FF' },
-  gemnValue: { ...typography.heading4, color: colors.white },
+  gemnLabel: { ...typography.bodySmall, color: '#E8F0FF' },
+  gemnValue: { ...typography.heading3, color: colors.white },
   disclaimer: { ...typography.caption, color: '#C9D9FF', marginTop: spacing.md },
 });
