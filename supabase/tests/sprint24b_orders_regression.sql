@@ -17,6 +17,11 @@ begin
   select id
     into v_user_id
     from auth.users
+   where not exists (
+     select 1
+       from public.sellers as existing_seller
+      where existing_seller.user_id = auth.users.id
+   )
    order by created_at desc
    limit 1;
 
