@@ -31,7 +31,8 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
   const { width } = useWindowDimensions();
   const wide = width >= layout.breakpoints.tablet;
   if (!route?.params) return null;
-  const { itemName, quantidade, formaPagamento, orderId, status, totalReal, totalGemn } = route.params;
+  const { itemName, quantidade, formaPagamento, orderId, status, totalReal, totalGemn, gemnUtilizado, valorDevidoReal } = route.params;
+  const paymentLabel = formaPagamento === 'real' ? 'Reais' : formaPagamento === 'misto' ? 'Misto (Reais + GEMN)' : '100% GEMN';
 
   return (
     <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
@@ -68,19 +69,27 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
               <Text style={styles.label}>Forma escolhida</Text>
               <View style={styles.paymentValue}>
                 <MaterialCommunityIcons name={formaPagamento === 'real' ? 'cash' : 'star-four-points'} size={16} color={formaPagamento === 'real' ? colors.primary : colors.secondary} />
-                <Text style={styles.value}>{formaPagamento === 'real' ? 'Reais' : 'Moeda GEMN'}</Text>
+                <Text style={styles.value}>{paymentLabel}</Text>
               </View>
             </View>
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>{formaPagamento === 'real' ? 'Total em reais' : 'Total em GEMN'}</Text>
-              <Text style={styles.total}>{formaPagamento === 'real' ? formatReal(totalReal) : formatGemn(totalGemn)}</Text>
+              <Text style={styles.totalLabel}>Devido em reais</Text>
+              <Text style={styles.total}>{formatReal(valorDevidoReal)}</Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>Total em reais</Text>
               <Text style={styles.value}>{formatReal(totalReal)}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.label}>Total em GEMN</Text>
+              <Text style={styles.label}>GEMN utilizado</Text>
+              <Text style={styles.value}>{formatGemn(gemnUtilizado)}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Devido em reais</Text>
+              <Text style={styles.value}>{formatReal(valorDevidoReal)}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Preço GEMN do anúncio (snapshot)</Text>
               <Text style={styles.value}>{formatGemn(totalGemn)}</Text>
             </View>
           </AppCard>

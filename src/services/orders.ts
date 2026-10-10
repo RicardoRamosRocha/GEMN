@@ -24,7 +24,7 @@ export class OrderServiceError extends Error {
 
 type UnknownRecord = Record<string, unknown>;
 
-const ORDER_SELECT = 'id,status,forma_pagamento,total_real,total_gemn,criado_em,atualizado_em,order_items(id,order_id,listing_id,seller_id,nome_item,tipo,quantidade,preco_real_unitario,preco_gemn_unitario,subtotal_real,subtotal_gemn,criado_em,atualizado_em)';
+const ORDER_SELECT = 'id,status,forma_pagamento,total_real,total_gemn,gemn_utilizado,valor_devido_real,criado_em,atualizado_em,order_items(id,order_id,listing_id,seller_id,nome_item,tipo,quantidade,preco_real_unitario,preco_gemn_unitario,subtotal_real,subtotal_gemn,cashback_percentual,cashback_previsto,criado_em,atualizado_em)';
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -110,6 +110,10 @@ function normalizeRpcResult(data: unknown): OrderRpcResult {
     quantidade: integerValue(row.quantidade, 'quantidade'),
     totalReal: finiteNumber(row.total_real, 'total_real') as number,
     totalGemn: finiteNumber(row.total_gemn, 'total_gemn', true),
+    gemnUtilizado: finiteNumber(row.gemn_utilizado, 'gemn_utilizado') as number,
+    valorDevidoReal: finiteNumber(row.valor_devido_real, 'valor_devido_real') as number,
+    cashbackPercentual: finiteNumber(row.cashback_percentual, 'cashback_percentual') as number,
+    cashbackPrevisto: finiteNumber(row.cashback_previsto, 'cashback_previsto') as number,
   };
 }
 
@@ -128,6 +132,8 @@ function normalizeItem(value: unknown): OrderItem {
     precoGemnUnitario: finiteNumber(value.preco_gemn_unitario, 'item.preco_gemn_unitario', true),
     subtotalReal: finiteNumber(value.subtotal_real, 'item.subtotal_real') as number,
     subtotalGemn: finiteNumber(value.subtotal_gemn, 'item.subtotal_gemn', true),
+    cashbackPercentual: finiteNumber(value.cashback_percentual, 'item.cashback_percentual') as number,
+    cashbackPrevisto: finiteNumber(value.cashback_previsto, 'item.cashback_previsto') as number,
     criadoEm: requiredString(value.criado_em, 'item.criado_em'),
     atualizadoEm: requiredString(value.atualizado_em, 'item.atualizado_em'),
   };
@@ -151,6 +157,8 @@ function normalizeOrder(value: unknown): Order {
     formaPagamento: paymentMethod(value.forma_pagamento),
     totalReal: finiteNumber(value.total_real, 'total_real') as number,
     totalGemn: finiteNumber(value.total_gemn, 'total_gemn', true),
+    gemnUtilizado: finiteNumber(value.gemn_utilizado, 'gemn_utilizado') as number,
+    valorDevidoReal: finiteNumber(value.valor_devido_real, 'valor_devido_real') as number,
     criadoEm: requiredString(value.criado_em, 'criado_em'),
     atualizadoEm: requiredString(value.atualizado_em, 'atualizado_em'),
     items: rawItems.map(normalizeItem),
@@ -165,6 +173,7 @@ export async function createOrder(params: CreateOrderParams): Promise<OrderRpcRe
     p_quantidade: params.quantidade,
     p_forma_pagamento: params.formaPagamento,
     p_idempotency_key: params.idempotencyKey,
+    p_gemn_utilizado: params.gemnUtilizado,
   });
 
   if (error) throw normalizeSupabaseError(error);

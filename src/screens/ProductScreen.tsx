@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -41,7 +41,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
   const productImageHeight = Math.min(320, Math.max(240, Math.round(width * 0.72)));
   const listing = route?.params?.listing;
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'money' | 'gemn'>('money');
+  const [gemnInput, setGemnInput] = useState('0');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const intentRef = useRef<{ signature: string; key: string } | null>(null);
@@ -52,13 +52,15 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
   const total = numericPrice * quantity;
   const formattedTotal = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const gemnUnitValue = listing?.gemnValue ?? 0;
-  const gemnTotal = quantity * gemnUnitValue;
+  const parsedGemnInput = Number(gemnInput.replace(',', '.'));
+  const gemnUtilizado = Number.isFinite(parsedGemnInput) ? Math.min(total, Math.max(0, Math.round(parsedGemnInput * 100) / 100)) : 0;
+  const paymentMethod = gemnUtilizado === 0 ? 'real' : gemnUtilizado === total ? 'gemn' : 'misto';
 
   useEffect(() => {
     if (!listing || isSubmitting) return;
     intentRef.current = null;
     setErrorMessage(null);
-  }, [listing?.id, quantity, paymentMethod]);
+  }, [listing?.id, quantity, gemnInput]);
 
   async function handleConfirmPurchase() {
     if (isSubmitting) return;
@@ -71,7 +73,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
       return;
     }
 
-    const signature = `${listing.id}:${quantity}:${paymentMethod}`;
+    const signature = `${listing.id}:${quantity}:${gemnUtilizado}`;
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
@@ -83,7 +85,8 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
       const result = await createOrder({
         listingId: listing.id,
         quantidade: quantity,
-        formaPagamento: paymentMethod === 'money' ? 'real' : 'gemn',
+        formaPagamento: paymentMethod,
+        gemnUtilizado,
         idempotencyKey,
       });
       // push força a confirmação no stack atual (MarketplaceStack ou HomeStack).
@@ -130,19 +133,22 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
 
           <Text style={styles.sectionTitle}>Forma de pagamento</Text>
           <View style={styles.paymentOptions}>
-            <TouchableOpacity accessibilityRole="radio" accessibilityState={{ selected: paymentMethod === 'money' }} style={[styles.paymentOption, paymentMethod === 'money' && styles.paymentOptionActive]} onPress={() => setPaymentMethod('money')}>
-              <MaterialCommunityIcons name="cash" size={23} color={paymentMethod === 'money' ? colors.primary : colors.textSecondary} /><Text style={styles.paymentTitle}>Reais</Text><Text style={styles.paymentAmount}>{formattedTotal}</Text>{paymentMethod === 'money' ? <MaterialCommunityIcons name="check-circle" size={20} color={colors.primary} /> : null}
+            <TouchableOpacity accessibilityRole="radio" accessibilityState={{ selected: paymentMethod === 'real' }} style={[styles.paymentOption, paymentMethod === 'real' && styles.paymentOptionActive]} onPress={() => setGemnInput('0')}>
+              <MaterialCommunityIcons name="cash" size={23} color={paymentMethod === 'real' ? colors.primary : colors.textSecondary} /><Text style={styles.paymentTitle}>Reais</Text><Text style={styles.paymentAmount}>{formattedTotal}</Text>{paymentMethod === 'real' ? <MaterialCommunityIcons name="check-circle" size={20} color={colors.primary} /> : null}
             </TouchableOpacity>
-            {listing?.acceptsGemn !== false ? <TouchableOpacity accessibilityRole="radio" accessibilityState={{ selected: paymentMethod === 'gemn' }} style={[styles.paymentOption, paymentMethod === 'gemn' && styles.paymentOptionGemnActive]} onPress={() => setPaymentMethod('gemn')}>
-              <MaterialCommunityIcons name="star-four-points" size={21} color={paymentMethod === 'gemn' ? colors.secondary : colors.textSecondary} /><Text style={styles.paymentTitle}>GEMN</Text><Text style={styles.paymentAmount}>{gemnTotal} GEMN</Text>{paymentMethod === 'gemn' ? <MaterialCommunityIcons name="check-circle" size={20} color={colors.secondary} /> : null}
-            </TouchableOpacity> : null}
+            {listing?.acceptsGemn !== false ? <View style={styles.gemnPaymentBox}>
+              <View style={styles.gemnPaymentHeader}><MaterialCommunityIcons name="star-four-points" size={21} color={colors.secondary} /><Text style={styles.paymentTitle}>Usar GEMN</Text><Text style={styles.paymentAmount}>{gemnUtilizado.toFixed(2)} GEMN</Text></View>
+              <TextInput accessibilityLabel="Quantidade de GEMN utilizada" keyboardType="decimal-pad" value={gemnInput} onChangeText={setGemnInput} style={styles.gemnInput} placeholder="0,00" />
+              <TouchableOpacity accessibilityRole="button" onPress={() => setGemnInput(total.toFixed(2))}><Text style={styles.gemnMax}>Usar 100% em GEMN</Text></TouchableOpacity>
+            </View> : null}
           </View>
 
           <View style={styles.summary}>
             <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Quantidade</Text><Text style={styles.summaryValue}>{quantity}</Text></View>
-            <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Pagamento</Text><Text style={styles.summaryValue}>{paymentMethod === 'money' ? 'Reais' : 'GEMN'}</Text></View>
+            <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Pagamento</Text><Text style={styles.summaryValue}>{paymentMethod === 'real' ? 'Reais' : paymentMethod === 'gemn' ? '100% GEMN' : 'Misto'}</Text></View>
+            <View style={styles.summaryRow}><Text style={styles.summaryLabel}>GEMN utilizado</Text><Text style={styles.summaryValue}>{gemnUtilizado.toFixed(2)} GEMN</Text></View>
             <View style={styles.divider} />
-            <View style={styles.totalRow}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalValue}>{paymentMethod === 'money' ? formattedTotal : `${gemnTotal} GEMN`}</Text></View>
+            <View style={styles.totalRow}><Text style={styles.totalLabel}>Devido em reais</Text><Text style={styles.totalValue}>{(total - gemnUtilizado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text></View>
           </View>
           {errorMessage ? <Text accessibilityRole="alert" style={styles.error}>{errorMessage}</Text> : null}
           <Text style={styles.paymentNote}>A forma escolhida registra apenas sua intenção de pagamento. Nenhum pagamento ou débito GEMN é realizado nesta etapa.</Text>
@@ -189,6 +195,10 @@ const styles = StyleSheet.create({
   paymentOption: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   paymentOptionActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
   paymentOptionGemnActive: { borderColor: colors.secondary, backgroundColor: colors.secondaryLight },
+  gemnPaymentBox: { borderWidth: 1, borderColor: colors.secondary, borderRadius: radius.md, padding: spacing.sm, gap: spacing.xs, backgroundColor: colors.secondaryLight },
+  gemnPaymentHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  gemnInput: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surface, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, color: colors.text },
+  gemnMax: { color: colors.secondary, fontWeight: '700', fontSize: 12 },
   paymentTitle: { ...typography.label, color: colors.text },
   paymentAmount: { flex: 1, textAlign: 'right', ...typography.caption, color: colors.textSecondary, fontWeight: '600' },
   summary: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm },

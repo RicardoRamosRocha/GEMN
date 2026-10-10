@@ -46,6 +46,8 @@ begin
   values (v_other, v_app_b, 'empreendedor', 'GEMN reservation receiver B', 'fixture', '11999990002')
   returning id into v_seller_b;
 
+  update public.sellers set aceita_gemn = true where id = v_seller_b;
+
   insert into public.categories (nome, ativo)
   values (concat('GEMN_RES_CAT_', current_setting('gemn.test.run_id')), true)
   returning id into v_category;
@@ -55,7 +57,7 @@ begin
   returning id into v_listing_a;
 
   insert into public.listings (seller_id, category_id, tipo, nome, descricao, preco_real, aceita_gemn, preco_gemn, status)
-  values (v_seller_b, v_category, 'produto', concat('GEMN_RES_RECEIVER_', current_setting('gemn.test.run_id')), 'fixture', 12.00, false, null, 'ativo');
+  values (v_seller_b, v_category, 'produto', concat('GEMN_RES_RECEIVER_', current_setting('gemn.test.run_id')), 'fixture', 12.00, true, 12.00, 'ativo');
 
   insert into public.listings (seller_id, category_id, tipo, nome, descricao, preco_real, aceita_gemn, preco_gemn, status)
   values (v_seller_b, v_category, 'produto', concat('GEMN_RES_SOURCE_B_', current_setting('gemn.test.run_id')), 'fixture', 6.00, false, null, 'ativo')
@@ -67,15 +69,15 @@ begin
   values (v_buyer, 10.00, 0.00, 0.00)
   returning id into v_wallet;
 
-  insert into public.orders (buyer_id, idempotency_key, status, forma_pagamento, total_real)
-  values (v_other, gen_random_uuid(), 'pendente', 'real', 4.00)
+  insert into public.orders (buyer_id, idempotency_key, status, forma_pagamento, total_real, total_gemn, gemn_utilizado, valor_devido_real)
+  values (v_other, gen_random_uuid(), 'pendente', 'real', 4.00, null, 0.00, 4.00)
   returning id into v_order_source_a;
   insert into public.order_items (order_id, listing_id, seller_id, nome_item, tipo, quantidade, preco_real_unitario, subtotal_real)
   values (v_order_source_a, v_listing_a, v_seller_a, concat('GEMN_RES_SOURCE_A_', current_setting('gemn.test.run_id')), 'produto', 1, 4.00, 4.00);
   update public.orders set status = 'concluido' where id = v_order_source_a;
 
-  insert into public.orders (buyer_id, idempotency_key, status, forma_pagamento, total_real)
-  values (v_other, gen_random_uuid(), 'pendente', 'real', 6.00)
+  insert into public.orders (buyer_id, idempotency_key, status, forma_pagamento, total_real, total_gemn, gemn_utilizado, valor_devido_real)
+  values (v_other, gen_random_uuid(), 'pendente', 'real', 6.00, null, 0.00, 6.00)
   returning id into v_order_source_b;
   insert into public.order_items (order_id, listing_id, seller_id, nome_item, tipo, quantidade, preco_real_unitario, subtotal_real)
   values (v_order_source_b, v_listing_source_b, v_seller_b, concat('GEMN_RES_SOURCE_B_', current_setting('gemn.test.run_id')), 'produto', 1, 6.00, 6.00);
@@ -94,16 +96,16 @@ begin
   update public.cashback_lots set criado_em = '2020-01-01 00:00:00+00' where id = v_lot_a;
   update public.cashback_lots set criado_em = '2020-01-02 00:00:00+00' where id = v_lot_b;
 
-  insert into public.orders (buyer_id, idempotency_key, status, forma_pagamento, total_real)
+  insert into public.orders (buyer_id, idempotency_key, status, forma_pagamento, total_real, total_gemn, gemn_utilizado, valor_devido_real)
   values
-    (v_buyer, gen_random_uuid(), 'pendente', 'real', 12.00),
-    (v_buyer, gen_random_uuid(), 'pendente', 'real', 12.00),
-    (v_buyer, gen_random_uuid(), 'pendente', 'real', 12.00),
-    (v_buyer, gen_random_uuid(), 'pendente', 'real', 12.00),
-    (v_buyer, gen_random_uuid(), 'pendente', 'real', 12.00);
+    (v_buyer, gen_random_uuid(), 'pendente', 'real', 12.00, 12.00, 0.00, 12.00),
+    (v_buyer, gen_random_uuid(), 'pendente', 'real', 12.00, 12.00, 0.00, 12.00),
+    (v_buyer, gen_random_uuid(), 'pendente', 'real', 12.00, 12.00, 0.00, 12.00),
+    (v_buyer, gen_random_uuid(), 'pendente', 'real', 12.00, 12.00, 0.00, 12.00),
+    (v_buyer, gen_random_uuid(), 'pendente', 'real', 12.00, 12.00, 0.00, 12.00);
 
-  insert into public.order_items (order_id, listing_id, seller_id, nome_item, tipo, quantidade, preco_real_unitario, subtotal_real)
-  select id, v_listing_b, v_seller_b, concat('GEMN_RES_RECEIVER_', current_setting('gemn.test.run_id')), 'produto', 1, total_real, total_real
+  insert into public.order_items (order_id, listing_id, seller_id, nome_item, tipo, quantidade, preco_real_unitario, preco_gemn_unitario, subtotal_real, subtotal_gemn)
+  select id, v_listing_b, v_seller_b, concat('GEMN_RES_RECEIVER_', current_setting('gemn.test.run_id')), 'produto', 1, total_real, 12.00, total_real, 12.00
     from public.orders
    where buyer_id = v_buyer
      and criado_em >= now() - interval '1 minute'
@@ -114,6 +116,17 @@ begin
   select id into v_order_concurrent_a from public.orders where buyer_id = v_buyer order by criado_em, id limit 1 offset 2;
   select id into v_order_concurrent_b from public.orders where buyer_id = v_buyer order by criado_em, id limit 1 offset 3;
   select id into v_order_expiry from public.orders where buyer_id = v_buyer order by criado_em, id limit 1 offset 4;
+
+  with numbered as (
+    select id, row_number() over (order by criado_em, id) as rn
+      from public.orders
+     where buyer_id = v_buyer
+  )
+  update public.orders as o
+     set gemn_utilizado = case numbered.rn when 1 then 7.00 when 2 then 4.00 when 3 then 6.00 when 4 then 6.00 else 2.00 end,
+         valor_devido_real = case numbered.rn when 1 then 5.00 when 2 then 8.00 when 3 then 6.00 when 4 then 6.00 else 10.00 end
+    from numbered
+   where o.id = numbered.id;
 
   perform set_config('gemn.test.order_target', v_order_target::text, false);
   perform set_config('gemn.test.order_insufficient', v_order_insufficient::text, false);

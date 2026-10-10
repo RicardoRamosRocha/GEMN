@@ -4,12 +4,13 @@ export type OrderStatus =
   | 'concluido'
   | 'cancelado';
 
-export type PaymentMethod = 'real' | 'gemn';
+export type PaymentMethod = 'real' | 'gemn' | 'misto';
 
 export type CreateOrderParams = {
   listingId: string;
   quantidade: number;
   formaPagamento: PaymentMethod;
+  gemnUtilizado: number;
   idempotencyKey: string;
 };
 
@@ -20,6 +21,10 @@ export type OrderRpcResult = {
   quantidade: number;
   totalReal: number;
   totalGemn: number | null;
+  gemnUtilizado: number;
+  valorDevidoReal: number;
+  cashbackPercentual: number;
+  cashbackPrevisto: number;
 };
 
 export type OrderItem = {
@@ -34,6 +39,8 @@ export type OrderItem = {
   precoGemnUnitario: number | null;
   subtotalReal: number;
   subtotalGemn: number | null;
+  cashbackPercentual: number;
+  cashbackPrevisto: number;
   criadoEm: string;
   atualizadoEm: string;
 };
@@ -44,6 +51,8 @@ export type Order = {
   formaPagamento: PaymentMethod;
   totalReal: number;
   totalGemn: number | null;
+  gemnUtilizado: number;
+  valorDevidoReal: number;
   criadoEm: string;
   atualizadoEm: string;
   items: OrderItem[];

@@ -35,11 +35,11 @@ function formatGemn(value: number | null) {
 }
 
 function orderTotal(order: Order) {
-  return order.formaPagamento === 'gemn' ? formatGemn(order.totalGemn) : formatReal(order.totalReal);
+  return order.formaPagamento === 'gemn' ? formatGemn(order.gemnUtilizado) : formatReal(order.valorDevidoReal);
 }
 
 function paymentLabel(order: Order) {
-  return order.formaPagamento === 'gemn' ? 'Moeda GEMN' : 'Reais';
+  return order.formaPagamento === 'gemn' ? '100% GEMN' : order.formaPagamento === 'misto' ? 'Misto' : 'Reais';
 }
 
 function friendlyOrdersError(error: unknown) {

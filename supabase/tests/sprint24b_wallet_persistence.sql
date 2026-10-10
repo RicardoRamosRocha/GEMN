@@ -68,10 +68,12 @@ values (
 returning id \gset listing_
 
 insert into public.orders (
-  buyer_id, idempotency_key, status, forma_pagamento, total_real, total_gemn
+  buyer_id, idempotency_key, status, forma_pagamento,
+  total_real, total_gemn, gemn_utilizado, valor_devido_real
 )
 values (
-  :'user_b_id'::uuid, gen_random_uuid(), 'pendente', 'real', 10.00, null
+  :'user_b_id'::uuid, gen_random_uuid(), 'pendente', 'real',
+  10.00, null, 0.00, 10.00
 )
 returning id \gset order_
 
