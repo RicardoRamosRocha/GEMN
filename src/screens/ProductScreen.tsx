@@ -1,27 +1,99 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Crypto from 'expo-crypto';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
+import { OrderServiceError, createOrder } from '../services/orders';
+import { useAuth } from '../context/AuthContext';
+import type { GemnProduct } from '../context/ProductsContext';
+import type { OrderRpcResult } from '../types/orders';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 
-export default function ProductScreen({ route, navigation }: any) {
+type ProductStackParamList = {
+  Product: { listing: GemnProduct };
+  OrderConfirmation: OrderConfirmationParams;
+};
+
+export type OrderConfirmationParams = OrderRpcResult & {
+  itemName: string;
+};
+
+type ProductScreenProps = {
+  route: { params?: { listing?: GemnProduct } };
+  navigation: NativeStackNavigationProp<ProductStackParamList, 'Product'>;
+};
+
+function createSecureUuid() {
+  return Crypto.randomUUID();
+}
+
+function purchaseErrorMessage(error: unknown) {
+  if (error instanceof OrderServiceError) return error.message;
+  if (error instanceof Error) return error.message;
+  return 'Não foi possível registrar o pedido. Tente novamente.';
+}
+
+export default function ProductScreen({ route, navigation }: ProductScreenProps) {
   const { width } = useWindowDimensions();
+  const { user } = useAuth();
   const wide = width >= layout.breakpoints.tablet;
   const productImageHeight = Math.min(320, Math.max(240, Math.round(width * 0.72)));
   const listing = route?.params?.listing;
-  const name = listing?.name ?? route?.params?.name ?? 'Produto Exemplo';
-  const numericPrice = listing?.price ?? (Number(String(route?.params?.price ?? '50').replace('R$', '').replace(/\./g, '').replace(',', '.')) || 50);
-  const price = numericPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const icon = listing?.icon ?? route?.params?.icon ?? 'package-variant-closed';
   const [quantity, setQuantity] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<'money' | 'gemn'>('money');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const intentRef = useRef<{ signature: string; key: string } | null>(null);
+  const name = listing?.name ?? 'Anúncio indisponível';
+  const numericPrice = listing?.price ?? 0;
+  const price = numericPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const icon = listing?.icon ?? 'package-variant-closed';
   const total = numericPrice * quantity;
   const formattedTotal = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const gemnUnitValue = Number(listing?.gemnValue ?? 10);
+  const gemnUnitValue = listing?.gemnValue ?? 0;
   const gemnTotal = quantity * gemnUnitValue;
 
-  function handleConfirmPurchase() {
-    navigation.navigate('OrderConfirmation', { name, quantity, paymentMethod, total: paymentMethod === 'money' ? formattedTotal : `${gemnTotal} GEMN` });
+  useEffect(() => {
+    if (!listing || isSubmitting) return;
+    intentRef.current = null;
+    setErrorMessage(null);
+  }, [listing?.id, quantity, paymentMethod]);
+
+  async function handleConfirmPurchase() {
+    if (isSubmitting) return;
+    if (!user) {
+      setErrorMessage('Entre na sua conta para registrar um pedido.');
+      return;
+    }
+    if (!listing) {
+      setErrorMessage('Este anúncio não está disponível.');
+      return;
+    }
+
+    const signature = `${listing.id}:${quantity}:${paymentMethod}`;
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      if (!intentRef.current || intentRef.current.signature !== signature) {
+        intentRef.current = { signature, key: createSecureUuid() };
+      }
+      const idempotencyKey = intentRef.current?.key;
+      if (!idempotencyKey) throw new Error('Não foi possível preparar a chave do pedido.');
+      const result = await createOrder({
+        listingId: listing.id,
+        quantidade: quantity,
+        formaPagamento: paymentMethod === 'money' ? 'real' : 'gemn',
+        idempotencyKey,
+      });
+      // push força a confirmação no stack atual (MarketplaceStack ou HomeStack).
+      // A navegação só ocorre depois do retorno validado da RPC.
+      navigation.push('OrderConfirmation', { ...result, itemName: listing.name });
+    } catch (error) {
+      setErrorMessage(purchaseErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -43,7 +115,7 @@ export default function ProductScreen({ route, navigation }: any) {
 
           <View style={styles.aboutSection}>
             <Text style={styles.sectionTitle}>Sobre o produto</Text>
-            <Text style={styles.description}>{listing?.description ?? 'Confira os detalhes deste anúncio da comunidade GEMN.'}</Text>
+              <Text style={styles.description}>{listing?.description ?? 'O anúncio não está disponível para compra.'}</Text>
           </View>
         </View>
 
@@ -72,7 +144,9 @@ export default function ProductScreen({ route, navigation }: any) {
             <View style={styles.divider} />
             <View style={styles.totalRow}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalValue}>{paymentMethod === 'money' ? formattedTotal : `${gemnTotal} GEMN`}</Text></View>
           </View>
-          <AppButton title="Confirmar compra" fullWidth onPress={handleConfirmPurchase} style={styles.confirmButton} />
+          {errorMessage ? <Text accessibilityRole="alert" style={styles.error}>{errorMessage}</Text> : null}
+          <Text style={styles.paymentNote}>A forma escolhida registra apenas sua intenção de pagamento. Nenhum pagamento ou débito GEMN é realizado nesta etapa.</Text>
+          <AppButton title="Registrar pedido" fullWidth onPress={() => { void handleConfirmPurchase(); }} loading={isSubmitting} disabled={!listing} style={styles.confirmButton} />
         </AppCard>
       </View>
     </AppScreen>
@@ -126,4 +200,6 @@ const styles = StyleSheet.create({
   totalLabel: { ...typography.heading3, color: colors.text },
   totalValue: { ...typography.heading2, color: colors.primary },
   confirmButton: { width: '100%', marginTop: spacing.sm },
+  error: { ...typography.bodySmall, color: colors.error },
+  paymentNote: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
 });

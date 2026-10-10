@@ -1,14 +1,37 @@
 import React from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
+import type { OrderConfirmationParams } from './ProductScreen';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 
-export default function OrderConfirmationScreen({ route, navigation }: any) {
+type OrderConfirmationStackParamList = {
+  OrderConfirmation: OrderConfirmationParams;
+};
+
+type OrderConfirmationScreenProps = {
+  route?: RouteProp<OrderConfirmationStackParamList, 'OrderConfirmation'>;
+  navigation?: NativeStackNavigationProp<OrderConfirmationStackParamList, 'OrderConfirmation'> & {
+    navigate: (screen: 'Marketplace', params: { screen: 'MarketplaceHome' }) => void;
+  };
+};
+
+function formatReal(value: number) {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function formatGemn(value: number | null) {
+  return value === null ? 'Não aplicável' : `${value.toLocaleString('pt-BR')} GEMN`;
+}
+
+export default function OrderConfirmationScreen({ route, navigation }: OrderConfirmationScreenProps) {
   const { width } = useWindowDimensions();
   const wide = width >= layout.breakpoints.tablet;
-  const { name = 'Produto Exemplo', quantity = 1, paymentMethod = 'money', total = 'R$ 50,00' } = route?.params ?? {};
+  if (!route?.params) return null;
+  const { itemName, quantidade, formaPagamento, orderId, status, totalReal, totalGemn } = route.params;
 
   return (
     <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
@@ -17,88 +40,72 @@ export default function OrderConfirmationScreen({ route, navigation }: any) {
           <View style={styles.successIcon}>
             <MaterialCommunityIcons name="check" size={34} color={colors.white} />
           </View>
-          <AppBadge label="COMPRA CONCLUÍDA" variant="success" />
-          <Text style={styles.title}>Pedido confirmado!</Text>
-          <Text style={styles.subtitle}>Sua compra foi registrada com sucesso.</Text>
+          <AppBadge label="PEDIDO REGISTRADO" variant="success" />
+          <Text style={styles.title}>Pedido criado</Text>
+          <Text style={styles.subtitle}>Seu pedido está com status {status} e aguardando processamento.</Text>
         </View>
 
         <View style={styles.orderNumber}>
           <View>
-            <Text style={styles.orderNumberLabel}>Número do pedido</Text>
-            <Text style={styles.orderNumberValue}>#GEMN-0001</Text>
+            <Text style={styles.orderNumberLabel}>Identificador do pedido</Text>
+            <Text style={styles.orderNumberValue}>{orderId}</Text>
           </View>
-          <MaterialCommunityIcons name="check-decagram-outline" size={28} color={colors.primary} />
+          <MaterialCommunityIcons name="clock-check-outline" size={28} color={colors.primary} />
         </View>
 
         <View style={[styles.details, wide && styles.detailsWide]}>
           <AppCard elevated={wide} style={styles.card}>
             <Text style={styles.cardTitle}>Resumo do pedido</Text>
-
             <View style={styles.productRow}>
-              <View style={styles.productIcon}>
-                <MaterialCommunityIcons name="package-variant-closed" size={28} color={colors.primary} />
-              </View>
+              <View style={styles.productIcon}><MaterialCommunityIcons name="package-variant-closed" size={28} color={colors.primary} /></View>
               <View style={styles.productInfo}>
-                <Text style={styles.productName}>{name}</Text>
-                <Text style={styles.quantity}>Quantidade: {quantity}</Text>
+                <Text style={styles.productName}>{itemName}</Text>
+                <Text style={styles.quantity}>Quantidade: {quantidade}</Text>
               </View>
             </View>
-
             <View style={styles.divider} />
-
             <View style={styles.row}>
-              <Text style={styles.label}>Forma de pagamento</Text>
+              <Text style={styles.label}>Forma escolhida</Text>
               <View style={styles.paymentValue}>
-                <MaterialCommunityIcons
-                  name={paymentMethod === 'money' ? 'cash' : 'star-four-points'}
-                  size={16}
-                  color={paymentMethod === 'money' ? colors.primary : colors.secondary}
-                />
-                <Text style={styles.value}>{paymentMethod === 'money' ? 'Reais' : 'Moeda GEMN'}</Text>
+                <MaterialCommunityIcons name={formaPagamento === 'real' ? 'cash' : 'star-four-points'} size={16} color={formaPagamento === 'real' ? colors.primary : colors.secondary} />
+                <Text style={styles.value}>{formaPagamento === 'real' ? 'Reais' : 'Moeda GEMN'}</Text>
               </View>
             </View>
-
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.total}>{total}</Text>
+              <Text style={styles.totalLabel}>{formaPagamento === 'real' ? 'Total em reais' : 'Total em GEMN'}</Text>
+              <Text style={styles.total}>{formaPagamento === 'real' ? formatReal(totalReal) : formatGemn(totalGemn)}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Total em reais</Text>
+              <Text style={styles.value}>{formatReal(totalReal)}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Total em GEMN</Text>
+              <Text style={styles.value}>{formatGemn(totalGemn)}</Text>
             </View>
           </AppCard>
 
           <AppCard elevated={wide} style={[styles.card, styles.stepsCard]}>
             <Text style={styles.cardTitle}>Acompanhe seu pedido</Text>
             <View style={styles.step}>
-              <View style={[styles.stepIcon, styles.stepIconActive]}>
-                <MaterialCommunityIcons name="check" size={16} color={colors.white} />
-              </View>
-              <View style={styles.stepCopy}>
-                <Text style={styles.stepTitle}>Pedido recebido</Text>
-                <Text style={styles.stepText}>Compra confirmada</Text>
-              </View>
+              <View style={[styles.stepIcon, styles.stepIconActive]}><MaterialCommunityIcons name="check" size={16} color={colors.white} /></View>
+              <View style={styles.stepCopy}><Text style={styles.stepTitle}>Pedido recebido</Text><Text style={styles.stepText}>Aguardando processamento</Text></View>
             </View>
             <View style={styles.step}>
-              <View style={styles.stepIcon}>
-                <MaterialCommunityIcons name="clock-outline" size={17} color={colors.secondary} />
-              </View>
-              <View style={styles.stepCopy}>
-                <Text style={styles.stepTitle}>Aguardando processamento</Text>
-                <Text style={styles.stepText}>Em breve, novas atualizações</Text>
-              </View>
+              <View style={styles.stepIcon}><MaterialCommunityIcons name="clock-outline" size={17} color={colors.secondary} /></View>
+              <View style={styles.stepCopy}><Text style={styles.stepTitle}>Processamento</Text><Text style={styles.stepText}>Novas atualizações aparecerão aqui</Text></View>
             </View>
             <View style={styles.stepLast}>
-              <View style={styles.stepIcon}>
-                <MaterialCommunityIcons name="package-variant" size={17} color={colors.textSecondary} />
-              </View>
-              <View style={styles.stepCopy}>
-                <Text style={styles.stepTitle}>Preparação do pedido</Text>
-                <Text style={styles.stepText}>Será iniciado em seguida</Text>
-              </View>
+              <View style={styles.stepIcon}><MaterialCommunityIcons name="package-variant" size={17} color={colors.textSecondary} /></View>
+              <View style={styles.stepCopy}><Text style={styles.stepTitle}>Preparação do pedido</Text><Text style={styles.stepText}>Será iniciada posteriormente</Text></View>
             </View>
+            <Text style={styles.paymentNote}>A forma escolhida representa apenas a intenção registrada. Nenhum pagamento foi realizado e nenhuma moeda GEMN foi debitada.</Text>
           </AppCard>
         </View>
 
         <View style={[styles.actions, wide && styles.actionsWide]}>
-          <AppButton title="Continuar comprando" fullWidth={!wide} onPress={() => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' })} style={[styles.primaryButton, wide && styles.actionButtonWide]} />
-          <AppButton title="Voltar" variant="outline" fullWidth={!wide} onPress={() => navigation.goBack()} style={[styles.secondaryButton, wide && styles.actionButtonWide]} />
+          <AppButton title="Continuar comprando" fullWidth={!wide} onPress={() => navigation?.navigate('Marketplace', { screen: 'MarketplaceHome' })} style={[styles.primaryButton, wide && styles.actionButtonWide]} />
+          <AppButton title="Voltar" variant="outline" fullWidth={!wide} onPress={() => navigation?.goBack()} style={[styles.secondaryButton, wide && styles.actionButtonWide]} />
         </View>
       </View>
     </AppScreen>
@@ -126,7 +133,7 @@ const styles = StyleSheet.create({
   productName: { ...typography.label, color: colors.text },
   quantity: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: spacing.sm },
   label: { ...typography.bodySmall, color: colors.textSecondary, flex: 1 },
   paymentValue: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   value: { ...typography.label, color: colors.text },
@@ -141,6 +148,7 @@ const styles = StyleSheet.create({
   stepCopy: { flex: 1, marginLeft: spacing.sm },
   stepTitle: { ...typography.label, color: colors.text },
   stepText: { ...typography.caption, color: colors.textSecondary, marginTop: 1 },
+  paymentNote: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.sm },
   actions: { gap: spacing.sm, marginTop: spacing.xs },
   actionsWide: { flexDirection: 'row', justifyContent: 'center' },
   primaryButton: {},

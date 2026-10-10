@@ -58,7 +58,7 @@ function HomeStack() {
         name="OrderConfirmation"
         component={OrderConfirmationScreen}
         options={{
-          title: 'Pedido confirmado',
+          title: 'Pedido registrado',
         }}
       />
     </Stack.Navigator>
@@ -83,7 +83,7 @@ function MarketplaceStack() {
         name="OrderConfirmation"
         component={OrderConfirmationScreen}
         options={{
-          title: 'Pedido confirmado',
+          title: 'Pedido registrado',
         }}
       />
     </Stack.Navigator>
