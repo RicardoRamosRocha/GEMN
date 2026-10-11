@@ -20,6 +20,8 @@ import SellerApplicationScreen from './src/screens/SellerApplicationScreen';
 import AdminHomeScreen from './src/screens/AdminHomeScreen';
 import AdminSellerApplicationsScreen from './src/screens/AdminSellerApplicationsScreen';
 import AdminSellerApplicationDetailScreen from './src/screens/AdminSellerApplicationDetailScreen';
+import AdminCancellationRequestsScreen from './src/screens/AdminCancellationRequestsScreen';
+import AdminCancellationRequestDetailScreen from './src/screens/AdminCancellationRequestDetailScreen';
 import { ProductsProvider } from './src/context/ProductsContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
@@ -139,6 +141,16 @@ function ProfileStack() {
         name="AdminSellerApplicationDetail"
         component={AdminSellerApplicationDetailScreen}
         options={{ title: 'Análise da solicitação' }}
+      />
+      <Stack.Screen
+        name="AdminCancellationRequests"
+        component={AdminCancellationRequestsScreen}
+        options={{ title: 'Cancelamentos' }}
+      />
+      <Stack.Screen
+        name="AdminCancellationRequestDetail"
+        component={AdminCancellationRequestDetailScreen}
+        options={{ title: 'Detalhes do cancelamento' }}
       />
     </Stack.Navigator>
   );

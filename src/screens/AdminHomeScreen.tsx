@@ -6,6 +6,7 @@ import { AppBadge, AppCard, AppScreen } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { colors, radius, spacing, typography } from '../theme/tokens';
+import { isAdminCancellationUiFixturesEnabled } from '../dev/adminCancellationUiFixtures';
 
 export default function AdminHomeScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -17,6 +18,10 @@ export default function AdminHomeScreen({ navigation }: any) {
   React.useEffect(() => {
     let mounted = true;
     async function loadAdminSummary() {
+      if (isAdminCancellationUiFixturesEnabled()) {
+        if (mounted) { setIsAdmin(true); setLoading(false); }
+        return;
+      }
       if (!user) { if (mounted) setLoading(false); return; }
       const { data: profile, error: profileError } = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
       if (!mounted) return;
@@ -42,9 +47,11 @@ export default function AdminHomeScreen({ navigation }: any) {
   return (
     <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
       <View style={styles.heading}><View><Text style={styles.eyebrow}>GEMN</Text><Text style={styles.title}>Administração</Text></View><View style={styles.headingIcon}><MaterialCommunityIcons name="shield-account-outline" size={24} color={colors.primary} /></View></View>
+      {isAdminCancellationUiFixturesEnabled() ? <View style={styles.demoBanner} accessibilityRole="text"><MaterialCommunityIcons name="flask-outline" size={18} color={colors.warning} /><Text style={styles.demoBannerText}>Modo de demonstração — dados sintéticos locais</Text></View> : null}
       {errorMessage ? <Text accessibilityRole="alert" style={styles.error}>{errorMessage}</Text> : null}
       <AppCard padding={0} style={styles.menuCard}>
-        <ActionItem title="Solicitações de vendedores" subtitle={pendingCount ? `${pendingCount} pendente${pendingCount === 1 ? '' : 's'} para analisar` : 'Nenhuma solicitação pendente'} count={pendingCount} onPress={() => navigation.navigate('AdminSellerApplications')} />
+        <ActionItem title="Cancelamentos de pedidos" subtitle="Analise solicitacoes e falhas recuperaveis" count={0} onPress={() => navigation.navigate('AdminCancellationRequests')} />
+        {!isAdminCancellationUiFixturesEnabled() ? <ActionItem title="Solicitações de vendedores" subtitle={pendingCount ? `${pendingCount} pendente${pendingCount === 1 ? '' : 's'} para analisar` : 'Nenhuma solicitação pendente'} count={pendingCount} onPress={() => navigation.navigate('AdminSellerApplications')} /> : null}
       </AppCard>
     </AppScreen>
   );
@@ -72,6 +79,8 @@ const styles = StyleSheet.create({
   actionSubtitle: { ...typography.caption, color: colors.textSecondary },
   feedback: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xxl },
   error: { ...typography.bodySmall, color: colors.error },
+  demoBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: '#FBF1DF', borderWidth: 1, borderColor: '#F5D9A0' },
+  demoBannerText: { ...typography.caption, color: colors.warning, flex: 1 },
   denied: { alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   deniedTitle: { ...typography.heading2, color: colors.text },
   deniedMessage: { ...typography.body, color: colors.textSecondary, textAlign: 'center', maxWidth: 420 },

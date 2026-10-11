@@ -22,13 +22,13 @@ export default function ProfileScreen({ navigation }: any) {
 
   React.useEffect(() => {
     let mounted = true;
-    if (!user) return () => { mounted = false; };
     if (isGemnUiFixturesEnabled()) {
       setIsSeller(true);
       setSellerStatus('ativo');
-      setIsAdmin(false);
+      setIsAdmin(true);
       return () => { mounted = false; };
     }
+    if (!user) return () => { mounted = false; };
     Promise.all([
       supabase.from('sellers').select('id, status').eq('user_id', user.id).maybeSingle(),
       supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
