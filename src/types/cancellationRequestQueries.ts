@@ -46,6 +46,19 @@ export type SellerRelatedOrder = {
   itemCriadoEm: string;
 };
 
+export type SellerCancellationRequestQuery = {
+  requestId: string;
+  orderId: string;
+  requesterRole: CancellationRequesterRole;
+  motivoSolicitacao: string;
+  status: CancellationRequestStatus;
+  motivoDecisao: string | null;
+  orderStatus: string;
+  criadoEm: string;
+  atualizadoEm: string;
+  decididoEm: string | null;
+};
+
 export type CancellationRequestAttempt = {
   attemptId: string;
   requestId: string;

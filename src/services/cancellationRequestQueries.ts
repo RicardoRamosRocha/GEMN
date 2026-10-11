@@ -3,6 +3,7 @@ import { CancellationRequestServiceError } from '../types/cancellationRequests';
 import type {
   CancellationRequestAttempt,
   CancellationRequestQuery,
+  SellerCancellationRequestQuery,
   SellerRelatedOrder,
 } from '../types/cancellationRequestQueries';
 import type { CancellationRequesterRole, CancellationRequestStatus } from '../types/cancellationRequests';
@@ -112,6 +113,21 @@ function mapSellerOrder(row: UnknownRecord): SellerRelatedOrder {
   };
 }
 
+function mapSellerCancellationRequest(row: UnknownRecord): SellerCancellationRequestQuery {
+  return {
+    requestId: requiredString(row.request_id, 'request_id'),
+    orderId: requiredString(row.order_id, 'order_id'),
+    requesterRole: role(row.requester_role),
+    motivoSolicitacao: requiredString(row.motivo_solicitacao, 'motivo_solicitacao'),
+    status: status(row.status),
+    motivoDecisao: nullableString(row.motivo_decisao, 'motivo_decisao'),
+    orderStatus: requiredString(row.order_status, 'order_status'),
+    criadoEm: requiredString(row.criado_em, 'criado_em'),
+    atualizadoEm: requiredString(row.atualizado_em, 'atualizado_em'),
+    decididoEm: nullableString(row.decidido_em, 'decidido_em'),
+  };
+}
+
 function mapAttempt(row: UnknownRecord): CancellationRequestAttempt {
   return {
     attemptId: requiredString(row.attempt_id, 'attempt_id'),
@@ -144,6 +160,13 @@ export async function listSellerRelatedOrders(): Promise<SellerRelatedOrder[]> {
   const { data, error } = await supabase.rpc('list_seller_related_orders');
   if (error) throw normalizeError(error);
   return rows(data).map(mapSellerOrder);
+}
+
+export async function listSellerCancellationRequests(): Promise<SellerCancellationRequestQuery[]> {
+  await requireUser();
+  const { data, error } = await supabase.rpc('list_seller_cancellation_requests');
+  if (error) throw normalizeError(error);
+  return rows(data).map(mapSellerCancellationRequest);
 }
 
 export async function listAdminCancellationRequests(statusFilter?: CancellationRequestStatus): Promise<CancellationRequestQuery[]> {
