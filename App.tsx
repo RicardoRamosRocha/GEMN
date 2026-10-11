@@ -14,6 +14,7 @@ import MarketplaceScreen from './src/screens/MarketplaceScreen';
 import OrderConfirmationScreen from './src/screens/OrderConfirmationScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import MyProductsScreen from './src/screens/MyProductsScreen';
+import SellerOrdersScreen from './src/screens/SellerOrdersScreen';
 import CreateProductScreen from './src/screens/CreateProductScreen';
 import SellerApplicationScreen from './src/screens/SellerApplicationScreen';
 import AdminHomeScreen from './src/screens/AdminHomeScreen';
@@ -103,6 +104,11 @@ function ProfileStack() {
         name="Orders"
         component={OrdersScreen}
         options={{ title: 'Meus pedidos' }}
+      />
+      <Stack.Screen
+        name="SellerOrders"
+        component={SellerOrdersScreen}
+        options={{ title: 'Pedidos recebidos' }}
       />
       <Stack.Screen
   name="MyProducts"

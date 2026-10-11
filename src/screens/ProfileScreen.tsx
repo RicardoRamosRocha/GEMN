@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 import { WalletCard } from '../components/WalletCard';
+import { isGemnUiFixturesEnabled } from '../dev/ordersUiFixtures';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, signOut } = useAuth();
@@ -14,6 +15,7 @@ export default function ProfileScreen({ navigation }: any) {
   const desktop = width >= layout.breakpoints.desktop;
   const [signOutError, setSignOutError] = React.useState('');
   const [isSeller, setIsSeller] = React.useState(false);
+  const [sellerStatus, setSellerStatus] = React.useState<'ativo' | 'suspenso' | null>(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
   const displayName = user?.user_metadata?.nome_completo?.trim() || 'Usuário GEMN';
   const email = user?.email || 'E-mail não informado';
@@ -21,12 +23,19 @@ export default function ProfileScreen({ navigation }: any) {
   React.useEffect(() => {
     let mounted = true;
     if (!user) return () => { mounted = false; };
+    if (isGemnUiFixturesEnabled()) {
+      setIsSeller(true);
+      setSellerStatus('ativo');
+      setIsAdmin(false);
+      return () => { mounted = false; };
+    }
     Promise.all([
-      supabase.from('sellers').select('id').eq('user_id', user.id).eq('status', 'ativo').maybeSingle(),
+      supabase.from('sellers').select('id, status').eq('user_id', user.id).maybeSingle(),
       supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
     ]).then(([sellerResult, profileResult]) => {
       if (!mounted) return;
       setIsSeller(Boolean(sellerResult.data));
+      setSellerStatus(sellerResult.data?.status === 'ativo' || sellerResult.data?.status === 'suspenso' ? sellerResult.data.status : null);
       setIsAdmin(Boolean(profileResult.data?.is_admin));
     });
     return () => { mounted = false; };
@@ -88,6 +97,15 @@ export default function ProfileScreen({ navigation }: any) {
           featured
           onPress={() => navigation.navigate('MyProducts')}
         />
+        {isSeller ? (
+          <MenuItem
+            icon="clipboard-arrow-down-outline"
+            title="Pedidos recebidos"
+            subtitle={sellerStatus === 'suspenso' ? 'HistÃ³rico do vendedor suspenso' : 'Acompanhe pedidos dos seus produtos'}
+            featured
+            onPress={() => navigation.navigate('SellerOrders')}
+          />
+        ) : null}
         {!isSeller ? (
           <MenuItem
             icon="store-plus-outline"
