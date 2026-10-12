@@ -90,6 +90,15 @@ export default function ProfileScreen({ navigation }: any) {
           featured
           onPress={() => navigation.navigate('Orders')}
         />
+        {isSeller ? (
+          <MenuItem
+            icon="store-outline"
+            title="Minha Loja"
+            subtitle={sellerStatus === 'suspenso' ? 'Consulta da loja suspensa' : 'Painel e atalhos do vendedor'}
+            featured
+            onPress={() => navigation.navigate('SellerDashboard')}
+          />
+        ) : null}
         <MenuItem
           icon="store-outline"
           title="Meus produtos"
