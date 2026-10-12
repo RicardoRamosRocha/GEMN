@@ -171,6 +171,7 @@ export default function SellerDashboardScreen({ navigation }: any) {
 
       <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Acessos rápidos</Text><Text style={styles.sectionSubtitle}>Gerencie seus anúncios e acompanhe pedidos.</Text></View></View>
       <View style={[styles.actions, wide && styles.actionsWide]}>
+        <AppButton title="Configurações da Loja" variant="outline" fullWidth={!wide} onPress={() => navigation.navigate('SellerStoreSettings')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
         <AppButton title="Meus produtos" variant="outline" fullWidth={!wide} onPress={() => navigation.navigate('MyProducts')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
         <AppButton title="Pedidos recebidos" fullWidth={!wide} onPress={() => navigation.navigate('SellerOrders')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
       </View>
