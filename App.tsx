@@ -17,6 +17,7 @@ import MyProductsScreen from './src/screens/MyProductsScreen';
 import SellerOrdersScreen from './src/screens/SellerOrdersScreen';
 import SellerDashboardScreen from './src/screens/SellerDashboardScreen';
 import SellerStoreSettingsScreen from './src/screens/SellerStoreSettingsScreen';
+import SellerStorefrontScreen from './src/screens/SellerStorefrontScreen';
 import CreateProductScreen from './src/screens/CreateProductScreen';
 import SellerApplicationScreen from './src/screens/SellerApplicationScreen';
 import AdminHomeScreen from './src/screens/AdminHomeScreen';
@@ -66,6 +67,11 @@ function HomeStack() {
           title: 'Pedido registrado',
         }}
       />
+      <Stack.Screen
+        name="SellerStorefront"
+        component={SellerStorefrontScreen}
+        options={{ title: 'Vitrine do vendedor' }}
+      />
     </Stack.Navigator>
   );
 }
@@ -90,6 +96,11 @@ function MarketplaceStack() {
         options={{
           title: 'Pedido registrado',
         }}
+      />
+      <Stack.Screen
+        name="SellerStorefront"
+        component={SellerStorefrontScreen}
+        options={{ title: 'Vitrine do vendedor' }}
       />
     </Stack.Navigator>
   );

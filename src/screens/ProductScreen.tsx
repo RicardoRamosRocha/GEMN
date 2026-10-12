@@ -13,6 +13,7 @@ import { colors, layout, radius, shadows, spacing, typography } from '../theme/t
 type ProductStackParamList = {
   Product: { listing: GemnProduct };
   OrderConfirmation: OrderConfirmationParams;
+  SellerStorefront: { sellerId: string };
 };
 
 export type OrderConfirmationParams = OrderRpcResult & {
@@ -110,7 +111,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
             </View>
             <View style={styles.productCopy}>
               <Text style={styles.productName}>{name}</Text>
-              <View style={styles.sellerLine}><MaterialCommunityIcons name="store-outline" size={16} color={colors.textSecondary} /><Text style={styles.sellerName}>{listing?.sellerName ?? 'Comunidade Mundo Novo'}</Text><View style={styles.verified}><MaterialCommunityIcons name="check-decagram" size={15} color={colors.success} /><Text style={styles.verifiedText}>Vendedor aprovado</Text></View></View>
+              <View style={styles.sellerLine}><MaterialCommunityIcons name="store-outline" size={16} color={colors.textSecondary} /><TouchableOpacity accessibilityRole="button" accessibilityLabel={`Abrir vitrine de ${listing?.sellerName ?? 'Comunidade Mundo Novo'}`} disabled={!listing?.sellerId} onPress={() => { if (listing?.sellerId) navigation.navigate('SellerStorefront', { sellerId: listing.sellerId }); }}><Text style={styles.sellerNameLink}>{listing?.sellerName ?? 'Comunidade Mundo Novo'}</Text></TouchableOpacity><View style={styles.verified}><MaterialCommunityIcons name="check-decagram" size={15} color={colors.success} /><Text style={styles.verifiedText}>Vendedor aprovado</Text></View></View>
               <View style={styles.priceRow}><Text style={styles.price}>{price}</Text></View>
               {listing?.acceptsGemn !== false ? <View style={styles.gemnLine}><MaterialCommunityIcons name="star-four-points" size={15} color={colors.secondary} /><Text style={styles.gemnText}>Aceita Moeda GEMN · {gemnUnitValue} GEMN por unidade</Text></View> : <View style={styles.gemnLine}><MaterialCommunityIcons name="information-outline" size={15} color={colors.textSecondary} /><Text style={styles.gemnMutedText}>Pagamento somente em reais</Text></View>}
             </View>
@@ -175,6 +176,7 @@ const styles = StyleSheet.create({
   productName: { ...typography.heading1, color: colors.text },
   sellerLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
   sellerName: { ...typography.bodySmall, color: colors.textSecondary },
+  sellerNameLink: { ...typography.bodySmall, color: colors.primary, textDecorationLine: 'underline' },
   verified: { flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: spacing.xs },
   verifiedText: { ...typography.caption, color: colors.success },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },

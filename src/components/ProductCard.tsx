@@ -7,11 +7,12 @@ import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 export type ProductCardProps = {
   icon: IconName; category: string; name: string; price: string; seller: string;
-  coinPrice?: string; rating?: string; imageUrl?: string; onPress: () => void;
+  coinPrice?: string; acceptanceLabel?: string; acceptanceGemn?: boolean; emphasizeName?: boolean; nameTestID?: string;
+  rating?: string; imageUrl?: string; onPress: () => void;
   layout?: 'default' | 'marketplace';
 };
 
-export function ProductCard({ icon, category, name, price, seller, coinPrice, rating, imageUrl, onPress, layout: cardLayout = 'default' }: ProductCardProps) {
+export function ProductCard({ icon, category, name, price, seller, coinPrice, acceptanceLabel, acceptanceGemn = false, emphasizeName = false, nameTestID, rating, imageUrl, onPress, layout: cardLayout = 'default' }: ProductCardProps) {
   const compact = useWindowDimensions().width < layout.breakpoints.tablet;
   const marketplace = cardLayout === 'marketplace';
   const [imageFailed, setImageFailed] = React.useState(false);
@@ -23,12 +24,13 @@ export function ProductCard({ icon, category, name, price, seller, coinPrice, ra
           {!compact || marketplace ? <View style={styles.category}><AppBadge label={category} /></View> : null}
         </View>
         <View style={[styles.info, compact && !marketplace && styles.infoCompact, marketplace && styles.marketplaceInfo]}>
-          <Text style={[styles.name, compact && !marketplace && styles.nameCompact, marketplace && styles.marketplaceName]} numberOfLines={marketplace ? 2 : compact ? 1 : 2}>{name}</Text>
+          <Text testID={nameTestID} accessibilityRole="text" style={[styles.name, compact && !marketplace && styles.nameCompact, marketplace && styles.marketplaceName, emphasizeName && styles.emphasizedName]} numberOfLines={marketplace ? 2 : compact ? 1 : 2}>{name}</Text>
           <View style={styles.sellerRow}><MaterialCommunityIcons name="store-outline" size={compact ? 12 : 14} color={colors.textSecondary} /><Text style={[styles.seller, compact && styles.sellerCompact]} numberOfLines={1}>{seller}</Text></View>
           <View style={[styles.bottomRow, compact && !marketplace && styles.bottomRowCompact, marketplace && styles.marketplaceBottomRow]}>
             <View style={styles.priceBlock}><Text style={[styles.price, compact && styles.priceCompact]}>{price}</Text>{coinPrice ? (compact ? <View style={styles.gemnBadge}><MaterialCommunityIcons name="star-four-points" size={11} color="#886512" /><Text style={styles.gemnText}>GEMN</Text></View> : <View style={styles.coinRow}><MaterialCommunityIcons name="star-four-points" size={12} color="#886512" /><Text style={styles.coin}>{coinPrice}</Text></View>) : null}</View>
             {!compact && rating ? <View style={styles.rating}><MaterialCommunityIcons name="star" size={14} color={colors.secondary} /><Text style={styles.ratingText}>{rating}</Text></View> : null}
           </View>
+          {acceptanceLabel ? <Text style={[styles.acceptance, acceptanceGemn ? styles.acceptanceGemn : styles.acceptanceMuted]} numberOfLines={2}>{acceptanceLabel}</Text> : null}
         </View>
       </AppCard>
     </Pressable>
@@ -48,6 +50,7 @@ const styles = StyleSheet.create({
   marketplaceIconDisc: { width: 62, height: 62 },
   marketplaceInfo: { padding: spacing.md, minWidth: 0, flex: 0, flexGrow: 0, flexShrink: 1 },
   marketplaceName: { ...typography.body, color: colors.text, fontWeight: '700', minHeight: 0 },
+  emphasizedName: { ...typography.heading3, color: colors.text, fontWeight: '700', width: '100%', minHeight: 48, flexShrink: 0 },
   marketplaceBottomRow: { marginTop: spacing.sm },
   image: { width: '100%', height: '100%', resizeMode: 'cover' },
   iconDisc: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
@@ -69,6 +72,9 @@ const styles = StyleSheet.create({
   gemnText: { fontSize: 12, lineHeight: 16, fontWeight: '700', color: '#886512' },
   coinRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 3 },
   coin: { ...typography.caption, color: '#886512', fontWeight: '600' },
+  acceptance: { ...typography.caption, marginTop: spacing.sm, fontWeight: '600' },
+  acceptanceGemn: { color: '#886512' },
+  acceptanceMuted: { color: colors.textSecondary },
   rating: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   ratingText: { ...typography.caption, color: colors.textSecondary, fontWeight: '600' },
 });
