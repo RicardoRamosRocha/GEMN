@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
 import { OrderServiceError, createOrder } from '../services/orders';
+import { getSellerBranding } from '../services/sellerBranding';
 import { useAuth } from '../context/AuthContext';
 import type { GemnProduct } from '../context/ProductsContext';
 import type { OrderRpcResult } from '../types/orders';
+import type { SellerBrandingStore } from '../types/sellerBranding';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 
 type ProductStackParamList = {
@@ -35,6 +37,40 @@ function purchaseErrorMessage(error: unknown) {
   return 'Não foi possível registrar o pedido. Tente novamente.';
 }
 
+function SellerCard({ storeName, logoUrl, onPress, disabled }: { storeName: string; logoUrl?: string; onPress: () => void; disabled: boolean }) {
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Conhecer a loja ${storeName}`}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [styles.sellerCard, pressed && !disabled && styles.sellerCardPressed]}
+    >
+      <View style={styles.sellerLogo}>
+        {logoUrl && !logoFailed ? (
+          <Image accessibilityLabel={`Logotipo de ${storeName}`} source={{ uri: logoUrl }} style={styles.sellerLogoImage} onError={() => setLogoFailed(true)} />
+        ) : (
+          <MaterialCommunityIcons name="store-outline" size={22} color={colors.primary} />
+        )}
+      </View>
+      <View style={styles.sellerCardCopy}>
+        <Text style={styles.sellerCardName} numberOfLines={1}>{storeName}</Text>
+        <View style={styles.sellerApproved}>
+          <MaterialCommunityIcons name="check-decagram" size={14} color={colors.success} />
+          <Text style={styles.sellerApprovedText}>Vendedor aprovado</Text>
+        </View>
+      </View>
+      <View style={styles.sellerVisit}>
+        <Text style={styles.sellerVisitText}>Conhecer a loja</Text>
+        <MaterialCommunityIcons name="arrow-right" size={17} color={colors.primary} />
+      </View>
+    </Pressable>
+  );
+}
+
 export default function ProductScreen({ route, navigation }: ProductScreenProps) {
   const { width } = useWindowDimensions();
   const { user } = useAuth();
@@ -45,6 +81,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
   const [gemnInput, setGemnInput] = useState('0');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [sellerBranding, setSellerBranding] = useState<SellerBrandingStore | null>(null);
   const intentRef = useRef<{ signature: string; key: string } | null>(null);
   const name = listing?.name ?? 'Anúncio indisponível';
   const numericPrice = listing?.price ?? 0;
@@ -62,6 +99,22 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
     intentRef.current = null;
     setErrorMessage(null);
   }, [listing?.id, quantity, gemnInput]);
+
+  useEffect(() => {
+    let mounted = true;
+    setSellerBranding(null);
+    if (!listing?.sellerId) return () => { mounted = false; };
+
+    void getSellerBranding(listing.sellerId)
+      .then((store) => {
+        if (mounted) setSellerBranding(store);
+      })
+      .catch(() => {
+        // O cartão continua utilizável com os dados do anúncio se o branding não estiver disponível.
+      });
+
+    return () => { mounted = false; };
+  }, [listing?.sellerId]);
 
   async function handleConfirmPurchase() {
     if (isSubmitting) return;
@@ -111,7 +164,12 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
             </View>
             <View style={styles.productCopy}>
               <Text style={styles.productName}>{name}</Text>
-              <View style={styles.sellerLine}><MaterialCommunityIcons name="store-outline" size={16} color={colors.textSecondary} /><TouchableOpacity accessibilityRole="button" accessibilityLabel={`Abrir vitrine de ${listing?.sellerName ?? 'Comunidade Mundo Novo'}`} disabled={!listing?.sellerId} onPress={() => { if (listing?.sellerId) navigation.navigate('SellerStorefront', { sellerId: listing.sellerId }); }}><Text style={styles.sellerNameLink}>{listing?.sellerName ?? 'Comunidade Mundo Novo'}</Text></TouchableOpacity><View style={styles.verified}><MaterialCommunityIcons name="check-decagram" size={15} color={colors.success} /><Text style={styles.verifiedText}>Vendedor aprovado</Text></View></View>
+              <SellerCard
+                storeName={sellerBranding?.storeName ?? listing?.sellerName ?? 'Comunidade Mundo Novo'}
+                logoUrl={sellerBranding?.branding.logoUrl}
+                disabled={!listing?.sellerId}
+                onPress={() => { if (listing?.sellerId) navigation.navigate('SellerStorefront', { sellerId: listing.sellerId }); }}
+              />
               <View style={styles.priceRow}><Text style={styles.price}>{price}</Text></View>
               {listing?.acceptsGemn !== false ? <View style={styles.gemnLine}><MaterialCommunityIcons name="star-four-points" size={15} color={colors.secondary} /><Text style={styles.gemnText}>Aceita Moeda GEMN · {gemnUnitValue} GEMN por unidade</Text></View> : <View style={styles.gemnLine}><MaterialCommunityIcons name="information-outline" size={15} color={colors.textSecondary} /><Text style={styles.gemnMutedText}>Pagamento somente em reais</Text></View>}
             </View>
@@ -174,11 +232,16 @@ const styles = StyleSheet.create({
   iconDisc: { width: 116, height: 116, borderRadius: radius.full, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...shadows.subtle },
   productCopy: { flex: 1, padding: spacing.lg, gap: spacing.sm },
   productName: { ...typography.heading1, color: colors.text },
-  sellerLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
-  sellerName: { ...typography.bodySmall, color: colors.textSecondary },
-  sellerNameLink: { ...typography.bodySmall, color: colors.primary, textDecorationLine: 'underline' },
-  verified: { flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: spacing.xs },
-  verifiedText: { ...typography.caption, color: colors.success },
+  sellerCard: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  sellerCardPressed: { opacity: 0.82, backgroundColor: colors.surfaceMuted },
+  sellerLogo: { width: 46, height: 46, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: colors.primaryLight, flexShrink: 0 },
+  sellerLogoImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  sellerCardCopy: { flex: 1, minWidth: 0, gap: 2 },
+  sellerCardName: { ...typography.heading4, color: colors.text },
+  sellerApproved: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  sellerApprovedText: { ...typography.caption, color: colors.success },
+  sellerVisit: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
+  sellerVisitText: { ...typography.caption, color: colors.primary, fontWeight: '600' },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
   price: { ...typography.heading2, color: colors.secondary },
   gemnLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },

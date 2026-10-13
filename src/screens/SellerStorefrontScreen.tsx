@@ -57,14 +57,10 @@ function listingAsProduct(listing: SellerStorefrontListing, sellerName: string, 
   };
 }
 
-function descriptionSummary(description: string) {
-  const normalized = description.replace(/\s+/g, ' ').trim();
-  return normalized.length > 180 ? `${normalized.slice(0, 177)}...` : normalized;
-}
-
 export default function SellerStorefrontScreen({ route, navigation }: StorefrontScreenProps) {
   const { width } = useWindowDimensions();
   const desktop = width >= layout.breakpoints.desktop;
+  const twoColumnCatalog = width >= 520 && !desktop;
   const sellerId = route?.params?.sellerId;
   const fixturesEnabled = isGemnUiFixturesEnabled();
   const [storefront, setStorefront] = React.useState<SellerStorefront | null>(null);
@@ -99,8 +95,6 @@ export default function SellerStorefrontScreen({ route, navigation }: Storefront
   }
 
   const { seller, listings } = storefront;
-  const summary = descriptionSummary(seller.descricao);
-
   return (
     <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
       {fixturesEnabled ? <View style={styles.demoBanner}><MaterialCommunityIcons name="flask-outline" size={18} color={colors.warning} /><Text style={styles.demoText}>Modo de demonstração — dados locais sintéticos</Text></View> : null}
@@ -113,8 +107,7 @@ export default function SellerStorefrontScreen({ route, navigation }: Storefront
             {seller.logoUrl ? <Image accessibilityLabel="Logotipo da loja" source={{ uri: seller.logoUrl }} resizeMode="contain" style={styles.logo} /> : <View style={styles.logoPlaceholder}><MaterialCommunityIcons name="storefront-outline" size={38} color={colors.primary} /></View>}
           </View>
           <View style={styles.identityCopy}>
-            <View style={styles.identityTitleRow}><Text style={styles.storeName}>{seller.nomeNegocio}</Text><AppBadge label="Vendedor ativo" variant="success" /></View>
-            <Text style={styles.summary} numberOfLines={3}>{summary}</Text>
+            <View style={styles.identityTitleRow}><Text style={styles.storeName}>{seller.nomeNegocio}</Text><AppBadge label="Vendedor aprovado" variant="success" /></View>
           </View>
         </View>
 
@@ -130,7 +123,7 @@ export default function SellerStorefrontScreen({ route, navigation }: Storefront
 
       <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Produtos e serviços</Text><Text style={styles.sectionSubtitle}>{listings.length === 0 ? 'Nenhum anúncio publicado no momento.' : `${listings.length} anúncio${listings.length === 1 ? '' : 's'} publicado${listings.length === 1 ? '' : 's'}`}</Text></View></View>
 
-      {listings.length === 0 ? <AppCard style={styles.emptyCard}><View style={styles.emptyIcon}><MaterialCommunityIcons name="package-variant-closed" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>Vitrine em preparação</Text><Text style={styles.emptyText}>Este vendedor ainda não publicou produtos ou serviços.</Text></AppCard> : <View style={[styles.catalog, desktop && styles.catalogWide]}>{listings.map((listing) => { const acceptsGemn = seller.aceitaGemn && listing.acceptsGemn; const product = listingAsProduct(listing, seller.nomeNegocio, seller.aceitaGemn); const acceptanceLabel = acceptsGemn ? 'Aceita GEMN neste anúncio' : listing.acceptsGemn && !seller.aceitaGemn ? 'GEMN indisponível no momento' : 'Pagamento somente em reais'; return <View key={listing.id} style={[styles.catalogItem, desktop && styles.catalogItemWide]}><ProductCard layout="marketplace" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} nameTestID={`seller-storefront-listing-name-${listing.id}`} price={product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} coinPrice={acceptsGemn && listing.gemnValue !== undefined ? `${listing.gemnValue.toLocaleString('pt-BR')} GEMN` : undefined} acceptanceLabel={acceptanceLabel} acceptanceGemn={acceptsGemn} emphasizeName seller={seller.nomeNegocio} onPress={() => navigation.navigate('Product', { listing: product })} /></View>; })}</View>}
+      {listings.length === 0 ? <AppCard style={styles.emptyCard}><View style={styles.emptyIcon}><MaterialCommunityIcons name="package-variant-closed" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>Vitrine em preparação</Text><Text style={styles.emptyText}>Este vendedor ainda não publicou produtos ou serviços.</Text></AppCard> : <View style={[styles.catalog, desktop && styles.catalogWide]}>{listings.map((listing) => { const acceptsGemn = seller.aceitaGemn && listing.acceptsGemn; const product = listingAsProduct(listing, seller.nomeNegocio, seller.aceitaGemn); const acceptanceLabel = acceptsGemn ? 'Aceita GEMN neste anúncio' : listing.acceptsGemn && !seller.aceitaGemn ? 'GEMN indisponível no momento' : 'Pagamento somente em reais'; return <View key={listing.id} style={[styles.catalogItem, twoColumnCatalog && styles.catalogItemTwoColumn, desktop && styles.catalogItemWide]}><ProductCard layout="marketplace" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} nameTestID={`seller-storefront-listing-name-${listing.id}`} price={product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} coinPrice={acceptsGemn && listing.gemnValue !== undefined ? `${listing.gemnValue.toLocaleString('pt-BR')} GEMN` : undefined} acceptanceLabel={acceptanceLabel} acceptanceGemn={acceptsGemn} emphasizeName seller={seller.nomeNegocio} onPress={() => navigation.navigate('Product', { listing: product })} /></View>; })}</View>}
     </AppScreen>
   );
 }
@@ -141,20 +134,19 @@ const styles = StyleSheet.create({
   demoText: { ...typography.caption, color: colors.warning, flex: 1 },
   hero: { width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center', backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
   heroWide: { ...({ boxShadow: '0px 8px 24px rgba(17, 24, 39, 0.08)' } as object) },
-  banner: { width: '100%', aspectRatio: 16 / 7, minHeight: 170 },
-  bannerFallback: { width: '100%', aspectRatio: 16 / 7, minHeight: 170, overflow: 'hidden', backgroundColor: colors.primary, position: 'relative' },
+  banner: { width: '100%', aspectRatio: 16 / 5, minHeight: 128, maxHeight: 350 },
+  bannerFallback: { width: '100%', aspectRatio: 16 / 5, minHeight: 128, maxHeight: 350, overflow: 'hidden', backgroundColor: colors.primary, position: 'relative' },
   fallbackOrbLarge: { position: 'absolute', width: 280, height: 280, borderRadius: 140, right: -72, top: -122, backgroundColor: colors.secondary, opacity: 0.85 },
   fallbackOrbSmall: { position: 'absolute', width: 180, height: 180, borderRadius: 90, left: -70, bottom: -110, backgroundColor: '#547EE0', opacity: 0.8 },
-  identity: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md, marginTop: -50, paddingHorizontal: spacing.md, paddingBottom: spacing.md },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm },
   identityWide: { paddingHorizontal: spacing.xl },
-  logoFrame: { width: 100, height: 100, borderRadius: radius.xl, padding: spacing.xs, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, shadowColor: '#17251C', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 7, elevation: 3 },
+  logoFrame: { width: 76, height: 76, borderRadius: radius.lg, padding: spacing.xs, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, shadowColor: '#17251C', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 7, elevation: 3 },
   logo: { width: '100%', height: '100%', borderRadius: radius.lg, backgroundColor: colors.surfaceMuted },
   logoPlaceholder: { flex: 1, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
   identityCopy: { flex: 1, minWidth: 0, gap: spacing.xs, paddingBottom: spacing.xs },
   identityTitleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   storeName: { ...typography.heading1, color: colors.text, flexShrink: 1 },
-  summary: { ...typography.bodySmall, color: colors.textSecondary, lineHeight: 21 },
-  heroFooter: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg },
+  heroFooter: { paddingHorizontal: spacing.md, paddingBottom: spacing.md },
   commerceRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   commerceHint: { ...typography.caption, color: colors.textSecondary, flexShrink: 1 },
   aboutCard: { maxWidth: layout.contentMaxWidth, width: '100%', alignSelf: 'center', gap: spacing.md, borderWidth: 1, borderColor: colors.border },
@@ -164,9 +156,10 @@ const styles = StyleSheet.create({
   sectionHeader: { maxWidth: layout.contentMaxWidth, width: '100%', alignSelf: 'center', gap: spacing.xs, paddingTop: spacing.sm },
   sectionTitle: { ...typography.heading2, color: colors.text },
   sectionSubtitle: { ...typography.bodySmall, color: colors.textSecondary },
-  catalog: { gap: spacing.md, maxWidth: layout.contentMaxWidth, width: '100%', alignSelf: 'center' },
+  catalog: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, maxWidth: layout.contentMaxWidth, width: '100%', alignSelf: 'center' },
   catalogWide: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   catalogItem: { width: '100%' },
+  catalogItemTwoColumn: { width: '48%' },
   catalogItemWide: { width: '31.8%' },
   emptyCard: { alignItems: 'center', gap: spacing.sm, maxWidth: 560, width: '100%', alignSelf: 'center', paddingVertical: spacing.xl, borderWidth: 1, borderColor: colors.border },
   emptyIcon: { width: 64, height: 64, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },

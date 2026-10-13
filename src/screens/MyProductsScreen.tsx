@@ -1,10 +1,31 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
 import { useProducts, type ListingStatus } from '../context/ProductsContext';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
+
+function ProductThumbnail({ imageUrl, name }: { imageUrl?: string; name: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  return (
+    <View style={styles.productThumbnail}>
+      {imageUrl && !imageFailed ? (
+        <Image
+          accessibilityLabel={`Imagem de ${name}`}
+          source={{ uri: imageUrl }}
+          style={styles.productThumbnailImage}
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <View style={styles.productThumbnailPlaceholder}>
+          <MaterialCommunityIcons name="image-outline" size={30} color={colors.primary} />
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function MyProductsScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
@@ -65,23 +86,22 @@ export default function MyProductsScreen({ navigation }: any) {
           <View key={product.id} style={[styles.productWrapper, wide && styles.productWrapperWide]}>
             <AppCard elevated={wide} style={styles.productCard}>
               <View style={styles.productTopRow}>
-                <View style={styles.productIcon}>
-                  <MaterialCommunityIcons name={product.icon} size={30} color={colors.primary} />
+                <ProductThumbnail imageUrl={product.imageUrl} name={product.name} />
+                <View style={styles.productDetails}>
+                  <View style={styles.badgesRow}>
+                    <AppBadge label={product.type} variant="neutral" />
+                    <AppBadge label={product.status === 'rascunho' ? 'Rascunho' : product.active ? 'Ativo' : 'Inativo'} variant={product.active ? 'success' : product.status === 'rascunho' ? 'warning' : 'neutral'} />
+                  </View>
+
+                  <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+                  <Text style={styles.productPrice}>
+                    {product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </Text>
                 </View>
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Opções de ${product.name}`} style={styles.moreButton}>
                   <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
-
-              <View style={styles.badgesRow}>
-                <AppBadge label={product.type} variant="neutral" />
-                <AppBadge label={product.status === 'rascunho' ? 'Rascunho' : product.active ? 'Ativo' : 'Inativo'} variant={product.active ? 'success' : product.status === 'rascunho' ? 'warning' : 'neutral'} />
-              </View>
-
-              <Text style={styles.productName}>{product.name}</Text>
-              <Text style={styles.productPrice}>
-                {product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              </Text>
               <View style={styles.actionsRow}>
                 <AppButton title="Editar" variant="outline" onPress={() => navigation.navigate('CreateProduct', { product })} disabled={busyProductId !== null} style={styles.actionButton} />
                 <AppButton
@@ -128,10 +148,13 @@ const styles = StyleSheet.create({
   productWrapper: { width: '100%' },
   productWrapperWide: { width: '48%' },
   productCard: { minHeight: 208, borderWidth: 1, borderColor: colors.border },
-  productTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  productIcon: { width: 58, height: 58, borderRadius: radius.md, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  productTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  productThumbnail: { width: 88, aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.surfaceMuted, flexShrink: 0 },
+  productThumbnailImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  productThumbnailPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
+  productDetails: { flex: 1, minWidth: 0, paddingRight: 28 },
   moreButton: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  badgesRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
+  badgesRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   productName: { ...typography.heading3, color: colors.text, marginTop: spacing.sm },
   productPrice: { ...typography.heading2, color: colors.primary, marginTop: spacing.xs },
   infoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight, borderWidth: 1, borderColor: colors.primaryLight },
