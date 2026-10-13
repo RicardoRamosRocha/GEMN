@@ -50,6 +50,7 @@ export default function AdminHomeScreen({ navigation }: any) {
       {isAdminCancellationUiFixturesEnabled() ? <View style={styles.demoBanner} accessibilityRole="text"><MaterialCommunityIcons name="flask-outline" size={18} color={colors.warning} /><Text style={styles.demoBannerText}>Modo de demonstração — dados sintéticos locais</Text></View> : null}
       {errorMessage ? <Text accessibilityRole="alert" style={styles.error}>{errorMessage}</Text> : null}
       <AppCard padding={0} style={styles.menuCard}>
+        <ActionItem title="Pedidos pendentes" subtitle="Revise e confirme pagamentos simulados" count={0} onPress={() => navigation.navigate('AdminPendingOrders')} />
         <ActionItem title="Cancelamentos de pedidos" subtitle="Analise solicitacoes e falhas recuperaveis" count={0} onPress={() => navigation.navigate('AdminCancellationRequests')} />
         {!isAdminCancellationUiFixturesEnabled() ? <ActionItem title="Solicitações de vendedores" subtitle={pendingCount ? `${pendingCount} pendente${pendingCount === 1 ? '' : 's'} para analisar` : 'Nenhuma solicitação pendente'} count={pendingCount} onPress={() => navigation.navigate('AdminSellerApplications')} /> : null}
       </AppCard>

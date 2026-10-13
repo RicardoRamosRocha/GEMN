@@ -8,9 +8,9 @@ const tones = ['#F1F5FF', '#FFF3EA', '#EFFBF7', '#FFF8E8'] as const;
 
 export function CategoryChip({ icon, label, compact = false, onPress, selected = false, tone = 0 }: { icon: IconName; label: string; compact?: boolean; onPress?: () => void; selected?: boolean; tone?: number }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} accessibilityState={{ selected }} style={[styles.chip, compact && styles.compact, !selected && !compact && { backgroundColor: tones[tone % tones.length] }, selected && styles.selected]}>
-      <View style={[styles.iconWrap, compact && styles.compactIcon, !selected && !compact && { backgroundColor: colors.white }]}><MaterialCommunityIcons name={icon} size={compact ? 18 : 20} color={colors.primary} /></View>
-      <Text style={styles.label} numberOfLines={1}>{label}</Text>
+    <Pressable accessibilityRole="button" onPress={onPress} accessibilityState={{ selected }} style={[styles.chip, compact && styles.compact, !selected && !compact && { backgroundColor: tones[tone % tones.length] }, selected && (compact ? styles.selectedCompact : styles.selected)]}>
+      <View style={[styles.iconWrap, compact && styles.compactIcon, !selected && !compact && { backgroundColor: colors.white }, selected && compact && styles.selectedCompactIcon]}><MaterialCommunityIcons name={icon} size={compact ? 18 : 20} color={selected && compact ? colors.white : colors.primary} /></View>
+      <Text style={[styles.label, selected && compact && styles.selectedCompactLabel]} numberOfLines={1}>{label}</Text>
     </Pressable>
   );
 }
@@ -22,4 +22,7 @@ const styles = StyleSheet.create({
   compactIcon: { width: 22, height: 22, borderRadius: radius.full },
   label: { ...typography.caption, color: colors.text, fontWeight: '600' },
   selected: { borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primaryLight },
+  selectedCompact: { borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primary },
+  selectedCompactIcon: { backgroundColor: 'rgba(255,255,255,0.18)' },
+  selectedCompactLabel: { color: colors.white },
 });

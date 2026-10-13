@@ -1,11 +1,12 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AppButton, AppCard, AppInput, AppScreen } from '../components/ui';
+import { AppButton, AppCard, AppScreen } from '../components/ui';
 import { CategoryChip } from '../components/CategoryChip';
 import { ProductCard } from '../components/ProductCard';
 import { SellerDirectoryCard } from '../components/SellerDirectoryCard';
 import { useProducts } from '../context/ProductsContext';
+import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { listActiveSellerDirectory, SellerDirectoryServiceError } from '../services/sellerDirectory';
 import type { SellerDirectoryStore } from '../types/sellerDirectory';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
@@ -52,7 +53,10 @@ export default function MarketplaceScreen({ navigation }: any) {
   });
   const marketplaceCategories = [allCategory, ...activeCategories.map((item, index) => ({ icon: categoryIcon(item.name, index), label: item.name }))];
   const hasActiveFilters = Boolean(search.trim()) || selectedCategory !== 'Todas';
+  const categoryFilterActive = selectedCategory !== 'Todas';
+  const searchValue = mode === 'stores' ? storeSearch : search;
   const clearFilters = () => { setSearch(''); setSelectedCategory('Todas'); };
+  const clearSearch = () => { if (mode === 'stores') setStoreSearch(''); else setSearch(''); };
 
   const loadStores = React.useCallback(async (term: string, page: number, append: boolean) => {
     const requestId = ++storesRequestRef.current;
@@ -100,31 +104,53 @@ export default function MarketplaceScreen({ navigation }: any) {
 
   return (
     <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
-      <View style={styles.institutionalBanner}>
+      <View style={[styles.institutionalBanner, desktop && styles.institutionalBannerDesktop]}>
         <View style={styles.bannerAccent} />
-        <View style={styles.bannerHeader}><Text style={styles.bannerKicker}>GEMN • COMUNIDADE MUNDO NOVO</Text><MaterialCommunityIcons name="storefront-outline" size={42} color="rgba(255,255,255,0.82)" /></View>
-        <View style={styles.bannerCopy}><Text style={styles.bannerTitle}>Valorize quem empreende na nossa comunidade.</Text><Text style={styles.bannerBody}>Descubra produtos e serviços dos empreendedores GEMN.</Text></View>
+        <View style={styles.bannerHeader}><Text style={styles.bannerKicker}>COMUNIDADE MUNDO NOVO</Text><MaterialCommunityIcons name="storefront-outline" size={34} color="rgba(255,255,255,0.82)" /></View>
+        <View style={styles.bannerCopy}><Text style={styles.bannerTitle}>Marketplace GEMN</Text><Text style={styles.bannerBody}>Produtos, serviços e lojas da nossa comunidade.</Text></View>
       </View>
 
       <View style={styles.modeSwitcher} accessibilityRole="tablist">
-        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'products' }} onPress={() => setMode('products')} style={[styles.modeButton, mode === 'products' && styles.modeButtonActive]}><MaterialCommunityIcons name="view-grid-outline" size={18} color={mode === 'products' ? colors.white : colors.primary} /><Text style={[styles.modeButtonText, mode === 'products' && styles.modeButtonTextActive]}>Produtos e serviços</Text></Pressable>
-        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'stores' }} onPress={() => setMode('stores')} style={[styles.modeButton, mode === 'stores' && styles.modeButtonActive]}><MaterialCommunityIcons name="storefront-outline" size={18} color={mode === 'stores' ? colors.white : colors.primary} /><Text style={[styles.modeButtonText, mode === 'stores' && styles.modeButtonTextActive]}>Lojas</Text></Pressable>
+        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'products' }} onPress={() => setMode('products')} style={[styles.modeButton, mode === 'products' && styles.modeButtonActive]}><MaterialCommunityIcons name="view-grid-outline" size={19} color={mode === 'products' ? colors.primary : colors.textSecondary} /><Text style={[styles.modeButtonText, mode === 'products' && styles.modeButtonTextActive]}>Produtos e serviços</Text></Pressable>
+        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'stores' }} onPress={() => setMode('stores')} style={[styles.modeButton, mode === 'stores' && styles.modeButtonActive]}><MaterialCommunityIcons name="storefront-outline" size={19} color={mode === 'stores' ? colors.primary : colors.textSecondary} /><Text style={[styles.modeButtonText, mode === 'stores' && styles.modeButtonTextActive]}>Lojas</Text></Pressable>
       </View>
 
       <View style={styles.searchRow}>
-        <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={21} color={colors.textSecondary} /><AppInput accessibilityLabel={mode === 'stores' ? 'Buscar lojas' : 'Buscar no marketplace'} placeholder={mode === 'stores' ? 'Buscar por nome ou descrição' : 'O que você procura?'} value={mode === 'stores' ? storeSearch : search} onChangeText={mode === 'stores' ? setStoreSearch : setSearch} containerStyle={styles.searchInputWrap} inputStyle={styles.searchInput} returnKeyType="search" /></View>
-        {mode === 'products' ? <Pressable accessibilityRole="button" accessibilityLabel={hasActiveFilters ? 'Limpar filtros' : 'Filtros'} accessibilityState={{ disabled: !hasActiveFilters }} disabled={!hasActiveFilters} onPress={clearFilters} style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}><MaterialCommunityIcons name={hasActiveFilters ? 'filter-remove-outline' : 'tune-variant'} size={20} color={hasActiveFilters ? colors.white : colors.primary} /></Pressable> : null}
+        <View style={styles.searchBox}>
+          <MaterialCommunityIcons name="magnify" size={21} color={colors.textSecondary} />
+          <TextInput
+            accessibilityLabel={mode === 'stores' ? 'Buscar lojas' : 'Buscar no marketplace'}
+            placeholder={mode === 'stores' ? 'Buscar por nome ou descrição' : 'O que você procura?'}
+            placeholderTextColor={colors.textMuted}
+            value={searchValue}
+            onChangeText={mode === 'stores' ? setStoreSearch : setSearch}
+            returnKeyType="search"
+            style={styles.searchInput}
+          />
+          {searchValue ? <Pressable accessibilityRole="button" accessibilityLabel="Limpar busca" hitSlop={6} onPress={clearSearch} style={styles.clearSearchButton}><MaterialCommunityIcons name="close-circle" size={19} color={colors.textSecondary} /></Pressable> : null}
+        </View>
+        {mode === 'products' ? <Pressable accessibilityRole="button" accessibilityLabel={hasActiveFilters ? 'Limpar filtros' : 'Filtros'} accessibilityState={{ disabled: !hasActiveFilters }} disabled={!hasActiveFilters} onPress={clearFilters} style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}><MaterialCommunityIcons name={hasActiveFilters ? 'filter-remove-outline' : 'tune-variant'} size={20} color={hasActiveFilters ? colors.white : colors.primary} />{categoryFilterActive ? <View style={styles.filterIndicator} /> : null}</Pressable> : null}
       </View>
 
       {mode === 'products' ? <View style={styles.filterSection}>
-        <Text style={styles.eyebrow}>EXPLORE POR CATEGORIA</Text>
+        <Text style={styles.eyebrow}>Explore por categoria</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>
-          {marketplaceCategories.map((category, index) => <CategoryChip key={category.label} icon={category.icon} label={category.label} tone={index} onPress={() => setSelectedCategory(category.label)} selected={selectedCategory === category.label} />)}
+          {marketplaceCategories.map((category, index) => <CategoryChip key={category.label} compact icon={category.icon} label={category.label} tone={index} onPress={() => setSelectedCategory(category.label)} selected={selectedCategory === category.label} />)}
         </ScrollView>
       </View> : null}
 
       <View style={styles.resultsHeader}>
-        <View><Text style={styles.resultsTitle}>{mode === 'stores' ? 'Lojas' : 'Produtos e serviços'}</Text><Text style={styles.resultsCount}>{mode === 'stores' ? 'Encontre lojas ativas da comunidade' : 'Feitos por empreendedores da comunidade'}</Text></View>
+        <View style={styles.resultsHeaderCopy}>
+          <View style={styles.resultsTitleRow}>
+            <Text style={styles.resultsTitle}>{mode === 'stores' ? 'Lojas' : 'Produtos e serviços'}</Text>
+            {mode === 'products' && !marketplaceLoading && !marketplaceError ? <View style={styles.resultsCountBadge}><Text style={styles.resultsCountBadgeText}>{visibleProducts.length}</Text></View> : null}
+          </View>
+          <Text style={styles.resultsCount}>
+            {mode === 'stores'
+              ? (storesLoading && stores.length === 0 ? 'Carregando lojas ativas...' : storeSearch.trim() ? `Resultados para “${storeSearch.trim()}”` : 'Lojas ativas da comunidade')
+              : marketplaceLoading ? 'Carregando anúncios...' : marketplaceError ? 'Não foi possível carregar os anúncios' : `${visibleProducts.length} ${visibleProducts.length === 1 ? 'anúncio encontrado' : 'anúncios encontrados'}`}
+          </Text>
+        </View>
         {mode === 'stores' ? <AppButton title="Atualizar" size="compact" variant="outline" loading={storesLoading && stores.length > 0} disabled={storesLoading || storesLoadingMore} onPress={() => { void loadStores(storeSearch.trim(), 1, false); }} /> : null}
       </View>
 
@@ -135,7 +161,8 @@ export default function MarketplaceScreen({ navigation }: any) {
         <View style={[styles.productGrid, desktop && styles.productGridDesktop]}>
           {visibleProducts.map((product) => {
             const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            return <View key={product.id} style={[styles.productCell, { width: productWidth }]}><ProductCard layout="marketplace" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={product.gemnValue !== undefined ? `${product.gemnValue.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? 'Comunidade GEMN'} onPress={() => navigation.navigate('Product', { listing: product })} /></View>;
+            const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
+            return <View key={product.id} style={[styles.productCell, { width: productWidth }]}><ProductCard layout="marketplace" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? 'Comunidade GEMN'} onPress={() => navigation.navigate('Product', { listing: product })} /></View>;
           })}
         </View>
       </> : <>
@@ -152,31 +179,37 @@ export default function MarketplaceScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
-  modeSwitcher: { flexDirection: 'row', backgroundColor: colors.surfaceMuted, borderRadius: radius.md, padding: spacing.xs, gap: spacing.xs },
-  modeButton: { flex: 1, minHeight: 44, borderRadius: radius.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm },
-  modeButtonActive: { backgroundColor: colors.primary },
-  modeButtonText: { ...typography.caption, color: colors.primary, textAlign: 'center' },
-  modeButtonTextActive: { color: colors.white },
+  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
+  modeSwitcher: { flexDirection: 'row', backgroundColor: colors.surfaceMuted, borderRadius: radius.lg, padding: spacing.xs, gap: spacing.xs, borderWidth: 1, borderColor: colors.border },
+  modeButton: { flex: 1, minHeight: 48, borderRadius: radius.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm },
+  modeButtonActive: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, shadowColor: '#17251C', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 1 },
+  modeButtonText: { ...typography.caption, color: colors.textSecondary, textAlign: 'center' },
+  modeButtonTextActive: { color: colors.primary, fontWeight: '700' },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   searchBox: { flex: 1, minHeight: 52, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, gap: spacing.sm },
-  searchInputWrap: { flex: 1 },
-  searchInput: { borderWidth: 0, backgroundColor: 'transparent', minHeight: 48, paddingHorizontal: 0 },
-  filterButton: { width: 52, height: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight, borderWidth: 1, borderColor: colors.primaryLight },
+  searchInput: { flex: 1, minWidth: 0, minHeight: 48, paddingHorizontal: 0, paddingVertical: spacing.sm, color: colors.text, ...typography.body },
+  clearSearchButton: { width: 40, height: 40, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
+  filterButton: { width: 52, height: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight, borderWidth: 1, borderColor: colors.primaryLight, position: 'relative' },
   filterButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterIndicator: { position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: radius.full, backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.white },
   filterSection: { gap: spacing.sm },
   eyebrow: { ...typography.caption, color: colors.textMuted, fontWeight: '700', letterSpacing: 0.8 },
   categoryList: { gap: spacing.sm, paddingRight: spacing.md },
-  institutionalBanner: { minHeight: 168, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: colors.primary, padding: spacing.lg, justifyContent: 'center', position: 'relative' },
+  institutionalBanner: { minHeight: 132, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: colors.primary, padding: spacing.md, justifyContent: 'center', position: 'relative' },
+  institutionalBannerDesktop: { minHeight: 148, paddingHorizontal: spacing.lg },
   bannerAccent: { position: 'absolute', right: -34, top: -38, width: 148, height: 148, borderRadius: 74, backgroundColor: colors.secondary },
   bannerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, zIndex: 1 },
   bannerCopy: { maxWidth: 600, gap: spacing.xs, zIndex: 1 },
   bannerKicker: { ...typography.label, color: '#C9D9FF', letterSpacing: 0.6 },
-  bannerTitle: { ...typography.heading2, color: colors.white, maxWidth: 520 },
+  bannerTitle: { ...typography.heading2, color: colors.white, maxWidth: 520, marginTop: spacing.xs },
   bannerBody: { ...typography.bodySmall, color: '#E8F0FF', maxWidth: 520 },
-  resultsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  resultsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  resultsHeaderCopy: { flex: 1, minWidth: 0 },
+  resultsTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   resultsTitle: { ...typography.heading2, color: colors.text },
   resultsCount: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
+  resultsCountBadge: { minWidth: 28, height: 24, paddingHorizontal: spacing.xs, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
+  resultsCountBadgeText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
   productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   productGridDesktop: { gap: spacing.lg },
   productCell: { minWidth: 0 },

@@ -23,11 +23,13 @@ const statusLabels: Record<OrderStatus, string> = {
   confirmado: 'Confirmado',
   concluido: 'Concluído',
   cancelado: 'Cancelado',
+  expirado: 'Expirado',
 };
 
 function statusPresentation(status: OrderStatus) {
   if (status === 'pendente') return { icon: 'clock-outline' as const, color: colors.warning, style: styles.statusPending, textStyle: styles.statusTextPending };
   if (status === 'cancelado') return { icon: 'close-circle-outline' as const, color: colors.error, style: styles.statusCancelled, textStyle: styles.statusTextCancelled };
+  if (status === 'expirado') return { icon: 'timer-off-outline' as const, color: colors.error, style: styles.statusExpired, textStyle: styles.statusTextExpired };
   if (status === 'concluido') return { icon: 'check-circle' as const, color: colors.success, style: styles.status, textStyle: styles.statusText };
   return { icon: 'progress-check' as const, color: colors.primary, style: styles.status, textStyle: styles.statusTextConfirmed };
 }
@@ -272,9 +274,13 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                       <Text style={styles.summaryValue}>{paymentLabel(order)}</Text>
                     </View>
                     <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Total</Text>
+                      <Text style={styles.summaryLabel}>{order.formaPagamento === 'gemn' ? 'Total em GEMN' : 'Devido em reais'}</Text>
                       <Text style={styles.total}>{orderTotal(order)}</Text>
                     </View>
+                    {order.gemnUtilizado > 0 ? <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>GEMN utilizado</Text>
+                      <Text style={styles.summaryValue}>{formatGemn(order.gemnUtilizado)}</Text>
+                    </View> : null}
                   </View>
                   {order.status === 'pendente' ? <Text style={styles.pendingNote}>Pedido pendente não significa pagamento realizado.</Text> : null}
                   {requestStatusPresentation(cancellationRequests[order.id]) ? (() => {
@@ -366,10 +372,12 @@ const styles = StyleSheet.create({
   status: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, minHeight: 28, borderRadius: radius.full, backgroundColor: colors.primaryLight },
   statusPending: { backgroundColor: colors.secondaryLight },
   statusCancelled: { backgroundColor: '#FDECEC' },
+  statusExpired: { backgroundColor: '#FDECEC' },
   statusText: { ...typography.caption, color: colors.success, fontWeight: '600' },
   statusTextPending: { color: colors.warning },
   statusTextConfirmed: { color: colors.primary },
   statusTextCancelled: { color: colors.error },
+  statusTextExpired: { color: colors.error },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
   productRow: { flexDirection: 'row', alignItems: 'center' },
   productIcon: { width: 56, height: 56, borderRadius: radius.md, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },

@@ -27,7 +27,7 @@ export function ProductCard({ icon, category, name, price, seller, coinPrice, ac
           <Text testID={nameTestID} accessibilityRole="text" style={[styles.name, compact && !marketplace && styles.nameCompact, marketplace && styles.marketplaceName, emphasizeName && styles.emphasizedName]} numberOfLines={marketplace ? 2 : compact ? 1 : 2}>{name}</Text>
           <View style={styles.sellerRow}><MaterialCommunityIcons name="store-outline" size={compact ? 12 : 14} color={colors.textSecondary} /><Text style={[styles.seller, compact && styles.sellerCompact]} numberOfLines={1}>{seller}</Text></View>
           <View style={[styles.bottomRow, compact && !marketplace && styles.bottomRowCompact, marketplace && styles.marketplaceBottomRow]}>
-            <View style={styles.priceBlock}><Text style={[styles.price, compact && styles.priceCompact]}>{price}</Text>{coinPrice ? (compact ? <View style={styles.gemnBadge}><MaterialCommunityIcons name="star-four-points" size={11} color="#886512" /><Text style={styles.gemnText}>GEMN</Text></View> : <View style={styles.coinRow}><MaterialCommunityIcons name="star-four-points" size={12} color="#886512" /><Text style={styles.coin}>{coinPrice}</Text></View>) : null}</View>
+            <View style={styles.priceBlock}><Text style={[styles.price, compact && styles.priceCompact]}>{price}</Text>{coinPrice ? (compact && !marketplace ? <View style={styles.gemnBadge}><MaterialCommunityIcons name="star-four-points" size={11} color="#886512" /><Text style={styles.gemnText}>GEMN</Text></View> : <View style={styles.coinRow}><MaterialCommunityIcons name="star-four-points" size={12} color="#886512" /><Text style={styles.coin}>{coinPrice}</Text></View>) : null}</View>
             {!compact && rating ? <View style={styles.rating}><MaterialCommunityIcons name="star" size={14} color={colors.secondary} /><Text style={styles.ratingText}>{rating}</Text></View> : null}
           </View>
           {acceptanceLabel ? <Text style={[styles.acceptance, acceptanceGemn ? styles.acceptanceGemn : styles.acceptanceMuted]} numberOfLines={2}>{acceptanceLabel}</Text> : null}
@@ -48,8 +48,8 @@ const styles = StyleSheet.create({
   marketplaceCard: { width: '100%', overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, height: 'auto' },
   marketplaceVisual: { aspectRatio: 1 },
   marketplaceIconDisc: { width: 62, height: 62 },
-  marketplaceInfo: { padding: spacing.md, minWidth: 0, flex: 0, flexGrow: 0, flexShrink: 1 },
-  marketplaceName: { ...typography.body, color: colors.text, fontWeight: '700', minHeight: 0 },
+  marketplaceInfo: { width: '100%', padding: spacing.md, minWidth: 0 },
+  marketplaceName: { ...typography.heading4, color: colors.text, fontWeight: '700', width: '100%', minHeight: 40, flexShrink: 0 },
   emphasizedName: { ...typography.heading3, color: colors.text, fontWeight: '700', width: '100%', minHeight: 48, flexShrink: 0 },
   marketplaceBottomRow: { marginTop: spacing.sm },
   image: { width: '100%', height: '100%', resizeMode: 'cover' },

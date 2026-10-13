@@ -2,22 +2,23 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
+import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 
 export type ProductType = 'Produto' | 'Serviço';
 export type ProductIcon = keyof typeof MaterialCommunityIcons.glyphMap;
 export type ListingStatus = 'rascunho' | 'ativo' | 'inativo';
 export type ProductCategory = { id: string; name: string };
 export type ListingImage = { uri: string; fileName?: string | null; fileSize?: number; mimeType?: string; file?: Blob };
-export type GemnProduct = { id: string; sellerId: string; type: ProductType; name: string; description: string; category: string; categoryId: string; price: number; acceptsGemn: boolean; gemnValue?: number; active: boolean; status: ListingStatus; sellerName?: string; imageUrl?: string; icon: ProductIcon };
+export type GemnProduct = { id: string; sellerId: string; type: ProductType; name: string; description: string; category: string; categoryId: string; price: number; acceptsGemn: boolean; sellerAcceptsGemn?: boolean; gemnValue?: number; active: boolean; status: ListingStatus; sellerName?: string; imageUrl?: string; icon: ProductIcon };
 export type NewGemnProduct = { type: ProductType; name: string; description: string; categoryId: string; price: number; acceptsGemn: boolean; gemnValue?: number; status?: ListingStatus };
 
 type ListingRelation<T> = T | T[] | null;
-type ListingRow = { id: string; seller_id: string; category_id: string; tipo: 'produto' | 'servico'; nome: string; descricao: string; preco_real: number | string; aceita_gemn: boolean; preco_gemn: number | string | null; imagem_principal: string | null; status: ListingStatus; categories?: ListingRelation<{ id: string; nome: string; ativo: boolean }>; sellers?: ListingRelation<{ id: string; nome_negocio: string; status: string }> };
+type ListingRow = { id: string; seller_id: string; category_id: string; tipo: 'produto' | 'servico'; nome: string; descricao: string; preco_real: number | string; aceita_gemn: boolean; preco_gemn: number | string | null; imagem_principal: string | null; status: ListingStatus; categories?: ListingRelation<{ id: string; nome: string; ativo: boolean }>; sellers?: ListingRelation<{ id: string; nome_negocio: string; status: string; aceita_gemn: boolean }> };
 type SellerRow = { id: string; status: string };
 type ProductMutationResult = { product?: GemnProduct; error?: string };
 type ProductsContextValue = { products: GemnProduct[]; productsLoading: boolean; productsError: string | null; refreshProducts: () => Promise<void>; marketplaceProducts: GemnProduct[]; marketplaceLoading: boolean; marketplaceError: string | null; refreshMarketplaceProducts: () => Promise<void>; categories: ProductCategory[]; categoriesLoading: boolean; categoriesError: string | null; refreshCategories: () => Promise<void>; addProduct: (product: NewGemnProduct, image?: ListingImage) => Promise<ProductMutationResult>; updateProduct: (id: string, product: NewGemnProduct, image?: ListingImage) => Promise<ProductMutationResult>; updateProductStatus: (id: string, status: ListingStatus) => Promise<ProductMutationResult> };
 const ProductsContext = createContext<ProductsContextValue | undefined>(undefined);
-const listingSelect = 'id,seller_id,category_id,tipo,nome,descricao,preco_real,aceita_gemn,preco_gemn,imagem_principal,status,categories(id,nome,ativo),sellers(id,nome_negocio,status)';
+const listingSelect = 'id,seller_id,category_id,tipo,nome,descricao,preco_real,aceita_gemn,preco_gemn,imagem_principal,status,categories(id,nome,ativo),sellers(id,nome_negocio,status,aceita_gemn)';
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
@@ -70,7 +71,8 @@ function mapListing(row: ListingRow): GemnProduct {
   const category = Array.isArray(row.categories) ? row.categories[0] : row.categories;
   const seller = Array.isArray(row.sellers) ? row.sellers[0] : row.sellers;
   const imageUrl = row.imagem_principal ? supabase.storage.from('listing-images').getPublicUrl(row.imagem_principal).data.publicUrl : undefined;
-  return { id: row.id, sellerId: row.seller_id, type, name: row.nome, description: row.descricao, category: category?.nome ?? 'Categoria', categoryId: row.category_id, price: Number(row.preco_real), acceptsGemn: row.aceita_gemn, ...(row.preco_gemn !== null ? { gemnValue: Number(row.preco_gemn) } : {}), active: row.status === 'ativo', status: row.status, sellerName: seller?.nome_negocio, imageUrl, icon: type === 'Produto' ? 'package-variant-closed' : 'tools' };
+  const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: seller?.aceita_gemn, listingAcceptsGemn: row.aceita_gemn, gemnValue: row.preco_gemn });
+  return { id: row.id, sellerId: row.seller_id, type, name: row.nome, description: row.descricao, category: category?.nome ?? 'Categoria', categoryId: row.category_id, price: Number(row.preco_real), acceptsGemn: row.aceita_gemn, ...(seller?.aceita_gemn !== undefined ? { sellerAcceptsGemn: seller.aceita_gemn } : {}), ...(gemnEligibility.enabled ? { gemnValue: gemnEligibility.value } : {}), active: row.status === 'ativo', status: row.status, sellerName: seller?.nome_negocio, imageUrl, icon: type === 'Produto' ? 'package-variant-closed' : 'tools' };
 }
 
 export function ProductsProvider({ children }: { children: ReactNode }) {

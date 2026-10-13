@@ -37,7 +37,7 @@ export default function HomeScreen({ navigation }: any) {
         </Pressable>
       </View>
 
-      <WalletCard />
+      <WalletCard onPress={() => navigation.navigate('Perfil', { screen: 'Wallet' })} />
 
       <View style={styles.communityBanner}>
         <View style={styles.bannerOrb} />

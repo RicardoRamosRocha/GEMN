@@ -55,12 +55,12 @@ function integerValue(value: unknown, field: string): number {
 }
 
 function orderStatus(value: unknown): OrderStatus {
-  if (value === 'pendente' || value === 'confirmado' || value === 'concluido' || value === 'cancelado') return value;
+  if (value === 'pendente' || value === 'confirmado' || value === 'concluido' || value === 'cancelado' || value === 'expirado') return value;
   throw new OrderServiceError('unexpected', 'Retorno inválido: status de pedido desconhecido.');
 }
 
 function paymentMethod(value: unknown): PaymentMethod {
-  if (value === 'real' || value === 'gemn') return value;
+  if (value === 'real' || value === 'gemn' || value === 'misto') return value;
   throw new OrderServiceError('unexpected', 'Retorno inválido: forma de pagamento desconhecida.');
 }
 
@@ -192,3 +192,11 @@ export async function listMyOrders(): Promise<Order[]> {
   if (!Array.isArray(data)) throw new OrderServiceError('unexpected', 'A consulta de pedidos retornou um formato inesperado.');
   return data.map(normalizeOrder);
 }
+
+// Exposto somente para os testes de contrato compiláveis do serviço.
+export const __ordersTestables = {
+  normalizeOrder,
+  normalizeRpcResult,
+  orderStatus,
+  paymentMethod,
+};

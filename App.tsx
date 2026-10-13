@@ -13,6 +13,7 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import MarketplaceScreen from './src/screens/MarketplaceScreen';
 import OrderConfirmationScreen from './src/screens/OrderConfirmationScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
+import WalletScreen from './src/screens/WalletScreen';
 import MyProductsScreen from './src/screens/MyProductsScreen';
 import SellerOrdersScreen from './src/screens/SellerOrdersScreen';
 import SellerDashboardScreen from './src/screens/SellerDashboardScreen';
@@ -22,6 +23,7 @@ import SellerStorefrontScreen from './src/screens/SellerStorefrontScreen';
 import CreateProductScreen from './src/screens/CreateProductScreen';
 import SellerApplicationScreen from './src/screens/SellerApplicationScreen';
 import AdminHomeScreen from './src/screens/AdminHomeScreen';
+import AdminPendingOrdersScreen from './src/screens/AdminPendingOrdersScreen';
 import AdminSellerApplicationsScreen from './src/screens/AdminSellerApplicationsScreen';
 import AdminSellerApplicationDetailScreen from './src/screens/AdminSellerApplicationDetailScreen';
 import AdminCancellationRequestsScreen from './src/screens/AdminCancellationRequestsScreen';
@@ -122,6 +124,11 @@ function ProfileStack() {
         options={{ title: 'Meus pedidos' }}
       />
       <Stack.Screen
+        name="Wallet"
+        component={WalletScreen}
+        options={{ title: 'Minha carteira' }}
+      />
+      <Stack.Screen
         name="SellerOrders"
         component={SellerOrdersScreen}
         options={{ title: 'Pedidos recebidos' }}
@@ -160,6 +167,11 @@ function ProfileStack() {
         name="AdminHome"
         component={AdminHomeScreen}
         options={{ title: 'Administração' }}
+      />
+      <Stack.Screen
+        name="AdminPendingOrders"
+        component={AdminPendingOrdersScreen}
+        options={{ title: 'Pedidos pendentes' }}
       />
       <Stack.Screen
         name="AdminSellerApplications"

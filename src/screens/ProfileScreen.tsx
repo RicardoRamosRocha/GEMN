@@ -72,7 +72,7 @@ export default function ProfileScreen({ navigation }: any) {
           <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
         </AppCard>
 
-        <View style={[styles.walletWrap, desktop && styles.walletWrapWide]}><WalletCard /></View>
+        <View style={[styles.walletWrap, desktop && styles.walletWrapWide]}><WalletCard onPress={() => navigation.navigate('Wallet')} /></View>
       </View>
 
       <View style={styles.sectionHeader}>
@@ -134,7 +134,7 @@ export default function ProfileScreen({ navigation }: any) {
           />
         ) : null}
         <MenuItem icon="heart-outline" title="Favoritos" subtitle="Em desenvolvimento" />
-        <MenuItem icon="wallet-outline" title="Minha carteira" subtitle="Em desenvolvimento" />
+        <MenuItem icon="wallet-outline" title="Minha carteira" subtitle="Saldo e movimentações GEMN" featured onPress={() => navigation.navigate('Wallet')} />
         <MenuItem icon="cog-outline" title="Configurações" subtitle="Em desenvolvimento" last />
       </AppCard>
 

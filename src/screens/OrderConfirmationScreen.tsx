@@ -6,6 +6,7 @@ import type { RouteProp } from '@react-navigation/native';
 
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
 import type { OrderConfirmationParams } from './ProductScreen';
+import type { OrderStatus } from '../types/orders';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 
 type OrderConfirmationStackParamList = {
@@ -27,6 +28,14 @@ function formatGemn(value: number | null) {
   return value === null ? 'Não aplicável' : `${value.toLocaleString('pt-BR')} GEMN`;
 }
 
+const statusLabels: Record<OrderStatus, string> = {
+  pendente: 'Pendente',
+  confirmado: 'Confirmado',
+  concluido: 'Concluído',
+  cancelado: 'Cancelado',
+  expirado: 'Expirado',
+};
+
 export default function OrderConfirmationScreen({ route, navigation }: OrderConfirmationScreenProps) {
   const { width } = useWindowDimensions();
   const wide = width >= layout.breakpoints.tablet;
@@ -43,7 +52,7 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
           </View>
           <AppBadge label="PEDIDO REGISTRADO" variant="success" />
           <Text style={styles.title}>Pedido criado</Text>
-          <Text style={styles.subtitle}>Seu pedido está com status {status} e aguardando processamento.</Text>
+          <Text style={styles.subtitle}>Seu pedido está com status {statusLabels[status]} e aguardando processamento.</Text>
         </View>
 
         <View style={styles.orderNumber}>
@@ -77,7 +86,7 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
               <Text style={styles.total}>{formatReal(valorDevidoReal)}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.label}>Total em reais</Text>
+              <Text style={styles.label}>Valor bruto em reais</Text>
               <Text style={styles.value}>{formatReal(totalReal)}</Text>
             </View>
             <View style={styles.row}>
@@ -85,11 +94,7 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
               <Text style={styles.value}>{formatGemn(gemnUtilizado)}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.label}>Devido em reais</Text>
-              <Text style={styles.value}>{formatReal(valorDevidoReal)}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Preço GEMN do anúncio (snapshot)</Text>
+              <Text style={styles.label}>Referência GEMN do anúncio</Text>
               <Text style={styles.value}>{formatGemn(totalGemn)}</Text>
             </View>
           </AppCard>

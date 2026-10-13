@@ -17,6 +17,7 @@ export function SellerDirectoryCard({ store, onPress }: SellerDirectoryCardProps
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Abrir vitrine de ${store.storeName}`}
+      accessibilityHint="Abre a vitrine pública desta loja"
       onPress={onPress}
       style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}
     >
@@ -39,10 +40,11 @@ export function SellerDirectoryCard({ store, onPress }: SellerDirectoryCardProps
         <View style={styles.info}>
           <View style={styles.titleRow}>
             <Text style={styles.storeName} numberOfLines={2}>{store.storeName}</Text>
-            <AppBadge label="Ativa" variant="success" />
+            <AppBadge label="Loja ativa" variant="success" />
           </View>
-          <Text style={styles.description} numberOfLines={3}>{store.description}</Text>
-          <View style={styles.linkRow}>
+          <Text style={styles.description} numberOfLines={2}>{store.description}</Text>
+          <View style={styles.ctaRow}>
+            <View style={styles.ctaIcon}><MaterialCommunityIcons name="storefront-outline" size={15} color={colors.primary} /></View>
             <Text style={styles.linkText}>Ver vitrine</Text>
             <MaterialCommunityIcons name="arrow-right" size={17} color={colors.primary} />
           </View>
@@ -54,15 +56,16 @@ export function SellerDirectoryCard({ store, onPress }: SellerDirectoryCardProps
 
 const styles = StyleSheet.create({
   pressable: { width: '100%' },
-  pressed: { opacity: 0.86 },
-  card: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, ...shadows.card },
-  logoArea: { aspectRatio: 16 / 7, minHeight: 132, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
-  logo: { width: '78%', height: '78%' },
-  logoFallback: { width: 76, height: 76, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
-  info: { padding: spacing.md, gap: spacing.sm },
+  pressed: { opacity: 0.86, transform: [{ scale: 0.99 }] },
+  card: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, ...shadows.card },
+  logoArea: { aspectRatio: 1.8, minHeight: 112, maxHeight: 156, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+  logo: { width: '76%', height: '76%' },
+  logoFallback: { width: 68, height: 68, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
+  info: { padding: spacing.md, gap: spacing.sm, minWidth: 0 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
   storeName: { ...typography.heading3, color: colors.text, flex: 1, minWidth: 0 },
-  description: { ...typography.bodySmall, color: colors.textSecondary, minHeight: 40 },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
+  description: { ...typography.bodySmall, color: colors.textSecondary, minHeight: 40, lineHeight: 20 },
+  ctaRow: { minHeight: 36, flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: spacing.xs, marginTop: spacing.xs, paddingRight: spacing.sm, borderRadius: radius.full, backgroundColor: colors.primaryLight },
+  ctaIcon: { width: 28, height: 28, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   linkText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
 });

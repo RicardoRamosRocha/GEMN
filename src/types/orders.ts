@@ -2,7 +2,8 @@ export type OrderStatus =
   | 'pendente'
   | 'confirmado'
   | 'concluido'
-  | 'cancelado';
+  | 'cancelado'
+  | 'expirado';
 
 export type PaymentMethod = 'real' | 'gemn' | 'misto';
 

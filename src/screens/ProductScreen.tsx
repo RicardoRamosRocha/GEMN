@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
+import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { OrderServiceError, createOrder } from '../services/orders';
 import { getSellerBranding } from '../services/sellerBranding';
 import { useAuth } from '../context/AuthContext';
@@ -89,8 +90,8 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
   const icon = listing?.icon ?? 'package-variant-closed';
   const total = numericPrice * quantity;
   const formattedTotal = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const gemnUnitValue = listing?.gemnValue ?? 0;
-  const parsedGemnInput = Number(gemnInput.replace(',', '.'));
+  const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: listing?.sellerAcceptsGemn, listingAcceptsGemn: listing?.acceptsGemn, gemnValue: listing?.gemnValue });
+  const parsedGemnInput = gemnEligibility.enabled ? Number(gemnInput.replace(',', '.')) : 0;
   const gemnUtilizado = Number.isFinite(parsedGemnInput) ? Math.min(total, Math.max(0, Math.round(parsedGemnInput * 100) / 100)) : 0;
   const paymentMethod = gemnUtilizado === 0 ? 'real' : gemnUtilizado === total ? 'gemn' : 'misto';
 
@@ -171,7 +172,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
                 onPress={() => { if (listing?.sellerId) navigation.navigate('SellerStorefront', { sellerId: listing.sellerId }); }}
               />
               <View style={styles.priceRow}><Text style={styles.price}>{price}</Text></View>
-              {listing?.acceptsGemn !== false ? <View style={styles.gemnLine}><MaterialCommunityIcons name="star-four-points" size={15} color={colors.secondary} /><Text style={styles.gemnText}>Aceita Moeda GEMN · {gemnUnitValue} GEMN por unidade</Text></View> : <View style={styles.gemnLine}><MaterialCommunityIcons name="information-outline" size={15} color={colors.textSecondary} /><Text style={styles.gemnMutedText}>Pagamento somente em reais</Text></View>}
+              {gemnEligibility.enabled ? <View style={styles.gemnLine}><MaterialCommunityIcons name="star-four-points" size={15} color={colors.secondary} /><Text style={styles.gemnText}>Aceita Moeda GEMN · {gemnEligibility.value} GEMN por unidade</Text></View> : <View style={styles.gemnLine}><MaterialCommunityIcons name="information-outline" size={15} color={colors.textSecondary} /><Text style={styles.gemnMutedText}>Pagamento somente em reais</Text></View>}
             </View>
           </AppCard>
 
@@ -195,7 +196,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
             <TouchableOpacity accessibilityRole="radio" accessibilityState={{ selected: paymentMethod === 'real' }} style={[styles.paymentOption, paymentMethod === 'real' && styles.paymentOptionActive]} onPress={() => setGemnInput('0')}>
               <MaterialCommunityIcons name="cash" size={23} color={paymentMethod === 'real' ? colors.primary : colors.textSecondary} /><Text style={styles.paymentTitle}>Reais</Text><Text style={styles.paymentAmount}>{formattedTotal}</Text>{paymentMethod === 'real' ? <MaterialCommunityIcons name="check-circle" size={20} color={colors.primary} /> : null}
             </TouchableOpacity>
-            {listing?.acceptsGemn !== false ? <View style={styles.gemnPaymentBox}>
+            {gemnEligibility.enabled ? <View style={styles.gemnPaymentBox}>
               <View style={styles.gemnPaymentHeader}><MaterialCommunityIcons name="star-four-points" size={21} color={colors.secondary} /><Text style={styles.paymentTitle}>Usar GEMN</Text><Text style={styles.paymentAmount}>{gemnUtilizado.toFixed(2)} GEMN</Text></View>
               <TextInput accessibilityLabel="Quantidade de GEMN utilizada" keyboardType="decimal-pad" value={gemnInput} onChangeText={setGemnInput} style={styles.gemnInput} placeholder="0,00" />
               <TouchableOpacity accessibilityRole="button" onPress={() => setGemnInput(total.toFixed(2))}><Text style={styles.gemnMax}>Usar 100% em GEMN</Text></TouchableOpacity>
