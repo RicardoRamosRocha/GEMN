@@ -13,6 +13,8 @@ export type SellerStorefrontSeller = {
   descricao: string;
   status: 'ativo';
   aceitaGemn: boolean;
+  logoUrl?: string;
+  bannerUrl?: string;
 };
 
 export type SellerStorefrontListing = {

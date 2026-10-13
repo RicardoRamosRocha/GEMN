@@ -17,6 +17,7 @@ import MyProductsScreen from './src/screens/MyProductsScreen';
 import SellerOrdersScreen from './src/screens/SellerOrdersScreen';
 import SellerDashboardScreen from './src/screens/SellerDashboardScreen';
 import SellerStoreSettingsScreen from './src/screens/SellerStoreSettingsScreen';
+import SellerStoreBrandingScreen from './src/screens/SellerStoreBrandingScreen';
 import SellerStorefrontScreen from './src/screens/SellerStorefrontScreen';
 import CreateProductScreen from './src/screens/CreateProductScreen';
 import SellerApplicationScreen from './src/screens/SellerApplicationScreen';
@@ -134,6 +135,11 @@ function ProfileStack() {
         name="SellerStoreSettings"
         component={SellerStoreSettingsScreen}
         options={{ title: 'Configurações da Loja' }}
+      />
+      <Stack.Screen
+        name="SellerStoreBranding"
+        component={SellerStoreBrandingScreen}
+        options={{ title: 'Personalizar Loja' }}
       />
       <Stack.Screen
   name="MyProducts"

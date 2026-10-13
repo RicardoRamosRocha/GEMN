@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getSellerBranding } from './sellerBranding';
 import {
   SellerStorefrontServiceError,
   type SellerStorefront,
@@ -168,6 +169,7 @@ export async function getSellerStorefront(sellerId: string): Promise<SellerStore
   if (sellerError) throw normalizeError(sellerError);
   if (!seller) throw new SellerStorefrontServiceError('not_found', 'Vendedor não encontrado.');
   const mappedSeller = mapSeller(seller as UnknownRecord);
+  const branding = await getSellerBranding(validatedSellerId);
 
   const { data: listings, error: listingsError } = await supabase
     .from('listings')
@@ -183,7 +185,14 @@ export async function getSellerStorefront(sellerId: string): Promise<SellerStore
     .map((row) => mapListing(row as ListingRow, validatedSellerId))
     .filter((listing): listing is SellerStorefrontListing => listing !== null);
 
-  return { seller: mappedSeller, listings: mappedListings };
+  return {
+    seller: {
+      ...mappedSeller,
+      ...(branding.branding.logoUrl ? { logoUrl: branding.branding.logoUrl } : {}),
+      ...(branding.branding.bannerUrl ? { bannerUrl: branding.branding.bannerUrl } : {}),
+    },
+    listings: mappedListings,
+  };
 }
 
 export const __sellerStorefrontTestables = {

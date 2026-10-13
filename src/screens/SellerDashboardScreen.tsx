@@ -12,7 +12,13 @@ import { supabase } from '../lib/supabase';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
 type SellerStatus = 'ativo' | 'suspenso';
-type SellerDashboardData = Omit<SellerDashboardFixture, 'cashbackPercentual'> & { cashbackPercentual: number | null };
+type SellerDashboardData = {
+  seller: Omit<SellerDashboardFixture['seller'], 'aceitaGemn'> & { aceitaGemn: boolean | null };
+  listingsCount: number;
+  ordersCount: number | null;
+  confirmedOrdersCount: number | null;
+  cashbackPercentual: number | null;
+};
 
 type SellerRow = {
   id: string;
@@ -20,16 +26,42 @@ type SellerRow = {
   descricao: string;
   telefone: string;
   status: SellerStatus;
-  aceita_gemn: boolean;
 };
 
 type CashbackRuleRow = { percentual: number | string };
 
-function friendlyError() {
-  return 'Não foi possível carregar os dados da Minha Loja. Tente novamente.';
+type OptionalResourceState = 'available' | 'unavailable' | 'error';
+
+function resourceState(error: unknown): OptionalResourceState {
+  const record = typeof error === 'object' && error !== null ? error as { code?: unknown; status?: unknown; message?: unknown } : {};
+  const code = typeof record.code === 'string' ? record.code : '';
+  const status = record.status === 401 || record.status === 403 ? record.status : undefined;
+  const message = typeof record.message === 'string' ? record.message.toLowerCase() : String(error).toLowerCase();
+  if (status || code === '401' || code === '403' || code === '42501' || message.includes('permission denied') || message.includes('row-level security') || message.includes('not authorized')) return 'error';
+  if (code === '42P01' || code === '42703' || code === 'PGRST202' || code === 'PGRST204' || code === 'PGRST205' || message.includes('does not exist') || message.includes('could not find the table') || message.includes('could not find the function') || message.includes('schema cache')) return 'unavailable';
+  return 'error';
 }
 
-function mapSeller(seller: SellerRow, listingsCount: number, ordersCount: number, confirmedOrdersCount: number, cashbackPercentual: number | null): SellerDashboardData {
+function diagnosticMessage(error: unknown) {
+  const record = typeof error === 'object' && error !== null ? error as { code?: unknown; status?: unknown; message?: unknown } : {};
+  const code = typeof record.code === 'string' ? record.code : undefined;
+  const status = typeof record.status === 'number' ? record.status : undefined;
+  const message = typeof record.message === 'string' ? record.message : String(error);
+  return {
+    code,
+    status,
+    message: message
+      .replace(/Bearer\s+[^\s]+/gi, 'Bearer <redacted>')
+      .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '<email>')
+      .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, '<uuid>'),
+  };
+}
+
+function reportOptionalFailure(operation: string, error: unknown) {
+  if (__DEV__) console.warn(`[SellerDashboard] ${operation} failed`, diagnosticMessage(error));
+}
+
+function mapSeller(seller: SellerRow, listingsCount: number, ordersCount: number | null, confirmedOrdersCount: number | null, cashbackPercentual: number | null, aceitaGemn: boolean | null): SellerDashboardData {
   return {
     seller: {
       id: seller.id,
@@ -37,7 +69,7 @@ function mapSeller(seller: SellerRow, listingsCount: number, ordersCount: number
       descricao: seller.descricao,
       telefone: seller.telefone,
       status: seller.status,
-      aceitaGemn: seller.aceita_gemn,
+      aceitaGemn,
     },
     listingsCount,
     ordersCount,
@@ -56,11 +88,13 @@ export default function SellerDashboardScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [settingsUnavailable, setSettingsUnavailable] = React.useState(false);
+  const [optionalResourceError, setOptionalResourceError] = React.useState<string | null>(null);
 
   const loadDashboard = React.useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true); else setLoading(true);
     setErrorMessage(null);
     setSettingsUnavailable(false);
+    setOptionalResourceError(null);
 
     if (fixturesEnabled) {
       setData(sellerDashboardUiFixture);
@@ -77,51 +111,85 @@ export default function SellerDashboardScreen({ navigation }: any) {
 
     const { data: seller, error: sellerError } = await supabase
       .from('sellers')
-      .select('id,nome_negocio,descricao,telefone,status,aceita_gemn')
+      .select('id,nome_negocio,descricao,telefone,status')
       .eq('user_id', user.id)
       .maybeSingle();
 
     if (sellerError || !seller || (seller.status !== 'ativo' && seller.status !== 'suspenso')) {
       setData(null);
-      setErrorMessage(sellerError ? friendlyError() : 'Esta área está disponível somente para vendedores aprovados.');
+      if (sellerError) {
+        reportOptionalFailure('seller-base', sellerError);
+        setErrorMessage('Não foi possível consultar os dados da loja. Verifique sua conexão e permissões.');
+      } else {
+        setErrorMessage('Esta área está disponível somente para vendedores aprovados.');
+      }
       if (refresh) setRefreshing(false); else setLoading(false);
       return;
     }
 
     const sellerRow = seller as SellerRow;
-    let listingsResult: { count: number | null; error: unknown };
-    let orders: Awaited<ReturnType<typeof listSellerRelatedOrders>>;
-    let cashbackResult: { data: CashbackRuleRow | null; error: unknown };
-    try {
-      [listingsResult, orders, cashbackResult] = await Promise.all([
-        supabase.from('listings').select('id', { count: 'exact', head: true }).eq('seller_id', sellerRow.id),
-        listSellerRelatedOrders(),
-        supabase.from('cashback_rules').select('percentual').eq('seller_id', sellerRow.id).is('vigente_ate', null).maybeSingle(),
-      ]);
-    } catch {
+    const { count: listingsCount, error: listingsError } = await supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('seller_id', sellerRow.id);
+
+    if (listingsError) {
+      reportOptionalFailure('listings-count', listingsError);
       setData(null);
-      setErrorMessage(friendlyError());
+      setErrorMessage('Não foi possível consultar os produtos da loja. Verifique sua conexão e permissões.');
       if (refresh) setRefreshing(false); else setLoading(false);
       return;
     }
 
-    if (listingsResult.error) {
-      setData(null);
-      setErrorMessage(friendlyError());
-      if (refresh) setRefreshing(false); else setLoading(false);
-      return;
+    const [acceptanceResult, ordersResult, cashbackResult] = await Promise.allSettled([
+      supabase.from('sellers').select('aceita_gemn').eq('id', sellerRow.id).maybeSingle(),
+      listSellerRelatedOrders(),
+      supabase.from('cashback_rules').select('percentual').eq('seller_id', sellerRow.id).is('vigente_ate', null).maybeSingle(),
+    ]);
+
+    let aceitaGemn: boolean | null = null;
+    if (acceptanceResult.status === 'fulfilled' && !acceptanceResult.value.error) {
+      const acceptance = acceptanceResult.value.data as { aceita_gemn?: unknown } | null;
+      aceitaGemn = acceptance?.aceita_gemn === true || acceptance?.aceita_gemn === false ? acceptance.aceita_gemn : null;
+    } else {
+      const acceptanceError = acceptanceResult.status === 'fulfilled' ? acceptanceResult.value.error : acceptanceResult.reason;
+      const state = resourceState(acceptanceError);
+      reportOptionalFailure('seller-acceptance', acceptanceError);
+      if (state === 'unavailable') setOptionalResourceError('A aceitação de GEMN ainda não está disponível nesta versão do banco.');
+      else setOptionalResourceError('Não foi possível consultar a aceitação de GEMN.');
     }
 
-    if (cashbackResult.error) setSettingsUnavailable(true);
-    const cashbackPercentual = cashbackResult.data
-      ? Number((cashbackResult.data as CashbackRuleRow).percentual)
-      : null;
+    let ordersCount: number | null = null;
+    let confirmedOrdersCount: number | null = null;
+    if (ordersResult.status === 'fulfilled') {
+      ordersCount = ordersResult.value.length;
+      confirmedOrdersCount = ordersResult.value.filter((order) => order.orderStatus === 'confirmado').length;
+    } else {
+      const state = resourceState(ordersResult.reason);
+      reportOptionalFailure('seller-related-orders', ordersResult.reason);
+      setOptionalResourceError((current) => current ?? (state === 'unavailable' ? 'O histórico de pedidos ainda não está disponível nesta versão do banco.' : 'Não foi possível consultar o histórico de pedidos.'));
+    }
+
+    let cashbackPercentual: number | null = null;
+    if (cashbackResult.status === 'fulfilled' && !cashbackResult.value.error) {
+      const row = cashbackResult.value.data as CashbackRuleRow | null;
+      const value = row ? Number(row.percentual) : null;
+      cashbackPercentual = value !== null && Number.isFinite(value) ? value : null;
+    } else {
+      const cashbackError = cashbackResult.status === 'fulfilled' ? cashbackResult.value.error : cashbackResult.reason;
+      const state = resourceState(cashbackError);
+      reportOptionalFailure('cashback-rule', cashbackError);
+      setSettingsUnavailable(true);
+      setOptionalResourceError((current) => current ?? (state === 'unavailable' ? 'As regras de cashback ainda não estão disponíveis nesta versão do banco.' : 'Não foi possível consultar a regra de cashback.'));
+    }
+
     setData(mapSeller(
       sellerRow,
-      listingsResult.count ?? 0,
-      orders.length,
-      orders.filter((order) => order.orderStatus === 'confirmado').length,
-      cashbackPercentual !== null && Number.isFinite(cashbackPercentual) ? cashbackPercentual : null,
+      listingsCount ?? 0,
+      ordersCount,
+      confirmedOrdersCount,
+      cashbackPercentual,
+      aceitaGemn,
     ));
     if (refresh) setRefreshing(false); else setLoading(false);
   }, [fixturesEnabled, user]);
@@ -158,19 +226,22 @@ export default function SellerDashboardScreen({ navigation }: any) {
 
       <View style={[styles.metricsGrid, wide && styles.metricsGridWide]}>
         <MetricCard icon="view-grid-outline" label="Anúncios próprios" value={String(data.listingsCount)} wide={wide} />
-        <MetricCard icon="clipboard-arrow-down-outline" label="Pedidos relacionados" value={String(data.ordersCount)} wide={wide} />
-        <MetricCard icon="progress-check" label="Pedidos confirmados" value={String(data.confirmedOrdersCount)} wide={wide} />
+        <MetricCard icon="clipboard-arrow-down-outline" label="Pedidos relacionados" value={data.ordersCount === null ? 'Indisponível' : String(data.ordersCount)} wide={wide} />
+        <MetricCard icon="progress-check" label="Pedidos confirmados" value={data.confirmedOrdersCount === null ? 'Indisponível' : String(data.confirmedOrdersCount)} wide={wide} />
       </View>
 
       <AppCard style={styles.settingsCard}>
         <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Resumo comercial</Text><Text style={styles.sectionSubtitle}>Somente informações autorizadas para este seller.</Text></View><MaterialCommunityIcons name="shield-check-outline" size={22} color={colors.primary} /></View>
         <View style={styles.settingRow}><View style={styles.settingIcon}><MaterialCommunityIcons name="cash-plus" size={20} color={colors.primary} /></View><View style={styles.settingCopy}><Text style={styles.settingLabel}>Cashback vigente</Text><Text style={styles.settingValue}>{settingsUnavailable ? 'Indisponível nesta versão' : data.cashbackPercentual === null ? 'Não configurado' : `${data.cashbackPercentual.toLocaleString('pt-BR')}%`}</Text></View></View>
-        <View style={styles.settingRow}><View style={styles.settingIcon}><MaterialCommunityIcons name="star-four-points-outline" size={20} color={colors.primary} /></View><View style={styles.settingCopy}><Text style={styles.settingLabel}>Aceita GEMN</Text><Text style={styles.settingValue}>{data.seller.aceitaGemn ? 'Sim' : 'Não'}</Text></View></View>
+        <View style={styles.settingRow}><View style={styles.settingIcon}><MaterialCommunityIcons name="star-four-points-outline" size={20} color={colors.primary} /></View><View style={styles.settingCopy}><Text style={styles.settingLabel}>Aceita GEMN</Text><Text style={styles.settingValue}>{data.seller.aceitaGemn === null ? 'Indisponível nesta versão' : data.seller.aceitaGemn ? 'Sim' : 'Não'}</Text></View></View>
         {settingsUnavailable ? <Text style={styles.helperText}>A regra de cashback não pôde ser consultada. Nenhuma alteração financeira foi executada.</Text> : null}
       </AppCard>
 
+      {optionalResourceError ? <AppCard style={styles.infoCard}><MaterialCommunityIcons name="information-outline" size={22} color={colors.primary} /><Text style={styles.infoText}>{optionalResourceError}</Text></AppCard> : null}
+
       <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Acessos rápidos</Text><Text style={styles.sectionSubtitle}>Gerencie seus anúncios e acompanhe pedidos.</Text></View></View>
       <View style={[styles.actions, wide && styles.actionsWide]}>
+        <AppButton title="Personalizar Loja" fullWidth={!wide} onPress={() => navigation.navigate('SellerStoreBranding')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
         <AppButton title="Configurações da Loja" variant="outline" fullWidth={!wide} onPress={() => navigation.navigate('SellerStoreSettings')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
         <AppButton title="Meus produtos" variant="outline" fullWidth={!wide} onPress={() => navigation.navigate('MyProducts')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
         <AppButton title="Pedidos recebidos" fullWidth={!wide} onPress={() => navigation.navigate('SellerOrders')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
@@ -205,6 +276,8 @@ const styles = StyleSheet.create({
   warningCopy: { flex: 1, gap: spacing.xs },
   warningTitle: { ...typography.heading4, color: colors.warning },
   warningText: { ...typography.bodySmall, color: colors.textSecondary },
+  infoCard: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryLight, borderWidth: 1, borderColor: colors.border },
+  infoText: { ...typography.bodySmall, color: colors.textSecondary, flex: 1 },
   metricsGrid: { gap: spacing.md },
   metricsGridWide: { flexDirection: 'row' },
   metricCard: { flex: 1, borderWidth: 1, borderColor: colors.border, gap: spacing.xs },

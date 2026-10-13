@@ -4,7 +4,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppButton, AppCard, AppInput, AppScreen } from '../components/ui';
 import { CategoryChip } from '../components/CategoryChip';
 import { ProductCard } from '../components/ProductCard';
+import { SellerDirectoryCard } from '../components/SellerDirectoryCard';
 import { useProducts } from '../context/ProductsContext';
+import { listActiveSellerDirectory, SellerDirectoryServiceError } from '../services/sellerDirectory';
+import type { SellerDirectoryStore } from '../types/sellerDirectory';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
 const allCategory = { icon: 'apps' as const, label: 'Todas' };
@@ -30,8 +33,18 @@ export default function MarketplaceScreen({ navigation }: any) {
   const productGap = desktop ? spacing.lg : spacing.md;
   const productWidth = (contentWidth - productGap * (columns - 1)) / columns;
   const { marketplaceProducts, marketplaceLoading, marketplaceError, refreshMarketplaceProducts, categories: activeCategories } = useProducts();
+  const [mode, setMode] = React.useState<'products' | 'stores'>('products');
   const [search, setSearch] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('Todas');
+  const [storeSearch, setStoreSearch] = React.useState('');
+  const [stores, setStores] = React.useState<SellerDirectoryStore[]>([]);
+  const [storesLoading, setStoresLoading] = React.useState(false);
+  const [storesLoadingMore, setStoresLoadingMore] = React.useState(false);
+  const [storesError, setStoresError] = React.useState<string | null>(null);
+  const [storesPage, setStoresPage] = React.useState(1);
+  const [storesHasMore, setStoresHasMore] = React.useState(false);
+  const storesRequestRef = React.useRef(0);
+
   const visibleProducts = marketplaceProducts.filter((product) => {
     const matchesCategory = selectedCategory === 'Todas' || product.category === selectedCategory;
     const query = search.trim().toLocaleLowerCase();
@@ -41,6 +54,50 @@ export default function MarketplaceScreen({ navigation }: any) {
   const hasActiveFilters = Boolean(search.trim()) || selectedCategory !== 'Todas';
   const clearFilters = () => { setSearch(''); setSelectedCategory('Todas'); };
 
+  const loadStores = React.useCallback(async (term: string, page: number, append: boolean) => {
+    const requestId = ++storesRequestRef.current;
+    if (append) setStoresLoadingMore(true);
+    else {
+      setStoresLoading(true);
+      setStoresLoadingMore(false);
+      setStoresError(null);
+      setStores([]);
+      setStoresPage(1);
+      setStoresHasMore(false);
+    }
+    try {
+      const result = await listActiveSellerDirectory({ search: term, page, pageSize: 12 });
+      if (requestId !== storesRequestRef.current) return;
+      setStores((current) => {
+        if (!append) return result.items;
+        const existingIds = new Set(current.map((store) => store.id));
+        return [...current, ...result.items.filter((store) => !existingIds.has(store.id))];
+      });
+      setStoresPage(page);
+      setStoresHasMore(result.hasMore);
+      setStoresError(null);
+    } catch (error) {
+      if (requestId !== storesRequestRef.current) return;
+      setStoresError(error instanceof SellerDirectoryServiceError ? error.message : 'Não foi possível carregar as lojas. Tente novamente.');
+    } finally {
+      if (requestId === storesRequestRef.current) {
+        setStoresLoading(false);
+        setStoresLoadingMore(false);
+      }
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (mode !== 'stores') return undefined;
+    const timer = setTimeout(() => { void loadStores(storeSearch.trim(), 1, false); }, 350);
+    return () => clearTimeout(timer);
+  }, [loadStores, mode, storeSearch]);
+
+  const retryStores = () => {
+    const append = stores.length > 0 && storesHasMore;
+    void loadStores(storeSearch.trim(), append ? storesPage + 1 : 1, append);
+  };
+
   return (
     <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
       <View style={styles.institutionalBanner}>
@@ -48,37 +105,59 @@ export default function MarketplaceScreen({ navigation }: any) {
         <View style={styles.bannerHeader}><Text style={styles.bannerKicker}>GEMN • COMUNIDADE MUNDO NOVO</Text><MaterialCommunityIcons name="storefront-outline" size={42} color="rgba(255,255,255,0.82)" /></View>
         <View style={styles.bannerCopy}><Text style={styles.bannerTitle}>Valorize quem empreende na nossa comunidade.</Text><Text style={styles.bannerBody}>Descubra produtos e serviços dos empreendedores GEMN.</Text></View>
       </View>
-      <View style={styles.searchRow}>
-        <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={21} color={colors.textSecondary} /><AppInput accessibilityLabel="Buscar no marketplace" placeholder="O que você procura?" value={search} onChangeText={setSearch} containerStyle={styles.searchInputWrap} inputStyle={styles.searchInput} returnKeyType="search" /></View>
-        <Pressable accessibilityRole="button" accessibilityLabel={hasActiveFilters ? 'Limpar filtros' : 'Filtros'} accessibilityState={{ disabled: !hasActiveFilters }} disabled={!hasActiveFilters} onPress={clearFilters} style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}><MaterialCommunityIcons name={hasActiveFilters ? 'filter-remove-outline' : 'tune-variant'} size={20} color={hasActiveFilters ? colors.white : colors.primary} /></Pressable>
+
+      <View style={styles.modeSwitcher} accessibilityRole="tablist">
+        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'products' }} onPress={() => setMode('products')} style={[styles.modeButton, mode === 'products' && styles.modeButtonActive]}><MaterialCommunityIcons name="view-grid-outline" size={18} color={mode === 'products' ? colors.white : colors.primary} /><Text style={[styles.modeButtonText, mode === 'products' && styles.modeButtonTextActive]}>Produtos e serviços</Text></Pressable>
+        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'stores' }} onPress={() => setMode('stores')} style={[styles.modeButton, mode === 'stores' && styles.modeButtonActive]}><MaterialCommunityIcons name="storefront-outline" size={18} color={mode === 'stores' ? colors.white : colors.primary} /><Text style={[styles.modeButtonText, mode === 'stores' && styles.modeButtonTextActive]}>Lojas</Text></Pressable>
       </View>
 
-      <View style={styles.filterSection}>
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={21} color={colors.textSecondary} /><AppInput accessibilityLabel={mode === 'stores' ? 'Buscar lojas' : 'Buscar no marketplace'} placeholder={mode === 'stores' ? 'Buscar por nome ou descrição' : 'O que você procura?'} value={mode === 'stores' ? storeSearch : search} onChangeText={mode === 'stores' ? setStoreSearch : setSearch} containerStyle={styles.searchInputWrap} inputStyle={styles.searchInput} returnKeyType="search" /></View>
+        {mode === 'products' ? <Pressable accessibilityRole="button" accessibilityLabel={hasActiveFilters ? 'Limpar filtros' : 'Filtros'} accessibilityState={{ disabled: !hasActiveFilters }} disabled={!hasActiveFilters} onPress={clearFilters} style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}><MaterialCommunityIcons name={hasActiveFilters ? 'filter-remove-outline' : 'tune-variant'} size={20} color={hasActiveFilters ? colors.white : colors.primary} /></Pressable> : null}
+      </View>
+
+      {mode === 'products' ? <View style={styles.filterSection}>
         <Text style={styles.eyebrow}>EXPLORE POR CATEGORIA</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>
           {marketplaceCategories.map((category, index) => <CategoryChip key={category.label} icon={category.icon} label={category.label} tone={index} onPress={() => setSelectedCategory(category.label)} selected={selectedCategory === category.label} />)}
         </ScrollView>
-      </View>
+      </View> : null}
 
       <View style={styles.resultsHeader}>
-        <View><Text style={styles.resultsTitle}>Produtos e serviços</Text><Text style={styles.resultsCount}>Feitos por empreendedores da comunidade</Text></View>
+        <View><Text style={styles.resultsTitle}>{mode === 'stores' ? 'Lojas' : 'Produtos e serviços'}</Text><Text style={styles.resultsCount}>{mode === 'stores' ? 'Encontre lojas ativas da comunidade' : 'Feitos por empreendedores da comunidade'}</Text></View>
+        {mode === 'stores' ? <AppButton title="Atualizar" size="compact" variant="outline" loading={storesLoading && stores.length > 0} disabled={storesLoading || storesLoadingMore} onPress={() => { void loadStores(storeSearch.trim(), 1, false); }} /> : null}
       </View>
 
-      {marketplaceError ? <AppCard style={styles.errorCard}><Text style={styles.errorText}>{marketplaceError}</Text><AppButton title="Tentar novamente" variant="outline" onPress={() => { void refreshMarketplaceProducts(); }} /></AppCard> : null}
-      {marketplaceLoading ? <View style={styles.loadingState}><ActivityIndicator color={colors.primary} /><Text style={styles.helperText}>Carregando anúncios publicados...</Text></View> : null}
-      {!marketplaceLoading && !marketplaceError && visibleProducts.length === 0 ? <AppCard style={styles.emptyCard}><View style={styles.emptyIcon}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>{hasActiveFilters ? 'Nenhum anúncio encontrado' : 'Ainda não há anúncios publicados'}</Text><Text style={styles.emptyBody}>{hasActiveFilters ? 'Tente buscar por outro termo ou limpar os filtros.' : 'Em breve, novos produtos e serviços da comunidade aparecerão aqui.'}</Text>{hasActiveFilters ? <AppButton title="Limpar filtros" size="compact" variant="outline" onPress={clearFilters} /> : null}</AppCard> : null}
-      <View style={[styles.productGrid, desktop && styles.productGridDesktop]}>
-        {visibleProducts.map((product) => {
-          const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-          return <View key={product.id} style={[styles.productCell, { width: productWidth }]}><ProductCard layout="marketplace" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={product.gemnValue !== undefined ? `${product.gemnValue.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? 'Comunidade GEMN'} onPress={() => navigation.navigate('Product', { listing: product })} /></View>;
-        })}
-      </View>
+      {mode === 'products' ? <>
+        {marketplaceError ? <AppCard style={styles.errorCard}><Text style={styles.errorText}>{marketplaceError}</Text><AppButton title="Tentar novamente" variant="outline" onPress={() => { void refreshMarketplaceProducts(); }} /></AppCard> : null}
+        {marketplaceLoading ? <View style={styles.loadingState}><ActivityIndicator color={colors.primary} /><Text style={styles.helperText}>Carregando anúncios publicados...</Text></View> : null}
+        {!marketplaceLoading && !marketplaceError && visibleProducts.length === 0 ? <AppCard style={styles.emptyCard}><View style={styles.emptyIcon}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>{hasActiveFilters ? 'Nenhum anúncio encontrado' : 'Ainda não há anúncios publicados'}</Text><Text style={styles.emptyBody}>{hasActiveFilters ? 'Tente buscar por outro termo ou limpar os filtros.' : 'Em breve, novos produtos e serviços da comunidade aparecerão aqui.'}</Text>{hasActiveFilters ? <AppButton title="Limpar filtros" size="compact" variant="outline" onPress={clearFilters} /> : null}</AppCard> : null}
+        <View style={[styles.productGrid, desktop && styles.productGridDesktop]}>
+          {visibleProducts.map((product) => {
+            const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            return <View key={product.id} style={[styles.productCell, { width: productWidth }]}><ProductCard layout="marketplace" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={product.gemnValue !== undefined ? `${product.gemnValue.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? 'Comunidade GEMN'} onPress={() => navigation.navigate('Product', { listing: product })} /></View>;
+          })}
+        </View>
+      </> : <>
+        {storesError ? <AppCard style={styles.errorCard}><Text style={styles.errorText}>{storesError}</Text><AppButton title="Tentar novamente" variant="outline" onPress={retryStores} /></AppCard> : null}
+        {storesLoading ? <View style={styles.loadingState}><ActivityIndicator color={colors.primary} /><Text style={styles.helperText}>Carregando lojas...</Text></View> : null}
+        {!storesLoading && stores.length === 0 && !storesError ? <AppCard style={styles.emptyCard}><View style={styles.emptyIcon}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>{storeSearch.trim() ? 'Nenhuma loja encontrada' : 'Ainda não há lojas disponíveis'}</Text><Text style={styles.emptyBody}>{storeSearch.trim() ? 'Tente buscar por outro nome ou descrição.' : 'Lojas ativas da comunidade aparecerão aqui.'}</Text></AppCard> : null}
+        <View style={[styles.productGrid, desktop && styles.productGridDesktop]}>
+          {stores.map((store) => <View key={store.id} style={[styles.productCell, { width: productWidth }]}><SellerDirectoryCard store={store} onPress={() => navigation.navigate('SellerStorefront', { sellerId: store.id })} /></View>)}
+        </View>
+        {storesHasMore ? <View style={styles.loadMore}><AppButton title={storesLoadingMore ? 'Carregando...' : storesError ? 'Tentar novamente' : 'Carregar mais'} loading={storesLoadingMore} disabled={storesLoadingMore} variant="outline" onPress={() => { void loadStores(storeSearch.trim(), storesPage + 1, true); }} /></View> : null}
+      </>}
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
+  modeSwitcher: { flexDirection: 'row', backgroundColor: colors.surfaceMuted, borderRadius: radius.md, padding: spacing.xs, gap: spacing.xs },
+  modeButton: { flex: 1, minHeight: 44, borderRadius: radius.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm },
+  modeButtonActive: { backgroundColor: colors.primary },
+  modeButtonText: { ...typography.caption, color: colors.primary, textAlign: 'center' },
+  modeButtonTextActive: { color: colors.white },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   searchBox: { flex: 1, minHeight: 52, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, gap: spacing.sm },
   searchInputWrap: { flex: 1 },
@@ -109,4 +188,5 @@ const styles = StyleSheet.create({
   emptyIcon: { width: 56, height: 56, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
   emptyTitle: { ...typography.heading3, color: colors.text, textAlign: 'center' },
   emptyBody: { ...typography.bodySmall, color: colors.textSecondary, textAlign: 'center', maxWidth: 420 },
+  loadMore: { alignItems: 'center', paddingTop: spacing.xs },
 });
