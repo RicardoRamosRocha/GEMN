@@ -6,6 +6,7 @@ import * as Crypto from 'expo-crypto';
 
 import { AppBadge, AppButton, AppCard, AppInput, AppScreen } from '../components/ui';
 import { listMyOrders, OrderServiceError } from '../services/orders';
+import { cancelPendingOrder, PendingOrderCancellationServiceError } from '../services/pendingOrderCancellation';
 import { requestOrderCancellation } from '../services/cancellationRequests';
 import { listMyCancellationRequests } from '../services/cancellationRequestQueries';
 import { CancellationRequestServiceError } from '../types/cancellationRequests';
@@ -62,6 +63,12 @@ function friendlyCancellationError(error: unknown) {
   return 'Não foi possível atualizar as solicitações de cancelamento.';
 }
 
+function friendlyPendingCancellationError(error: unknown) {
+  if (error instanceof PendingOrderCancellationServiceError) return error.message;
+  if (error instanceof Error) return error.message;
+  return 'Não foi possível cancelar o pedido. Tente novamente.';
+}
+
 function latestRequestsByOrder(requests: CancellationRequestQuery[]) {
   return requests.reduce<Record<string, CancellationRequestQuery>>((result, request) => {
     const current = result[request.orderId];
@@ -92,7 +99,11 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestProcessing, setRequestProcessing] = useState(false);
   const [inconclusiveMessage, setInconclusiveMessage] = useState<string | null>(null);
+  const [pendingSelectedOrder, setPendingSelectedOrder] = useState<Order | null>(null);
+  const [pendingCancellationProcessing, setPendingCancellationProcessing] = useState(false);
+  const [pendingCancellationError, setPendingCancellationError] = useState<string | null>(null);
   const intentKeysRef = useRef<Record<string, string>>({});
+  const pendingIntentKeysRef = useRef<Record<string, string>>({});
   const fixturesEnabled = isGemnUiFixturesEnabled();
 
   const loadCancellationRequests = useCallback(async () => {
@@ -112,7 +123,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
     }
   }, [fixturesEnabled]);
 
-  const loadOrders = useCallback(async (refresh = false) => {
+  const loadOrders = useCallback(async (refresh = false): Promise<Order[] | null> => {
     if (refresh) setRefreshing(true); else setLoading(true);
     setErrorMessage(null);
     setInconclusiveMessage(null);
@@ -120,17 +131,21 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
       setOrders(ordersUiFixtures);
       await loadCancellationRequests();
       if (refresh) setRefreshing(false); else setLoading(false);
-      return;
+      return ordersUiFixtures;
     }
+    let loadedOrders: Order[];
     try {
       const result = await listMyOrders();
       setOrders(result);
+      loadedOrders = result;
     } catch (error) {
       setErrorMessage(friendlyOrdersError(error));
+      return null;
     } finally {
       if (refresh) setRefreshing(false); else setLoading(false);
     }
     await loadCancellationRequests();
+    return loadedOrders;
   }, [fixturesEnabled, loadCancellationRequests]);
 
   useFocusEffect(useCallback(() => {
@@ -153,6 +168,72 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
     setSelectedOrder(null);
     setReason('');
     setRequestError(null);
+  }
+
+  function openPendingCancellationModal(order: Order) {
+    if (order.status !== 'pendente') return;
+    if (!pendingIntentKeysRef.current[order.id]) pendingIntentKeysRef.current[order.id] = Crypto.randomUUID();
+    setPendingSelectedOrder(order);
+    setPendingCancellationError(null);
+    setInconclusiveMessage(null);
+  }
+
+  function closePendingCancellationModal() {
+    if (pendingCancellationProcessing) return;
+    if (pendingSelectedOrder) delete pendingIntentKeysRef.current[pendingSelectedOrder.id];
+    setPendingSelectedOrder(null);
+    setPendingCancellationError(null);
+  }
+
+  async function submitPendingCancellation() {
+    if (!pendingSelectedOrder || pendingCancellationProcessing) return;
+    const orderId = pendingSelectedOrder.id;
+    const idempotencyKey = pendingIntentKeysRef.current[orderId] ?? Crypto.randomUUID();
+    pendingIntentKeysRef.current[orderId] = idempotencyKey;
+    setPendingCancellationProcessing(true);
+    setPendingCancellationError(null);
+    setInconclusiveMessage(null);
+    try {
+      const result = await cancelPendingOrder({ orderId, idempotencyKey });
+      delete pendingIntentKeysRef.current[orderId];
+      setPendingSelectedOrder(null);
+      await loadOrders(true);
+      setInconclusiveMessage(
+        result.gemnLiberado > 0
+          ? `Pedido cancelado. ${formatGemn(result.gemnLiberado)} reservado${result.gemnLiberado === 1 ? '' : 's'} foi devolvido à sua carteira.`
+          : 'Pedido cancelado. Nenhum GEMN reservado precisava ser devolvido.',
+      );
+    } catch (error) {
+      const serviceError = error instanceof PendingOrderCancellationServiceError ? error : null;
+      if (serviceError?.kind === 'network' || serviceError?.retryable) {
+        const refreshed = await loadOrders(true);
+        const currentOrder = refreshed?.find((current) => current.id === orderId);
+        if (currentOrder?.status === 'cancelado') {
+          delete pendingIntentKeysRef.current[orderId];
+          setPendingSelectedOrder(null);
+          setInconclusiveMessage('O pedido foi cancelado. Atualizamos a lista; consulte a carteira para conferir a devolução dos GEMN reservados.');
+        } else if (currentOrder && currentOrder.status !== 'pendente') {
+          delete pendingIntentKeysRef.current[orderId];
+          setPendingSelectedOrder(null);
+          setInconclusiveMessage(`O pedido não pode mais ser cancelado porque está ${statusLabels[currentOrder.status].toLocaleLowerCase()}.`);
+        } else {
+          setPendingCancellationError(friendlyPendingCancellationError(error));
+          setInconclusiveMessage('O resultado do cancelamento ficou inconclusivo. O pedido continua disponível para consulta e a mesma chave será reutilizada se você tentar novamente.');
+        }
+      } else {
+        const refreshed = await loadOrders(true);
+        const currentOrder = refreshed?.find((current) => current.id === orderId);
+        if (currentOrder && currentOrder.status !== 'pendente') {
+          delete pendingIntentKeysRef.current[orderId];
+          setPendingSelectedOrder(null);
+          setInconclusiveMessage(friendlyPendingCancellationError(error));
+        } else {
+          setPendingCancellationError(friendlyPendingCancellationError(error));
+        }
+      }
+    } finally {
+      setPendingCancellationProcessing(false);
+    }
   }
 
   async function submitCancellationRequest() {
@@ -294,6 +375,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                       {request?.status === 'rejeitada' && request.motivoDecisao ? <Text style={styles.cancellationNote}>Motivo: {request.motivoDecisao}</Text> : null}
                     </View>;
                   })() : null}
+                  {order.status === 'pendente' ? <AppButton title="Cancelar pedido" variant="outline" fullWidth onPress={() => openPendingCancellationModal(order)} style={styles.cancelButton} /> : null}
                   {order.status === 'confirmado' && (!cancellationRequests[order.id] || cancellationRequests[order.id].status === 'rejeitada') ? <AppButton title="Solicitar cancelamento" variant="outline" fullWidth onPress={() => openCancellationModal(order)} style={styles.cancelButton} /> : null}
                 </AppCard>
               </View>
@@ -317,9 +399,33 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
         <MaterialCommunityIcons name="cloud-question" size={20} color={colors.warning} />
         <Text style={styles.warningBoxText}>{inconclusiveMessage}</Text>
       </AppCard> : null}
+      <PendingCancellationModal order={pendingSelectedOrder} processing={pendingCancellationProcessing} errorMessage={pendingCancellationError} onCancel={closePendingCancellationModal} onConfirm={() => { void submitPendingCancellation(); }} />
       <CancellationModal order={selectedOrder} reason={reason} processing={requestProcessing} errorMessage={requestError} onReasonChange={setReason} onCancel={closeCancellationModal} onConfirm={() => { void submitCancellationRequest(); }} />
     </AppScreen>
   );
+}
+
+function PendingCancellationModal({ order, processing, errorMessage, onCancel, onConfirm }: {
+  order: Order | null;
+  processing: boolean;
+  errorMessage: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return <Modal visible={Boolean(order)} transparent animationType="fade" onRequestClose={onCancel}>
+    <View accessibilityViewIsModal style={styles.modalBackdrop}>
+      <View style={styles.modalCard}>
+        <Text style={styles.modalTitle}>Cancelar pedido?</Text>
+        <Text style={styles.modalDescription}>Pedido {order?.id}</Text>
+        <Text style={styles.modalDescription}>Esta ação cancela a intenção pendente. Se houver GEMN reservado, o valor será devolvido à sua carteira.</Text>
+        {errorMessage ? <Text accessibilityRole="alert" style={styles.modalError}>{errorMessage}</Text> : null}
+        <View style={styles.modalActions}>
+          <AppButton title="Voltar" variant="outline" onPress={onCancel} disabled={processing} style={styles.modalButton} />
+          <AppButton title="Confirmar cancelamento" onPress={onConfirm} loading={processing} disabled={processing} style={styles.modalButton} />
+        </View>
+      </View>
+    </View>
+  </Modal>;
 }
 
 function CancellationModal({ order, reason, processing, errorMessage, onReasonChange, onCancel, onConfirm }: {
@@ -405,6 +511,7 @@ const styles = StyleSheet.create({
   modalCard: { width: '100%', maxWidth: 480, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
   modalTitle: { ...typography.heading3, color: colors.text },
   modalDescription: { ...typography.bodySmall, color: colors.textSecondary },
+  modalError: { ...typography.bodySmall, color: colors.error },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.sm },
   modalButton: { flex: 1 },
   demoBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: '#FBF1DF', borderWidth: 1, borderColor: '#F5D9A0' },
