@@ -10,14 +10,15 @@ export type AppInputProps = Omit<TextInputProps, 'style'> & {
   containerStyle?: StyleProp<ViewStyle>;
   inputStyle?: TextInputProps['style'];
   icon?: keyof typeof MaterialCommunityIcons.glyphMap;
+  variant?: 'default' | 'search';
 };
 
-export function AppInput({ label, helperText, error, multiline = false, containerStyle, inputStyle, icon, ...inputProps }: AppInputProps) {
+export function AppInput({ label, helperText, error, multiline = false, containerStyle, inputStyle, icon, variant = 'default', ...inputProps }: AppInputProps) {
   const invalid = Boolean(error);
   return (
     <View style={containerStyle}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={[styles.inputWrap, invalid && styles.invalid]}>
+      <View style={[styles.inputWrap, variant === 'search' && styles.searchInputWrap, invalid && styles.invalid]}>
         {icon ? <MaterialCommunityIcons name={icon} size={19} color={colors.textSecondary} style={styles.icon} /> : null}
         <TextInput
           {...inputProps}
@@ -36,6 +37,7 @@ export function AppInput({ label, helperText, error, multiline = false, containe
 const styles = StyleSheet.create({
   label: { ...typography.label, color: colors.text, marginBottom: spacing.sm },
   inputWrap: { minHeight: 52, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
+  searchInputWrap: { borderRadius: radius.full, borderColor: colors.surfaceMuted },
   input: { flex: 1, minHeight: 50, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, color: colors.text, backgroundColor: 'transparent', ...typography.body },
   icon: { marginLeft: spacing.md },
   multiline: { minHeight: 112, paddingTop: spacing.md },

@@ -6,11 +6,11 @@ import { colors, radius, spacing, typography } from '../theme/tokens';
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 const tones = [colors.brandLight, colors.gemnLight, colors.surfaceMuted, colors.background] as const;
 
-export function CategoryChip({ icon, label, compact = false, onPress, selected = false, tone = 0, variant = 'default' }: { icon: IconName; label: string; compact?: boolean; onPress?: () => void; selected?: boolean; tone?: number; variant?: 'default' | 'home' }) {
+export function CategoryChip({ icon, label, compact = false, onPress, selected = false, tone = 0, variant = 'default', hideIcon = false }: { icon: IconName; label: string; compact?: boolean; onPress?: () => void; selected?: boolean; tone?: number; variant?: 'default' | 'home'; hideIcon?: boolean }) {
   const home = variant === 'home';
   return (
     <Pressable accessibilityRole="button" onPress={onPress} accessibilityState={{ selected }} style={[styles.chip, home && styles.homeChip, compact && styles.compact, !selected && !compact && !home && { backgroundColor: tones[tone % tones.length] }, selected && (compact ? styles.selectedCompact : styles.selected)]}>
-      <View style={[styles.iconWrap, home && styles.homeIcon, compact && styles.compactIcon, !selected && !compact && !home && { backgroundColor: colors.white }, selected && compact && styles.selectedCompactIcon]}><MaterialCommunityIcons name={icon} size={home ? 24 : compact ? 18 : 20} color={selected && compact ? colors.white : home ? colors.textSecondary : colors.primary} /></View>
+      {!hideIcon ? <View style={[styles.iconWrap, home && styles.homeIcon, compact && styles.compactIcon, !selected && !compact && !home && { backgroundColor: colors.white }, selected && compact && styles.selectedCompactIcon]}><MaterialCommunityIcons name={icon} size={home ? 24 : compact ? 18 : 20} color={selected && compact ? colors.white : home ? colors.textSecondary : colors.primary} /></View> : null}
       <Text style={[styles.label, home && styles.homeLabel, selected && compact && styles.selectedCompactLabel]} numberOfLines={1}>{label}</Text>
     </Pressable>
   );
