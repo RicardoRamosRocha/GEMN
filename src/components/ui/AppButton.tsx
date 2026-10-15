@@ -21,7 +21,7 @@ export function AppButton({ title, onPress, variant = 'primary', disabled = fals
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? title} accessibilityState={{ disabled: unavailable, busy: loading }} disabled={unavailable} onPress={onPress}
       style={({ pressed }) => [styles.button, styles[variant], size === 'compact' && styles.compact, fullWidth && styles.fullWidth, unavailable && styles.disabled, pressed && !unavailable && styles.pressed, style]}>
-      {loading ? <ActivityIndicator size="small" color={variant === 'primary' || variant === 'accent' ? colors.white : colors.primary} /> : <Text style={[styles.label, styles[`${variant}Label`]]}>{title}</Text>}
+      {loading ? <ActivityIndicator size="small" color={variant === 'primary' || variant === 'accent' ? colors.white : colors.brand} /> : <Text style={[styles.label, styles[`${variant}Label`]]}>{title}</Text>}
     </Pressable>
   );
 }
@@ -30,15 +30,15 @@ const styles = StyleSheet.create({
   button: { alignSelf: 'flex-start', minHeight: 48, paddingHorizontal: spacing.lg, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   compact: { minHeight: 48, paddingHorizontal: spacing.md },
   fullWidth: { alignSelf: 'stretch', width: '100%' },
-  primary: { backgroundColor: colors.primary },
-  secondary: { backgroundColor: colors.secondaryLight },
-  accent: { backgroundColor: colors.secondary },
-  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.primary },
+  primary: { backgroundColor: colors.brand },
+  secondary: { backgroundColor: colors.brandLight },
+  accent: { backgroundColor: colors.brandDark },
+  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.brand },
   label: { ...typography.label },
   primaryLabel: { color: colors.white },
-  secondaryLabel: { color: colors.text },
+  secondaryLabel: { color: colors.brandDark },
   accentLabel: { color: colors.white },
-  outlineLabel: { color: colors.primary },
+  outlineLabel: { color: colors.brand },
   disabled: { opacity: 0.48 },
   pressed: { opacity: 0.82 },
 });

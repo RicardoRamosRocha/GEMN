@@ -32,11 +32,26 @@ import { ProductsProvider } from './src/context/ProductsContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
-import { colors } from './src/theme/tokens';
+import { colors, layout, radius, shadows, spacing, typography } from './src/theme/tokens';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const AuthStack = createNativeStackNavigator();
+
+const stackScreenOptions = {
+  headerStyle: { backgroundColor: colors.surface },
+  headerTintColor: colors.brandDark,
+  headerTitleStyle: {
+    fontFamily: typography.heading4.fontFamily,
+    fontSize: typography.heading4.fontSize,
+    fontWeight: typography.heading4.fontWeight,
+    color: colors.text,
+  },
+  headerTitleAlign: 'left' as const,
+  headerShadowVisible: false,
+  headerBackTitle: 'Voltar',
+  contentStyle: { backgroundColor: colors.background },
+};
 
 function AuthNavigator() {
   return (
@@ -51,7 +66,7 @@ function AuthNavigator() {
 
 function HomeStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={stackScreenOptions}>
       <Stack.Screen
         name="Home"
         component={HomeScreen}
@@ -68,6 +83,7 @@ function HomeStack() {
         component={OrderConfirmationScreen}
         options={{
           title: 'Pedido registrado',
+          headerShown: false,
         }}
       />
       <Stack.Screen
@@ -81,7 +97,7 @@ function HomeStack() {
 
 function MarketplaceStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={stackScreenOptions}>
       <Stack.Screen
         name="MarketplaceHome"
         component={MarketplaceScreen}
@@ -98,6 +114,7 @@ function MarketplaceStack() {
         component={OrderConfirmationScreen}
         options={{
           title: 'Pedido registrado',
+          headerShown: false,
         }}
       />
       <Stack.Screen
@@ -111,7 +128,7 @@ function MarketplaceStack() {
 
 function ProfileStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={stackScreenOptions}>
       <Stack.Screen
         name="ProfileHome"
         component={ProfileScreen}
@@ -121,77 +138,77 @@ function ProfileStack() {
       <Stack.Screen
         name="Orders"
         component={OrdersScreen}
-        options={{ title: 'Meus pedidos' }}
+        options={{ title: 'Meus pedidos', headerShown: false }}
       />
       <Stack.Screen
         name="Wallet"
         component={WalletScreen}
-        options={{ title: 'Minha carteira' }}
+        options={{ title: 'Minha carteira', headerShown: false }}
       />
       <Stack.Screen
         name="SellerOrders"
         component={SellerOrdersScreen}
-        options={{ title: 'Pedidos recebidos' }}
+        options={{ title: 'Pedidos recebidos', headerShown: false }}
       />
       <Stack.Screen
         name="SellerDashboard"
         component={SellerDashboardScreen}
-        options={{ title: 'Minha Loja' }}
+        options={{ title: 'Minha Loja', headerShown: false }}
       />
       <Stack.Screen
         name="SellerStoreSettings"
         component={SellerStoreSettingsScreen}
-        options={{ title: 'Configurações da Loja' }}
+        options={{ title: 'Configurações da Loja', headerShown: false }}
       />
       <Stack.Screen
         name="SellerStoreBranding"
         component={SellerStoreBrandingScreen}
-        options={{ title: 'Personalizar Loja' }}
+        options={{ title: 'Personalizar Loja', headerShown: false }}
       />
       <Stack.Screen
-  name="MyProducts"
-  component={MyProductsScreen}
-  options={{ title: 'Meus produtos' }}
-/>
+        name="MyProducts"
+        component={MyProductsScreen}
+        options={{ title: 'Meus produtos', headerShown: false }}
+      />
       <Stack.Screen
         name="CreateProduct"
         component={CreateProductScreen}
-        options={{ title: 'Cadastro do anúncio' }}
+        options={{ title: 'Cadastro do anúncio', headerShown: false }}
       />
       <Stack.Screen
         name="SellerApplication"
         component={SellerApplicationScreen}
-        options={{ title: 'Quero vender no GEMN' }}
+        options={{ title: 'Quero vender no GEMN', headerShown: false }}
       />
       <Stack.Screen
         name="AdminHome"
         component={AdminHomeScreen}
-        options={{ title: 'Administração' }}
+        options={{ title: 'Administração', headerShown: false }}
       />
       <Stack.Screen
         name="AdminPendingOrders"
         component={AdminPendingOrdersScreen}
-        options={{ title: 'Pedidos pendentes' }}
+        options={{ title: 'Pedidos pendentes', headerShown: false }}
       />
       <Stack.Screen
         name="AdminSellerApplications"
         component={AdminSellerApplicationsScreen}
-        options={{ title: 'Solicitações de vendedores' }}
+        options={{ title: 'Solicitações de vendedores', headerShown: false }}
       />
       <Stack.Screen
         name="AdminSellerApplicationDetail"
         component={AdminSellerApplicationDetailScreen}
-        options={{ title: 'Análise da solicitação' }}
+        options={{ title: 'Análise da solicitação', headerShown: false }}
       />
       <Stack.Screen
         name="AdminCancellationRequests"
         component={AdminCancellationRequestsScreen}
-        options={{ title: 'Cancelamentos' }}
+        options={{ title: 'Cancelamentos', headerShown: false }}
       />
       <Stack.Screen
         name="AdminCancellationRequestDetail"
         component={AdminCancellationRequestDetailScreen}
-        options={{ title: 'Detalhes do cancelamento' }}
+        options={{ title: 'Detalhes do cancelamento', headerShown: false }}
       />
     </Stack.Navigator>
   );
@@ -204,8 +221,19 @@ function AuthenticatedApp() {
         <Tab.Navigator
           screenOptions={{
             headerShown: false,
-            tabBarActiveTintColor: '#1B5E20',
-            tabBarInactiveTintColor: '#777',
+            tabBarActiveTintColor: colors.brand,
+            tabBarInactiveTintColor: colors.textMuted,
+            tabBarLabelStyle: { ...typography.label, fontSize: 12 },
+            tabBarStyle: {
+              height: 72,
+              paddingTop: spacing.sm,
+              paddingBottom: spacing.sm,
+              backgroundColor: colors.surface,
+              borderTopWidth: 1,
+              borderTopColor: colors.border,
+              ...shadows.subtle,
+            },
+            tabBarItemStyle: { marginHorizontal: spacing.xs, borderRadius: radius.lg },
             // Reset nested stacks when their tab loses focus.
             popToTopOnBlur: true,
           }}
@@ -217,11 +245,10 @@ function AuthenticatedApp() {
             tabPress: () => navigation.navigate('Início', { screen: 'Home' }),
           })}
           options={{
-            tabBarIcon: () => (
-              <MaterialCommunityIcons
-                name="home"
-                size={24}
-              />
+            tabBarIcon: ({ color, focused }) => (
+              <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
+                <MaterialCommunityIcons name="home-variant" size={22} color={color} />
+              </View>
             ),
           }}
         />
@@ -233,11 +260,10 @@ function AuthenticatedApp() {
             tabPress: () => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' }),
           })}
           options={{
-            tabBarIcon: () => (
-              <MaterialCommunityIcons
-                name="storefront-outline"
-                size={24}
-              />
+            tabBarIcon: ({ color, focused }) => (
+              <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
+                <MaterialCommunityIcons name="storefront-outline" size={22} color={color} />
+              </View>
             ),
           }}
         />
@@ -249,11 +275,10 @@ function AuthenticatedApp() {
             tabPress: () => navigation.navigate('Perfil', { screen: 'ProfileHome' }),
           })}
           options={{
-            tabBarIcon: () => (
-              <MaterialCommunityIcons
-                name="account-circle-outline"
-                size={24}
-              />
+            tabBarIcon: ({ color, focused }) => (
+              <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
+                <MaterialCommunityIcons name="account-circle-outline" size={22} color={color} />
+              </View>
             ),
           }}
         />
@@ -292,6 +317,16 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  tabIcon: {
+    width: 36,
+    height: 30,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconActive: {
+    backgroundColor: colors.brandLight,
+  },
   loadingScreen: {
     flex: 1,
     alignItems: 'center',

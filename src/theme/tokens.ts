@@ -3,19 +3,23 @@ import { colors } from './colors';
 export { colors };
 
 export const spacing = {
+  xxs: 2,
   xs: 4,
   sm: 8,
+  smMd: 12,
   md: 16,
+  mdLg: 20,
   lg: 24,
   xl: 32,
   xxl: 48,
+  display: 64,
 } as const;
 
 export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 14,
-  xl: 20,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
   full: 999,
 } as const;
 
@@ -35,18 +39,18 @@ export const typography = {
 export const shadows = {
   subtle: {
     elevation: 1,
-    shadowColor: '#17251C', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3,
-    boxShadow: '0px 1px 3px rgba(17, 24, 39, 0.05)',
+    shadowColor: colors.brandDark, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3,
+    boxShadow: '0px 1px 3px rgba(15, 81, 57, 0.05)',
   },
   card: {
     elevation: 2,
-    shadowColor: '#17251C', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 7,
-    boxShadow: '0px 2px 7px rgba(17, 24, 39, 0.07)',
+    shadowColor: colors.brandDark, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 7,
+    boxShadow: '0px 2px 7px rgba(15, 81, 57, 0.07)',
   },
   floating: {
     elevation: 5,
-    shadowColor: '#17251C', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.12, shadowRadius: 12,
-    boxShadow: '0px 5px 12px rgba(17, 24, 39, 0.12)',
+    shadowColor: colors.brandDark, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.12, shadowRadius: 12,
+    boxShadow: '0px 5px 12px rgba(15, 81, 57, 0.12)',
   },
 } as const;
 

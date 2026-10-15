@@ -1,7 +1,7 @@
 import React from 'react';
-import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, spacing, typography } from '../../theme/tokens';
+import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
 
 export type AppHeaderProps = {
   title: string;
@@ -12,11 +12,24 @@ export type AppHeaderProps = {
 };
 
 export function AppHeader({ title, subtitle, action, onBack, style }: AppHeaderProps) {
+  const { width } = useWindowDimensions();
+  const wide = width >= layout.breakpoints.tablet;
+  const [backFocused, setBackFocused] = React.useState(false);
+
   return (
-    <View style={[styles.row, style]}>
+    <View style={[styles.row, wide && styles.rowWide, style]}>
       {onBack ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={onBack} style={styles.back} hitSlop={8}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.text} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Voltar"
+          accessibilityHint="Volta para a tela anterior"
+          onPress={onBack}
+          onFocus={() => setBackFocused(true)}
+          onBlur={() => setBackFocused(false)}
+          style={({ pressed }) => [styles.back, backFocused && styles.backFocused, pressed && styles.backPressed]}
+          hitSlop={8}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={22} color={backFocused ? colors.brandDark : colors.text} />
         </Pressable>
       ) : null}
       <View style={styles.copy}>
@@ -29,8 +42,11 @@ export function AppHeader({ title, subtitle, action, onBack, style }: AppHeaderP
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', minHeight: 48, gap: spacing.md },
-  back: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', minHeight: 56, paddingVertical: spacing.xs, gap: spacing.smMd },
+  rowWide: { gap: spacing.md },
+  back: { width: 44, height: 44, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
+  backFocused: { backgroundColor: colors.brandLight, borderWidth: 2, borderColor: colors.brand },
+  backPressed: { opacity: 0.72 },
   copy: { flex: 1 },
   title: { ...typography.heading2, color: colors.text },
   subtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },

@@ -35,7 +35,7 @@ export function AppInput({ label, helperText, error, multiline = false, containe
 
 const styles = StyleSheet.create({
   label: { ...typography.label, color: colors.text, marginBottom: spacing.sm },
-  inputWrap: { minHeight: 52, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.surfaceMuted, borderRadius: radius.md },
+  inputWrap: { minHeight: 52, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
   input: { flex: 1, minHeight: 50, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, color: colors.text, backgroundColor: 'transparent', ...typography.body },
   icon: { marginLeft: spacing.md },
   multiline: { minHeight: 112, paddingTop: spacing.md },

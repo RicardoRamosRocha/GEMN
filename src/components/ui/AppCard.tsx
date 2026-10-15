@@ -14,5 +14,5 @@ export function AppCard({ children, padding = spacing.lg, elevated = false, styl
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border },
 });
