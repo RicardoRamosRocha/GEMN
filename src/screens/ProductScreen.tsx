@@ -54,7 +54,7 @@ function SellerCard({ storeName, logoUrl, onPress, disabled }: { storeName: stri
         {logoUrl && !logoFailed ? (
           <Image accessibilityLabel={`Logotipo de ${storeName}`} source={{ uri: logoUrl }} style={styles.sellerLogoImage} onError={() => setLogoFailed(true)} />
         ) : (
-          <MaterialCommunityIcons name="store-outline" size={22} color={colors.primary} />
+          <MaterialCommunityIcons name="store-outline" size={28} color={colors.brand} />
         )}
       </View>
       <View style={styles.sellerCardCopy}>
@@ -283,10 +283,10 @@ const styles = StyleSheet.create({
   iconDisc: { width: 116, height: 116, borderRadius: radius.full, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...shadows.subtle },
   productCopy: { flex: 1, padding: spacing.md, gap: spacing.sm },
   productName: { ...typography.heading1, color: colors.brandDark },
-  sellerCard: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  sellerCard: { minHeight: 84, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
   sellerCardPressed: { opacity: 0.82, backgroundColor: colors.brandLight },
-  sellerLogo: { width: 46, height: 46, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: colors.brandLight, flexShrink: 0 },
-  sellerLogoImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  sellerLogo: { width: 72, height: 72, borderRadius: radius.md, padding: spacing.xs, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexShrink: 0 },
+  sellerLogoImage: { width: '100%', height: '100%', resizeMode: 'contain' },
   sellerCardCopy: { flex: 1, minWidth: 0, gap: 2 },
   sellerCardName: { ...typography.heading4, color: colors.text },
   sellerApproved: { flexDirection: 'row', alignItems: 'center', gap: 3 },

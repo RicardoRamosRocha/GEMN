@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { isGemnUiFixturesEnabled } from '../dev/ordersUiFixtures';
 import { sellerDashboardUiFixture, type SellerDashboardFixture } from '../dev/sellerDashboardUiFixtures';
 import { listSellerRelatedOrders } from '../services/cancellationRequestQueries';
+import { getSellerBranding } from '../services/sellerBranding';
 import { supabase } from '../lib/supabase';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 
@@ -18,6 +19,7 @@ type SellerDashboardData = {
   ordersCount: number | null;
   confirmedOrdersCount: number | null;
   cashbackPercentual: number | null;
+  logoUrl?: string;
 };
 
 type SellerRow = {
@@ -61,7 +63,14 @@ function reportOptionalFailure(operation: string, error: unknown) {
   if (__DEV__) console.warn(`[SellerDashboard] ${operation} failed`, diagnosticMessage(error));
 }
 
-function mapSeller(seller: SellerRow, listingsCount: number, ordersCount: number | null, confirmedOrdersCount: number | null, cashbackPercentual: number | null, aceitaGemn: boolean | null): SellerDashboardData {
+function presentDescription(value: string) {
+  return value
+    .replace(/\*\*|__|`/g, '')
+    .replace(/(^|\n)\s{0,3}#{1,6}\s+/g, '$1')
+    .replace(/(^|\n)\s*[-*+]\s+/g, '$1');
+}
+
+function mapSeller(seller: SellerRow, listingsCount: number, ordersCount: number | null, confirmedOrdersCount: number | null, cashbackPercentual: number | null, aceitaGemn: boolean | null, logoUrl?: string): SellerDashboardData {
   return {
     seller: {
       id: seller.id,
@@ -75,6 +84,7 @@ function mapSeller(seller: SellerRow, listingsCount: number, ordersCount: number
     ordersCount,
     confirmedOrdersCount,
     cashbackPercentual,
+    logoUrl,
   };
 }
 
@@ -89,6 +99,7 @@ export default function SellerDashboardScreen({ navigation }: any) {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [settingsUnavailable, setSettingsUnavailable] = React.useState(false);
   const [optionalResourceError, setOptionalResourceError] = React.useState<string | null>(null);
+  const [descriptionExpanded, setDescriptionExpanded] = React.useState(false);
 
   const loadDashboard = React.useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true); else setLoading(true);
@@ -128,6 +139,13 @@ export default function SellerDashboardScreen({ navigation }: any) {
     }
 
     const sellerRow = seller as SellerRow;
+    let logoUrl: string | undefined;
+    try {
+      const branding = await getSellerBranding(sellerRow.id);
+      logoUrl = branding.branding.logoUrl;
+    } catch (brandingError) {
+      reportOptionalFailure('seller-branding', brandingError);
+    }
     const { count: listingsCount, error: listingsError } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
@@ -190,6 +208,7 @@ export default function SellerDashboardScreen({ navigation }: any) {
       confirmedOrdersCount,
       cashbackPercentual,
       aceitaGemn,
+      logoUrl,
     ));
     if (refresh) setRefreshing(false); else setLoading(false);
   }, [fixturesEnabled, user]);
@@ -207,11 +226,21 @@ export default function SellerDashboardScreen({ navigation }: any) {
   }
 
   const suspended = data.seller.status === 'suspenso';
+  const description = presentDescription(data.seller.descricao);
+  const descriptionCanExpand = description.length > 180 || description.split('\n').length > 3;
+  const confirmedRatio = data.ordersCount !== null
+    && data.confirmedOrdersCount !== null
+    && data.ordersCount > 0
+    && data.confirmedOrdersCount >= 0
+    && data.confirmedOrdersCount <= data.ordersCount
+    ? data.confirmedOrdersCount / data.ordersCount
+    : null;
 
   return (
-    <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
+    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
       <View style={styles.storeHero}>
       <View style={styles.header}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Voltar para o perfil" style={styles.backButton} onPress={() => { if (navigation?.canGoBack?.()) navigation.goBack(); else navigation?.navigate?.('Perfil', { screen: 'ProfileHome' }); }}><MaterialCommunityIcons name="arrow-left" size={21} color={colors.text} /></TouchableOpacity>
         <View style={styles.headerCopy}><Text style={styles.eyebrow}>GEMN · ÁREA DO EMPREENDEDOR</Text><Text style={styles.title}>Minha Loja</Text><Text style={styles.subtitle}>Acompanhe sua operação no GEMN.</Text></View>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar Minha Loja" style={styles.refreshButton} disabled={loading || refreshing} onPress={() => { void loadDashboard(true); }}><MaterialCommunityIcons name="refresh" size={22} color={loading || refreshing ? colors.textSecondary : colors.primary} /></TouchableOpacity>
       </View>
@@ -219,18 +248,32 @@ export default function SellerDashboardScreen({ navigation }: any) {
       {fixturesEnabled ? <View style={styles.demoBanner}><MaterialCommunityIcons name="flask-outline" size={18} color={colors.warning} /><Text style={styles.demoBannerText}>Modo de demonstração — dados locais sintéticos</Text></View> : null}
 
       <AppCard elevated={wide} style={[styles.storeCard, wide && styles.storeCardWide]}>
-        <View style={styles.storeIcon}><MaterialCommunityIcons name="storefront-outline" size={34} color={colors.primary} /></View>
-        <View style={styles.storeCopy}><Text style={styles.storeName}>{data.seller.nomeNegocio}</Text><View style={styles.statusRow}><AppBadge label={suspended ? 'Suspensa' : 'Ativa'} variant={suspended ? 'warning' : 'success'} /><Text style={styles.storePhone}>{data.seller.telefone}</Text></View><Text style={styles.storeDescription}>{data.seller.descricao}</Text></View>
+        <View style={styles.storeIcon}>{data.logoUrl ? <Image accessibilityLabel={`Logotipo de ${data.seller.nomeNegocio}`} source={{ uri: data.logoUrl }} style={styles.storeLogoImage} /> : <MaterialCommunityIcons name="storefront-outline" size={30} color={colors.brand} />}</View>
+        <View style={styles.storeCopy}><Text style={styles.storeName}>{data.seller.nomeNegocio}</Text><View style={styles.statusRow}><AppBadge label={suspended ? 'Suspensa' : 'Ativa'} variant={suspended ? 'warning' : 'success'} /><Text style={styles.storePhone}>{data.seller.telefone}</Text></View><Text style={styles.storeDescription} numberOfLines={descriptionExpanded ? undefined : 3}>{description}</Text>{descriptionCanExpand ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={descriptionExpanded ? 'Mostrar menos da descrição da loja' : 'Mostrar mais da descrição da loja'} onPress={() => setDescriptionExpanded((current) => !current)}><Text style={styles.descriptionToggle}>{descriptionExpanded ? 'Ver menos' : 'Ver mais'}</Text></TouchableOpacity> : null}</View>
       </AppCard>
       </View>
 
       {suspended ? <AppCard style={styles.warningCard}><MaterialCommunityIcons name="alert-outline" size={22} color={colors.warning} /><View style={styles.warningCopy}><Text style={styles.warningTitle}>Loja suspensa</Text><Text style={styles.warningText}>Você pode consultar seus dados e histórico. Publicações e configurações comerciais permanecem restritas pelo banco.</Text></View></AppCard> : null}
 
-      <View style={[styles.metricsGrid, wide && styles.metricsGridWide]}>
-        <MetricCard icon="view-grid-outline" label="Anúncios próprios" value={String(data.listingsCount)} wide={wide} />
-        <MetricCard icon="clipboard-arrow-down-outline" label="Pedidos relacionados" value={data.ordersCount === null ? 'Indisponível' : String(data.ordersCount)} wide={wide} />
-        <MetricCard icon="progress-check" label="Pedidos confirmados" value={data.confirmedOrdersCount === null ? 'Indisponível' : String(data.confirmedOrdersCount)} wide={wide} />
-      </View>
+      <AppCard style={styles.overviewCard}>
+        <View style={styles.sectionHeader}>
+          <View><Text style={styles.sectionTitle}>Visão geral</Text><Text style={styles.sectionSubtitle}>Indicadores da sua operação no GEMN.</Text></View>
+          <MaterialCommunityIcons name="chart-box-outline" size={22} color={colors.brand} />
+        </View>
+        <View style={styles.metricsRow}>
+          <MetricCard icon="view-grid-outline" label="Anúncios próprios" value={String(data.listingsCount)} />
+          <MetricCard icon="clipboard-arrow-down-outline" label="Pedidos relacionados" value={data.ordersCount === null ? 'Indisponível' : String(data.ordersCount)} />
+          <MetricCard icon="progress-check" label="Pedidos confirmados" value={data.confirmedOrdersCount === null ? 'Indisponível' : String(data.confirmedOrdersCount)} />
+        </View>
+        {confirmedRatio !== null ? <View style={styles.donutSummary}>
+          <DonutChart ratio={confirmedRatio} />
+          <View style={styles.donutCopy}>
+            <Text style={styles.donutTitle}>Pedidos confirmados</Text>
+            <Text style={styles.donutValue}>{Math.round(confirmedRatio * 100)}%</Text>
+            <Text style={styles.donutDescription}>{data.confirmedOrdersCount} de {data.ordersCount} pedidos relacionados</Text>
+          </View>
+        </View> : null}
+      </AppCard>
 
       <AppCard style={styles.settingsCard}>
         <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Resumo comercial</Text><Text style={styles.sectionSubtitle}>Somente informações autorizadas para este seller.</Text></View><MaterialCommunityIcons name="shield-check-outline" size={22} color={colors.primary} /></View>
@@ -252,8 +295,23 @@ export default function SellerDashboardScreen({ navigation }: any) {
   );
 }
 
-function MetricCard({ icon, label, value, wide }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: string; wide: boolean }) {
-  return <AppCard style={[styles.metricCard, wide && styles.metricCardWide]}><View style={styles.metricIcon}><MaterialCommunityIcons name={icon} size={21} color={colors.primary} /></View><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></AppCard>;
+function MetricCard({ icon, label, value }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: string }) {
+  return <View style={styles.metricCard}><View style={styles.metricIcon}><MaterialCommunityIcons name={icon} size={17} color={colors.brand} /></View><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>;
+}
+
+function DonutChart({ ratio }: { ratio: number }) {
+  const segmentCount = 24;
+  const activeSegments = Math.round(ratio * segmentCount);
+  return (
+    <View accessibilityRole="image" accessibilityLabel={`Pedidos confirmados: ${Math.round(ratio * 100)} por cento`} style={styles.donut}>
+      {Array.from({ length: segmentCount }, (_, index) => (
+        <View key={index} style={[styles.donutRotation, { transform: [{ rotate: `${index * (360 / segmentCount)}deg` }] }]}>
+          <View style={[styles.donutSegment, index < activeSegments ? styles.donutSegmentActive : styles.donutSegmentTrack]} />
+        </View>
+      ))}
+      <View style={styles.donutHole}><Text style={styles.donutPercent}>{Math.round(ratio * 100)}%</Text></View>
+    </View>
+  );
 }
 
 function ManagementItem({ icon, title, onPress, last = false }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; onPress: () => void; last?: boolean }) {
@@ -262,36 +320,50 @@ function ManagementItem({ icon, title, onPress, last = false }: { icon: keyof ty
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
-  storeHero: { backgroundColor: '#123B7A', borderRadius: radius.xl, overflow: 'hidden', padding: spacing.lg, gap: spacing.md },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  storeHero: { backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', padding: spacing.md, gap: spacing.sm, borderWidth: 1, borderColor: colors.borderStrong, ...shadows.subtle },
+  header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.smMd },
+  backButton: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.brandLight, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1, gap: spacing.xs },
-  eyebrow: { ...typography.caption, color: '#A9DCD0', letterSpacing: 0.7, fontWeight: '700' },
-  title: { ...typography.heading1, color: colors.white },
-  subtitle: { ...typography.bodySmall, color: '#C9D9FF' },
-  refreshButton: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  eyebrow: { ...typography.caption, color: colors.brand, letterSpacing: 0.7, fontWeight: '700' },
+  title: { ...typography.heading1, color: colors.brandDark },
+  subtitle: { ...typography.bodySmall, color: colors.textSecondary },
+  refreshButton: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.brandLight, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   demoBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: '#FBF1DF', borderWidth: 1, borderColor: '#F5D9A0' },
   demoBannerText: { ...typography.caption, color: colors.warning, flex: 1 },
-  storeCard: { flexDirection: 'row', gap: spacing.md, padding: 0, backgroundColor: 'transparent' },
-  storeCardWide: { padding: 0 },
-  storeIcon: { width: 64, height: 64, borderRadius: radius.lg, backgroundColor: '#E8F0FF', alignItems: 'center', justifyContent: 'center' },
+  storeCard: { flexDirection: 'row', gap: spacing.md, padding: 0, backgroundColor: 'transparent', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
+  storeCardWide: { padding: 0, paddingTop: spacing.sm },
+  storeIcon: { width: 72, height: 72, borderRadius: radius.lg, padding: spacing.xs, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  storeLogoImage: { width: '100%', height: '100%', resizeMode: 'contain' },
   storeCopy: { flex: 1, gap: spacing.xs },
-  storeName: { ...typography.heading2, color: colors.white },
+  storeName: { ...typography.heading2, color: colors.text },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  storePhone: { ...typography.caption, color: '#C9D9FF' },
-  storeDescription: { ...typography.bodySmall, color: '#C9D9FF' },
+  storePhone: { ...typography.caption, color: colors.textSecondary },
+  storeDescription: { ...typography.bodySmall, color: colors.textSecondary },
+  descriptionToggle: { ...typography.caption, color: colors.brand, fontWeight: '700', marginTop: spacing.xxs },
   warningCard: { flexDirection: 'row', gap: spacing.sm, backgroundColor: '#FBF1DF', borderWidth: 1, borderColor: '#F5D9A0' },
   warningCopy: { flex: 1, gap: spacing.xs },
   warningTitle: { ...typography.heading4, color: colors.warning },
   warningText: { ...typography.bodySmall, color: colors.textSecondary },
   infoCard: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryLight, borderWidth: 1, borderColor: colors.border },
   infoText: { ...typography.bodySmall, color: colors.textSecondary, flex: 1 },
-  metricsGrid: { gap: spacing.md },
-  metricsGridWide: { flexDirection: 'row' },
-  metricCard: { flex: 1, padding: spacing.md, borderWidth: 1, borderColor: colors.border, gap: spacing.xs, ...shadows.subtle },
-  metricCardWide: { minWidth: 0 },
-  metricIcon: { width: 40, height: 40, borderRadius: radius.md, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
-  metricValue: { ...typography.heading2, color: colors.primary },
-  metricLabel: { ...typography.caption, color: colors.textSecondary },
+  overviewCard: { borderWidth: 1, borderColor: colors.border, gap: spacing.md, ...shadows.subtle },
+  metricsRow: { flexDirection: 'row', gap: spacing.xs, width: '100%' },
+  metricCard: { flex: 1, minWidth: 0, alignItems: 'center', gap: spacing.xxs, paddingVertical: spacing.xs },
+  metricIcon: { width: 30, height: 30, borderRadius: radius.full, backgroundColor: colors.brandLight, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xxs },
+  metricValue: { ...typography.heading3, color: colors.brandDark },
+  metricLabel: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', minHeight: 32 },
+  donutSummary: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  donut: { width: 78, height: 78, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
+  donutRotation: { position: 'absolute', width: 78, height: 78, alignItems: 'center' },
+  donutSegment: { width: 7, height: 12, marginTop: 1, borderRadius: radius.full },
+  donutSegmentActive: { backgroundColor: colors.brand },
+  donutSegmentTrack: { backgroundColor: colors.brandLight },
+  donutHole: { width: 54, height: 54, borderRadius: radius.full, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  donutPercent: { ...typography.heading4, color: colors.brandDark },
+  donutCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  donutTitle: { ...typography.heading4, color: colors.text },
+  donutValue: { ...typography.heading2, color: colors.brand },
+  donutDescription: { ...typography.caption, color: colors.textSecondary },
   settingsCard: { borderWidth: 1, borderColor: colors.border, gap: spacing.md },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
   sectionTitle: { ...typography.heading2, color: colors.text },

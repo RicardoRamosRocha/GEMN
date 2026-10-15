@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
@@ -43,12 +43,20 @@ export default function MyProductsScreen({ navigation }: any) {
     if (result.error) setOperationError(result.error);
   }
 
+  function goBack() {
+    if (navigation?.canGoBack?.()) navigation.goBack();
+    else navigation?.navigate?.('SellerDashboard');
+  }
+
   return (
-    <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
+    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
       <View style={styles.header}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Voltar para Minha Loja" style={styles.backButton} onPress={goBack}>
+          <MaterialCommunityIcons name="arrow-left" size={21} color={colors.text} />
+        </TouchableOpacity>
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>Sua vitrine na comunidade</Text>
-          <Text style={styles.title}>Meus produtos</Text>
+          <Text style={styles.eyebrow}>ÁREA DO EMPREENDEDOR</Text>
+          <Text style={styles.title}>Meus Produtos</Text>
           <Text style={styles.subtitle}>Gerencie seus produtos e serviços</Text>
         </View>
         <View style={styles.counter}>
@@ -57,12 +65,15 @@ export default function MyProductsScreen({ navigation }: any) {
         </View>
       </View>
 
-      <AppButton
-        title="Adicionar produto ou serviço"
-        fullWidth={!wide}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Adicionar produto ou serviço"
         onPress={() => navigation.navigate('CreateProduct')}
-        style={[styles.addButton, wide && styles.addButtonWide]}
-      />
+        style={({ pressed }) => [styles.addButton, !wide && styles.addButtonFull, pressed && styles.pressed]}
+      >
+        <MaterialCommunityIcons name="plus" size={20} color={colors.white} />
+        <Text style={styles.addButtonLabel}>Adicionar produto ou serviço</Text>
+      </Pressable>
 
       <View style={styles.sectionHeader}>
         <View>
@@ -81,9 +92,16 @@ export default function MyProductsScreen({ navigation }: any) {
       {productsLoading ? <Text style={styles.helperText}>Carregando seus anúncios...</Text> : null}
       {operationError ? <Text style={styles.errorText}>{operationError}</Text> : null}
 
-      <View style={[styles.productsGrid, wide && styles.productsGridWide]}>
+      {!productsLoading && !productsError && products.length === 0 ? <AppCard style={styles.emptyCard}>
+        <View style={styles.emptyIcon}><MaterialCommunityIcons name="package-variant-closed" size={26} color={colors.brand} /></View>
+        <Text style={styles.emptyTitle}>Você ainda não publicou anúncios</Text>
+        <Text style={styles.emptyText}>Adicione um produto ou serviço para começar sua vitrine.</Text>
+        <AppButton title="Adicionar produto ou serviço" variant="outline" onPress={() => navigation.navigate('CreateProduct')} />
+      </AppCard> : null}
+
+      <View style={styles.productsGrid}>
         {products.map((product) => (
-          <View key={product.id} style={[styles.productWrapper, wide && styles.productWrapperWide]}>
+          <View key={product.id} style={styles.productWrapper}>
             <AppCard elevated={wide} style={styles.productCard}>
               <View style={styles.productTopRow}>
                 <ProductThumbnail imageUrl={product.imageUrl} name={product.name} />
@@ -129,41 +147,46 @@ export default function MyProductsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  content: { paddingTop: spacing.xs, paddingBottom: spacing.xxl, gap: spacing.md },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.smMd },
+  backButton: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.brandLight, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1, gap: spacing.xs },
-  eyebrow: { ...typography.caption, color: colors.textSecondary },
-  title: { ...typography.heading1, color: colors.text },
+  eyebrow: { ...typography.caption, color: colors.brand, letterSpacing: 0.7, fontWeight: '700' },
+  title: { ...typography.heading2, color: colors.brandDark },
   subtitle: { ...typography.bodySmall, color: colors.textSecondary },
-  counter: { minWidth: 68, minHeight: 68, borderRadius: radius.lg, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  counterValue: { ...typography.heading3, color: colors.primary },
-  counterLabel: { ...typography.caption, color: colors.primary, marginTop: 1 },
-  addButton: { minHeight: 52 },
-  addButtonWide: { width: 240, maxWidth: 240 },
-  sectionHeader: { marginTop: spacing.xs },
+  counter: { minWidth: 60, minHeight: 56, paddingHorizontal: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.brandLight, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  counterValue: { ...typography.heading3, color: colors.brandDark },
+  counterLabel: { ...typography.caption, color: colors.brand, marginTop: 1 },
+  addButton: { minHeight: 48, width: 260, maxWidth: '100%', paddingHorizontal: spacing.md, borderRadius: radius.md, backgroundColor: colors.brand, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  addButtonFull: { width: '100%' },
+  addButtonLabel: { ...typography.label, color: colors.white },
+  pressed: { opacity: 0.82 },
+  sectionHeader: { marginTop: 0 },
   sectionTitle: { ...typography.heading2, color: colors.text },
   sectionSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },
   productsGrid: { gap: spacing.md },
-  productsGridWide: { flexDirection: 'row', flexWrap: 'wrap' },
   productWrapper: { width: '100%' },
-  productWrapperWide: { width: '48%' },
-  productCard: { minHeight: 208, borderWidth: 1, borderColor: colors.border },
-  productTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  productThumbnail: { width: 88, aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.surfaceMuted, flexShrink: 0 },
+  productCard: { minHeight: 184, borderWidth: 1, borderColor: colors.border },
+  productTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.smMd },
+  productThumbnail: { width: 80, aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border, flexShrink: 0 },
   productThumbnailImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  productThumbnailPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
-  productDetails: { flex: 1, minWidth: 0, paddingRight: 28 },
-  moreButton: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  badgesRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  productName: { ...typography.heading3, color: colors.text, marginTop: spacing.sm },
-  productPrice: { ...typography.heading2, color: colors.primary, marginTop: spacing.xs },
-  infoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight, borderWidth: 1, borderColor: colors.primaryLight },
+  productThumbnailPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandLight },
+  productDetails: { flex: 1, minWidth: 0 },
+  moreButton: { width: 36, height: 36, borderRadius: radius.full, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
+  badgesRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs },
+  productName: { ...typography.heading4, color: colors.text, marginTop: spacing.sm },
+  productPrice: { ...typography.heading3, color: colors.brandDark, marginTop: spacing.xs },
+  infoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.brandLight, borderWidth: 1, borderColor: colors.border, paddingVertical: spacing.sm },
   infoIcon: { width: 38, height: 38, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
-  infoText: { flex: 1, ...typography.bodySmall, color: colors.textSecondary, marginLeft: spacing.md },
+  infoText: { flex: 1, ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm },
+  emptyCard: { alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, paddingVertical: spacing.lg },
+  emptyIcon: { width: 52, height: 52, borderRadius: radius.full, backgroundColor: colors.brandLight, alignItems: 'center', justifyContent: 'center' },
+  emptyTitle: { ...typography.heading4, color: colors.text, textAlign: 'center' },
+  emptyText: { ...typography.caption, color: colors.textSecondary, textAlign: 'center' },
   errorCard: { borderWidth: 1, borderColor: colors.error, gap: spacing.sm },
   errorText: { ...typography.bodySmall, color: colors.error },
   helperText: { ...typography.bodySmall, color: colors.textSecondary },
   retryButton: { alignSelf: 'flex-start' },
-  actionsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  actionButton: { flex: 1, minHeight: 48, paddingHorizontal: spacing.sm },
+  actionsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  actionButton: { flex: 1, minHeight: 44, paddingHorizontal: spacing.sm },
 });
