@@ -76,7 +76,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
   const { width } = useWindowDimensions();
   const { user } = useAuth();
   const wide = width >= layout.breakpoints.tablet;
-  const productImageHeight = Math.min(320, Math.max(240, Math.round(width * 0.72)));
+  const productImageHeight = Math.min(300, Math.max(220, Math.round(width * 0.66)));
   const listing = route?.params?.listing;
   const listingSequence = route?.params?.listingSequence ?? [];
   const listingIndex = route?.params?.listingIndex ?? listingSequence.findIndex((item) => item.id === listing?.id);
@@ -181,7 +181,14 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
   }
 
   return (
-    <AppScreen scroll edges={['bottom']} style={styles.screen} contentContainerStyle={styles.content}>
+    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} style={styles.screen} contentContainerStyle={styles.content}>
+      <View style={styles.topBar}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={() => navigation.goBack()} hitSlop={8} style={styles.backButton}>
+          <MaterialCommunityIcons name="chevron-left" size={26} color={colors.text} />
+        </Pressable>
+        <Text style={styles.topBarTitle}>Detalhes do produto</Text>
+        <View style={styles.topBarSpacer} />
+      </View>
       <View style={[styles.layout, wide && styles.layoutWide]}>
         <View style={[styles.detailsColumn, wide && styles.detailsColumnWide]} {...productPanResponder.panHandlers}>
           <AppCard padding={0} style={[styles.productCard, wide && styles.productCardWide]}>
@@ -198,7 +205,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
                 onPress={() => { if (listing?.sellerId) navigation.navigate('SellerStorefront', { sellerId: listing.sellerId }); }}
               />
               <View style={styles.priceRow}><Text style={styles.price}>{price}</Text></View>
-              {gemnEligibility.enabled ? <View style={styles.gemnLine}><MaterialCommunityIcons name="star-four-points" size={15} color="#F4A340" /><Text style={styles.gemnText}>Aceita Moeda GEMN · {gemnEligibility.value} GEMN por unidade</Text></View> : <View style={styles.gemnLine}><MaterialCommunityIcons name="information-outline" size={15} color={colors.textSecondary} /><Text style={styles.gemnMutedText}>Pagamento somente em reais</Text></View>}
+              {gemnEligibility.enabled ? <View style={styles.gemnLine}><MaterialCommunityIcons name="star-four-points" size={15} color={colors.gemn} /><Text style={styles.gemnText}>Aceita Moeda GEMN · {gemnEligibility.value} GEMN por unidade</Text></View> : <View style={styles.gemnLine}><MaterialCommunityIcons name="information-outline" size={15} color={colors.textSecondary} /><Text style={styles.gemnMutedText}>Pagamento somente em reais</Text></View>}
             </View>
           </AppCard>
 
@@ -229,7 +236,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
               <MaterialCommunityIcons name="cash" size={23} color={paymentMethod === 'real' ? colors.primary : colors.textSecondary} /><Text style={styles.paymentTitle}>Reais</Text><Text style={styles.paymentAmount}>{formattedTotal}</Text>{paymentMethod === 'real' ? <MaterialCommunityIcons name="check-circle" size={20} color={colors.primary} /> : null}
             </TouchableOpacity>
             {gemnEligibility.enabled ? <View style={styles.gemnPaymentBox}>
-              <View style={styles.gemnPaymentHeader}><MaterialCommunityIcons name="star-four-points" size={21} color="#F4A340" /><Text style={styles.paymentTitle}>Usar GEMN</Text><Text style={styles.paymentAmount}>{gemnUtilizado.toFixed(2)} GEMN</Text></View>
+              <View style={styles.gemnPaymentHeader}><MaterialCommunityIcons name="star-four-points" size={21} color={colors.gemn} /><Text style={styles.paymentTitle}>Usar GEMN</Text><Text style={styles.paymentAmount}>{gemnUtilizado.toFixed(2)} GEMN</Text></View>
               <TextInput accessibilityLabel="Quantidade de GEMN utilizada" keyboardType="decimal-pad" value={gemnInput} onChangeText={setGemnInput} style={styles.gemnInput} placeholder="0,00" />
               <TouchableOpacity accessibilityRole="button" onPress={() => setGemnInput(total.toFixed(2))}><Text style={styles.gemnMax}>Usar 100% em GEMN</Text></TouchableOpacity>
             </View> : null}
@@ -252,13 +259,17 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#F7F8F5' },
-  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
-  layout: { gap: spacing.lg },
+  screen: { backgroundColor: colors.background },
+  content: { paddingTop: spacing.xs, paddingBottom: spacing.xxl, gap: spacing.md },
+  topBar: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backButton: { width: 40, height: 40, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
+  topBarTitle: { ...typography.heading4, color: colors.text },
+  topBarSpacer: { width: 40, height: 40 },
+  layout: { gap: spacing.md },
   layoutWide: { flexDirection: 'row', alignItems: 'flex-start' },
-  detailsColumn: { gap: spacing.lg },
+  detailsColumn: { gap: spacing.md },
   detailsColumnWide: { flex: 1, minWidth: 0 },
-  productCard: { overflow: 'hidden', borderWidth: 1, borderColor: '#E1E7EF', borderRadius: radius.lg, ...shadows.subtle },
+  productCard: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, ...shadows.subtle },
   productCardWide: { flexDirection: 'row' },
   productNavigation: { minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   productNavigationWide: { justifyContent: 'space-between' },
@@ -266,55 +277,55 @@ const styles = StyleSheet.create({
   productNavigationButtonDisabled: { opacity: 0.55 },
   productNavigationButtonText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
   productPosition: { ...typography.caption, color: colors.textMuted },
-  productVisual: { backgroundColor: '#EEF2F6', alignItems: 'center', justifyContent: 'center', gap: spacing.md, position: 'relative' },
+  productVisual: { backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center', gap: spacing.md, position: 'relative' },
   productVisualWide: { width: '42%', minHeight: 300 },
   productImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   iconDisc: { width: 116, height: 116, borderRadius: radius.full, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...shadows.subtle },
-  productCopy: { flex: 1, padding: spacing.lg, gap: spacing.sm },
-  productName: { ...typography.heading1, color: '#123B7A' },
-  sellerCard: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: 1, borderColor: '#DCE6E1', borderRadius: radius.md, backgroundColor: colors.surface },
-  sellerCardPressed: { opacity: 0.82, backgroundColor: '#F1F7F3' },
-  sellerLogo: { width: 46, height: 46, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: '#E5F1EC', flexShrink: 0 },
+  productCopy: { flex: 1, padding: spacing.md, gap: spacing.sm },
+  productName: { ...typography.heading1, color: colors.brandDark },
+  sellerCard: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  sellerCardPressed: { opacity: 0.82, backgroundColor: colors.brandLight },
+  sellerLogo: { width: 46, height: 46, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: colors.brandLight, flexShrink: 0 },
   sellerLogoImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   sellerCardCopy: { flex: 1, minWidth: 0, gap: 2 },
-  sellerCardName: { ...typography.heading4, color: '#123B7A' },
+  sellerCardName: { ...typography.heading4, color: colors.text },
   sellerApproved: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  sellerApprovedText: { ...typography.caption, color: '#16866A', fontWeight: '600' },
+  sellerApprovedText: { ...typography.caption, color: colors.brand, fontWeight: '600' },
   sellerVisit: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
-  sellerVisitText: { ...typography.caption, color: '#1D56D8', fontWeight: '600' },
+  sellerVisitText: { ...typography.caption, color: colors.brand, fontWeight: '600' },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
-  price: { ...typography.heading1, color: '#123B7A' },
+  price: { ...typography.heading1, color: colors.brandDark },
   gemnLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-  gemnText: { ...typography.caption, color: '#16866A', fontWeight: '600' },
+  gemnText: { ...typography.caption, color: colors.brand, fontWeight: '600' },
   gemnMutedText: { ...typography.caption, color: colors.textSecondary },
   aboutSection: { gap: spacing.sm },
   sectionTitle: { ...typography.heading3, color: colors.text, marginTop: spacing.xs, marginBottom: spacing.xs },
   description: { ...typography.bodySmall, color: colors.textSecondary },
-  purchaseCard: { borderWidth: 1, borderColor: '#E1E7EF', borderRadius: radius.lg, gap: spacing.sm, backgroundColor: colors.surface, ...shadows.subtle },
+  purchaseCard: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, gap: spacing.sm, backgroundColor: colors.surface, ...shadows.subtle },
   purchaseCardWide: { width: 368, flexShrink: 0 },
-  purchaseTitle: { ...typography.heading2, color: '#123B7A', marginBottom: spacing.xs },
-  quantityContainer: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#F0F3F7', borderRadius: radius.md, padding: spacing.xs },
+  purchaseTitle: { ...typography.heading2, color: colors.text, marginBottom: spacing.xs },
+  quantityContainer: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: colors.surfaceMuted, borderRadius: radius.md, padding: spacing.xs },
   quantityButton: { width: 44, height: 44, borderRadius: radius.sm, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   quantityText: { width: 52, textAlign: 'center', ...typography.heading3, color: colors.text },
   paymentOptions: { gap: spacing.sm },
-  paymentOption: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: '#DCE6F0', backgroundColor: colors.surface },
-  paymentOptionActive: { borderColor: '#1D56D8', backgroundColor: '#E8F0FF' },
-  paymentOptionGemnActive: { borderColor: '#F4A340', backgroundColor: '#FFF4E3' },
-  gemnPaymentBox: { borderWidth: 1, borderColor: '#F4A340', borderRadius: radius.md, padding: spacing.sm, gap: spacing.xs, backgroundColor: '#FFF4E3' },
+  paymentOption: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  paymentOptionActive: { borderColor: colors.brand, backgroundColor: colors.brandLight },
+  paymentOptionGemnActive: { borderColor: colors.gemn, backgroundColor: colors.gemnLight },
+  gemnPaymentBox: { borderWidth: 1, borderColor: colors.gemn, borderRadius: radius.md, padding: spacing.sm, gap: spacing.xs, backgroundColor: colors.gemnLight },
   gemnPaymentHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   gemnInput: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surface, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, color: colors.text },
-  gemnMax: { color: '#B86B12', fontWeight: '700', fontSize: 12 },
+  gemnMax: { color: colors.warning, fontWeight: '700', fontSize: 12 },
   paymentTitle: { ...typography.label, color: colors.text },
   paymentAmount: { flex: 1, textAlign: 'right', ...typography.caption, color: colors.textSecondary, fontWeight: '600' },
-  summary: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm },
+  summary: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryLabel: { ...typography.bodySmall, color: colors.textSecondary },
   summaryValue: { ...typography.bodySmall, color: colors.text, fontWeight: '600' },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { ...typography.heading3, color: '#123B7A' },
-  totalValue: { ...typography.heading2, color: '#123B7A' },
-  confirmButton: { width: '100%', marginTop: spacing.sm, backgroundColor: '#1D56D8' },
+  totalLabel: { ...typography.heading3, color: colors.text },
+  totalValue: { ...typography.heading2, color: colors.brandDark },
+  confirmButton: { width: '100%', marginTop: spacing.sm, backgroundColor: colors.brand },
   error: { ...typography.bodySmall, color: colors.error },
   paymentNote: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
 });

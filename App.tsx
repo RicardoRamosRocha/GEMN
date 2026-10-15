@@ -76,7 +76,7 @@ function HomeStack() {
       <Stack.Screen
         name="Product"
         component={ProductScreen}
-        options={{ title: 'Produto' }}
+        options={{ title: 'Produto', headerShown: false }}
       />
       <Stack.Screen
         name="OrderConfirmation"
@@ -107,7 +107,7 @@ function MarketplaceStack() {
       <Stack.Screen
         name="Product"
         component={ProductScreen}
-        options={{ title: 'Produto' }}
+        options={{ title: 'Produto', headerShown: false }}
       />
       <Stack.Screen
         name="OrderConfirmation"
