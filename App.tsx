@@ -206,11 +206,16 @@ function AuthenticatedApp() {
             headerShown: false,
             tabBarActiveTintColor: '#1B5E20',
             tabBarInactiveTintColor: '#777',
+            // Reset nested stacks when their tab loses focus.
+            popToTopOnBlur: true,
           }}
         >
         <Tab.Screen
           name="Início"
           component={HomeStack}
+          listeners={({ navigation }) => ({
+            tabPress: () => navigation.navigate('Início', { screen: 'Home' }),
+          })}
           options={{
             tabBarIcon: () => (
               <MaterialCommunityIcons
@@ -224,6 +229,9 @@ function AuthenticatedApp() {
         <Tab.Screen
           name="Marketplace"
           component={MarketplaceStack}
+          listeners={({ navigation }) => ({
+            tabPress: () => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' }),
+          })}
           options={{
             tabBarIcon: () => (
               <MaterialCommunityIcons
@@ -237,6 +245,9 @@ function AuthenticatedApp() {
         <Tab.Screen
           name="Perfil"
           component={ProfileStack}
+          listeners={({ navigation }) => ({
+            tabPress: () => navigation.navigate('Perfil', { screen: 'ProfileHome' }),
+          })}
           options={{
             tabBarIcon: () => (
               <MaterialCommunityIcons

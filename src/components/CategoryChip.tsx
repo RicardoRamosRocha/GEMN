@@ -17,12 +17,12 @@ export function CategoryChip({ icon, label, compact = false, onPress, selected =
 
 const styles = StyleSheet.create({
   chip: { minWidth: 96, minHeight: 84, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
-  compact: { minWidth: 0, minHeight: 42, flexDirection: 'row', paddingHorizontal: spacing.md, borderRadius: radius.full, gap: spacing.sm },
+  compact: { minWidth: 0, minHeight: 44, flexDirection: 'row', paddingHorizontal: spacing.md, borderRadius: radius.full, gap: spacing.sm, borderWidth: 1, borderColor: 'transparent' },
   iconWrap: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
   compactIcon: { width: 22, height: 22, borderRadius: radius.full },
   label: { ...typography.caption, color: colors.text, fontWeight: '600' },
   selected: { borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primaryLight },
-  selectedCompact: { borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primary },
+  selectedCompact: { borderWidth: 1, borderColor: '#123B7A', backgroundColor: '#123B7A' },
   selectedCompactIcon: { backgroundColor: 'rgba(255,255,255,0.18)' },
   selectedCompactLabel: { color: colors.white },
 });

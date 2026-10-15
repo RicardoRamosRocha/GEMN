@@ -17,7 +17,8 @@ export default function ProfileScreen({ navigation }: any) {
   const [isSeller, setIsSeller] = React.useState(false);
   const [sellerStatus, setSellerStatus] = React.useState<'ativo' | 'suspenso' | null>(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
-  const displayName = user?.user_metadata?.nome_completo?.trim() || 'Usuário GEMN';
+  const [profileName, setProfileName] = React.useState('');
+  const displayName = user?.user_metadata?.nome_completo?.trim() || profileName || 'Usuário GEMN';
   const email = user?.email || 'E-mail não informado';
 
   React.useEffect(() => {
@@ -31,12 +32,13 @@ export default function ProfileScreen({ navigation }: any) {
     if (!user) return () => { mounted = false; };
     Promise.all([
       supabase.from('sellers').select('id, status').eq('user_id', user.id).maybeSingle(),
-      supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+      supabase.from('profiles').select('is_admin, nome_completo').eq('id', user.id).maybeSingle(),
     ]).then(([sellerResult, profileResult]) => {
       if (!mounted) return;
       setIsSeller(Boolean(sellerResult.data));
       setSellerStatus(sellerResult.data?.status === 'ativo' || sellerResult.data?.status === 'suspenso' ? sellerResult.data.status : null);
       setIsAdmin(Boolean(profileResult.data?.is_admin));
+      setProfileName(typeof profileResult.data?.nome_completo === 'string' ? profileResult.data.nome_completo.trim() : '');
     });
     return () => { mounted = false; };
   }, [user]);
@@ -49,32 +51,34 @@ export default function ProfileScreen({ navigation }: any) {
 
   return (
     <AppScreen maxWidth={desktop ? 1180 : layout.contentMaxWidth} scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={[styles.content, desktop && styles.contentDesktop]}>
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.eyebrow}>Comunidade Mundo Novo</Text>
-          <Text style={[styles.title, desktop && styles.titleDesktop]}>Meu perfil</Text>
+      <View style={[styles.profileLayout, desktop && styles.profileLayoutDesktop]}>
+      <View style={[styles.identityColumn, desktop && styles.identityColumnDesktop]}>
+      <View style={[styles.identityCard, desktop && styles.identityCardDesktop]}>
+        <View style={styles.identityHeading}>
+          <View>
+            <Text style={styles.identityEyebrow}>Comunidade Mundo Novo</Text>
+            <Text style={styles.identityTitle}>Meu perfil</Text>
+          </View>
         </View>
-        <View style={styles.headerIcon}>
-          <MaterialCommunityIcons name="account-outline" size={22} color={colors.primary} />
-        </View>
-      </View>
-
-      <View style={[styles.overview, desktop && styles.overviewDesktop, desktop && styles.overviewWide]}>
-        <AppCard elevated={desktop} style={[styles.profileCard, desktop && styles.profileCardWide]}>
+        <View style={styles.identityTop}>
           <View style={[styles.avatar, desktop && styles.avatarWide]}>
-            <MaterialCommunityIcons name="account" size={desktop ? 46 : 42} color={colors.primary} />
+            <MaterialCommunityIcons name="account" size={desktop ? 42 : 38} color="#123B7A" />
           </View>
           <View style={styles.profileInfo}>
             <Text style={[styles.name, desktop && styles.nameDesktop]}>{displayName}</Text>
             <Text style={styles.email}>{email}</Text>
-            <AppBadge label={isSeller ? 'MEMBRO GEMN' : 'CLIENTE'} variant={isSeller ? 'success' : 'neutral'} />
+            <View style={styles.memberLine}>
+              <Text style={styles.gemnLabel}>GEMN</Text>
+              <AppBadge label={isSeller ? 'MEMBRO GEMN' : 'CLIENTE'} variant={isSeller ? 'success' : 'neutral'} />
+            </View>
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
-        </AppCard>
-
-        <View style={[styles.walletWrap, desktop && styles.walletWrapWide]}><WalletCard onPress={() => navigation.navigate('Wallet')} /></View>
+        </View>
+        <WalletCard embedded onPress={() => navigation.navigate('Wallet')} />
       </View>
 
+      </View>
+
+      <View style={[styles.resourcesColumn, desktop && styles.resourcesColumnDesktop]}>
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>Minha conta</Text>
@@ -83,6 +87,7 @@ export default function ProfileScreen({ navigation }: any) {
       </View>
 
       <AppCard padding={0} elevated={desktop} style={styles.menu}>
+        <Text style={styles.groupTitle}>Minhas compras</Text>
         <MenuItem
           icon="clipboard-text-outline"
           title="Meus pedidos"
@@ -90,6 +95,8 @@ export default function ProfileScreen({ navigation }: any) {
           featured
           onPress={() => navigation.navigate('Orders')}
         />
+        <MenuItem icon="wallet-outline" title="Minha carteira" subtitle="Saldo e movimentações GEMN" featured onPress={() => navigation.navigate('Wallet')} />
+        <Text style={styles.groupTitle}>Minha loja</Text>
         {isSeller ? (
           <MenuItem
             icon="store-outline"
@@ -125,6 +132,9 @@ export default function ProfileScreen({ navigation }: any) {
           />
         ) : null}
         {isAdmin ? (
+          <View style={styles.groupLabel}><Text style={styles.groupTitle}>Administração</Text></View>
+        ) : null}
+        {isAdmin ? (
           <MenuItem
             icon="shield-account-outline"
             title="Administração"
@@ -133,10 +143,12 @@ export default function ProfileScreen({ navigation }: any) {
             onPress={() => navigation.navigate('AdminHome')}
           />
         ) : null}
+        <View style={styles.groupLabel}><Text style={styles.groupTitle}>Preferências</Text></View>
         <MenuItem icon="heart-outline" title="Favoritos" subtitle="Em desenvolvimento" />
-        <MenuItem icon="wallet-outline" title="Minha carteira" subtitle="Saldo e movimentações GEMN" featured onPress={() => navigation.navigate('Wallet')} />
         <MenuItem icon="cog-outline" title="Configurações" subtitle="Em desenvolvimento" last />
       </AppCard>
+      </View>
+      </View>
 
       {signOutError ? <Text accessibilityRole="alert" style={styles.signOutError}>{signOutError}</Text> : null}
       <AppButton title="Sair" variant="outline" onPress={handleSignOut} style={styles.signOutButton} />
@@ -144,7 +156,7 @@ export default function ProfileScreen({ navigation }: any) {
   );
 }
 
-function MenuItem({ icon, title, subtitle, onPress, featured = false, last = false }: {
+function MenuItem({ icon, title, onPress, featured = false, last = false }: {
   icon: any;
   title: string;
   subtitle: string;
@@ -168,7 +180,6 @@ function MenuItem({ icon, title, subtitle, onPress, featured = false, last = fal
       </View>
       <View style={styles.menuText}>
         <Text style={[styles.menuTitle, desktop && styles.menuTitleDesktop]}>{title}</Text>
-        <Text style={[styles.menuSubtitle, desktop && styles.menuSubtitleDesktop]}>{subtitle}</Text>
       </View>
       <MaterialCommunityIcons name={onPress ? 'chevron-right' : 'clock-outline'} size={19} color={onPress && featured ? colors.primary : colors.textMuted} />
     </TouchableOpacity>
@@ -176,39 +187,43 @@ function MenuItem({ icon, title, subtitle, onPress, featured = false, last = fal
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
-  contentDesktop: { paddingTop: spacing.xl, gap: spacing.xl },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  eyebrow: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
-  title: { ...typography.heading1, color: colors.text },
-  titleDesktop: { fontSize: 30, lineHeight: 38 },
-  headerIcon: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  overview: { gap: spacing.md },
-  overviewDesktop: { gap: spacing.lg },
-  overviewWide: { flexDirection: 'row', alignItems: 'stretch' },
-  profileCard: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
-  profileCardWide: { flex: 1 },
-  avatar: { width: 68, height: 68, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.md },
+  contentDesktop: { paddingTop: spacing.lg, gap: spacing.lg },
+  profileLayout: { gap: spacing.md },
+  profileLayoutDesktop: { flexDirection: 'column', gap: spacing.lg },
+  identityColumn: { width: '100%' },
+  identityColumnDesktop: { width: '100%' },
+  resourcesColumn: { width: '100%', gap: spacing.sm },
+  resourcesColumnDesktop: { width: '100%' },
+  identityCard: { backgroundColor: '#123B7A', borderRadius: radius.xl, overflow: 'hidden', ...shadows.card },
+  identityCardDesktop: { width: '100%' },
+  identityHeading: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
+  identityEyebrow: { ...typography.bodySmall, color: '#A9DCD0', letterSpacing: 0.4, fontWeight: '600' },
+  identityTitle: { ...typography.heading1, color: colors.white, marginTop: spacing.xs },
+  identityTop: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.lg },
+  avatar: { width: 60, height: 60, borderRadius: radius.full, backgroundColor: '#E8F0FF', alignItems: 'center', justifyContent: 'center' },
   avatarWide: { width: 76, height: 76 },
   profileInfo: { flex: 1, marginLeft: spacing.md, gap: spacing.xs },
-  name: { ...typography.heading3, color: colors.text },
+  name: { ...typography.heading3, color: colors.white, letterSpacing: 0.1 },
   nameDesktop: { fontSize: 20, lineHeight: 26 },
-  email: { ...typography.bodySmall, color: colors.textSecondary },
-  walletWrap: { width: '100%' },
-  walletWrapWide: { width: 360, flexShrink: 0 },
+  email: { ...typography.bodySmall, color: '#C9D9FF' },
+  memberLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
+  gemnLabel: { ...typography.caption, color: '#A9DCD0', fontWeight: '700', letterSpacing: 1 },
   sectionHeader: { marginTop: spacing.xs },
-  sectionTitle: { ...typography.heading2, color: colors.text },
+  sectionTitle: { ...typography.heading2, color: '#123B7A' },
   sectionSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },
-  menu: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
-  menuItem: { minHeight: 70, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface },
-  menuItemDesktop: { minHeight: 80, paddingHorizontal: spacing.lg },
+  groupTitle: { display: 'none' },
+  groupLabel: { display: 'none' },
+  menu: { width: '100%', overflow: 'hidden', borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
+  menuItem: { width: '100%', minHeight: 62, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface },
+  menuItemDesktop: { minHeight: 66, paddingHorizontal: spacing.lg },
   menuItemDisabled: { backgroundColor: '#FAFAFB' },
   menuItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  menuIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
-  menuIconDesktop: { width: 48, height: 48 },
+  menuIcon: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  menuIconDesktop: { width: 38, height: 38 },
   menuIconFeatured: { backgroundColor: colors.primaryLight },
   menuIconDisabled: { backgroundColor: colors.surfaceMuted, opacity: 0.7 },
-  menuText: { flex: 1, marginLeft: spacing.md, gap: spacing.xs },
+  menuText: { flex: 1, minWidth: 0, marginLeft: spacing.sm },
   menuTitle: { ...typography.label, color: colors.text },
   menuTitleDesktop: { ...typography.heading4 },
   menuSubtitle: { ...typography.caption, color: colors.textSecondary },

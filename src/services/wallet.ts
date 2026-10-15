@@ -26,6 +26,8 @@ async function authenticatedUser() { const { data, error } = await supabase.auth
 
 export async function getMyWallet(): Promise<WalletData> {
   const user = await authenticatedUser();
+  const { error: bootstrapError } = await supabase.rpc('ensure_my_wallet');
+  if (bootstrapError) throw normalizeError(bootstrapError);
   const { data: walletRow, error: walletError } = await supabase.from('wallets').select(WALLET_SELECT).eq('user_id', user.id).maybeSingle();
   if (walletError) throw normalizeError(walletError);
   if (!walletRow) return { wallet: null, transactions: [] };

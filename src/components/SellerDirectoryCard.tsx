@@ -57,8 +57,8 @@ export function SellerDirectoryCard({ store, onPress }: SellerDirectoryCardProps
 const styles = StyleSheet.create({
   pressable: { width: '100%' },
   pressed: { opacity: 0.86, transform: [{ scale: 0.99 }] },
-  card: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, ...shadows.card },
-  logoArea: { aspectRatio: 1.8, minHeight: 112, maxHeight: 156, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+  card: { overflow: 'hidden', borderWidth: 1, borderColor: '#E1E7EF', borderRadius: radius.lg, ...shadows.card },
+  logoArea: { aspectRatio: 1.8, minHeight: 112, maxHeight: 156, backgroundColor: '#F2F5F8', alignItems: 'center', justifyContent: 'center', padding: spacing.md },
   logo: { width: '76%', height: '76%' },
   logoFallback: { width: 68, height: 68, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
   info: { padding: spacing.md, gap: spacing.sm, minWidth: 0 },
@@ -67,5 +67,5 @@ const styles = StyleSheet.create({
   description: { ...typography.bodySmall, color: colors.textSecondary, minHeight: 40, lineHeight: 20 },
   ctaRow: { minHeight: 36, flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: spacing.xs, marginTop: spacing.xs, paddingRight: spacing.sm, borderRadius: radius.full, backgroundColor: colors.primaryLight },
   ctaIcon: { width: 28, height: 28, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  linkText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
+  linkText: { ...typography.caption, color: '#123B7A', fontWeight: '700' },
 });

@@ -9,7 +9,7 @@ import { isGemnUiFixturesEnabled } from '../dev/ordersUiFixtures';
 import { sellerDashboardUiFixture, type SellerDashboardFixture } from '../dev/sellerDashboardUiFixtures';
 import { listSellerRelatedOrders } from '../services/cancellationRequestQueries';
 import { supabase } from '../lib/supabase';
-import { colors, layout, radius, spacing, typography } from '../theme/tokens';
+import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 
 type SellerStatus = 'ativo' | 'suspenso';
 type SellerDashboardData = {
@@ -210,8 +210,9 @@ export default function SellerDashboardScreen({ navigation }: any) {
 
   return (
     <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
+      <View style={styles.storeHero}>
       <View style={styles.header}>
-        <View style={styles.headerCopy}><Text style={styles.eyebrow}>Área do vendedor</Text><Text style={styles.title}>Minha Loja</Text><Text style={styles.subtitle}>Acompanhe sua operação no GEMN.</Text></View>
+        <View style={styles.headerCopy}><Text style={styles.eyebrow}>GEMN · ÁREA DO EMPREENDEDOR</Text><Text style={styles.title}>Minha Loja</Text><Text style={styles.subtitle}>Acompanhe sua operação no GEMN.</Text></View>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar Minha Loja" style={styles.refreshButton} disabled={loading || refreshing} onPress={() => { void loadDashboard(true); }}><MaterialCommunityIcons name="refresh" size={22} color={loading || refreshing ? colors.textSecondary : colors.primary} /></TouchableOpacity>
       </View>
 
@@ -221,6 +222,7 @@ export default function SellerDashboardScreen({ navigation }: any) {
         <View style={styles.storeIcon}><MaterialCommunityIcons name="storefront-outline" size={34} color={colors.primary} /></View>
         <View style={styles.storeCopy}><Text style={styles.storeName}>{data.seller.nomeNegocio}</Text><View style={styles.statusRow}><AppBadge label={suspended ? 'Suspensa' : 'Ativa'} variant={suspended ? 'warning' : 'success'} /><Text style={styles.storePhone}>{data.seller.telefone}</Text></View><Text style={styles.storeDescription}>{data.seller.descricao}</Text></View>
       </AppCard>
+      </View>
 
       {suspended ? <AppCard style={styles.warningCard}><MaterialCommunityIcons name="alert-outline" size={22} color={colors.warning} /><View style={styles.warningCopy}><Text style={styles.warningTitle}>Loja suspensa</Text><Text style={styles.warningText}>Você pode consultar seus dados e histórico. Publicações e configurações comerciais permanecem restritas pelo banco.</Text></View></AppCard> : null}
 
@@ -239,13 +241,13 @@ export default function SellerDashboardScreen({ navigation }: any) {
 
       {optionalResourceError ? <AppCard style={styles.infoCard}><MaterialCommunityIcons name="information-outline" size={22} color={colors.primary} /><Text style={styles.infoText}>{optionalResourceError}</Text></AppCard> : null}
 
-      <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Acessos rápidos</Text><Text style={styles.sectionSubtitle}>Gerencie seus anúncios e acompanhe pedidos.</Text></View></View>
-      <View style={[styles.actions, wide && styles.actionsWide]}>
-        <AppButton title="Personalizar Loja" fullWidth={!wide} onPress={() => navigation.navigate('SellerStoreBranding')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
-        <AppButton title="Configurações da Loja" variant="outline" fullWidth={!wide} onPress={() => navigation.navigate('SellerStoreSettings')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
-        <AppButton title="Meus produtos" variant="outline" fullWidth={!wide} onPress={() => navigation.navigate('MyProducts')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
-        <AppButton title="Pedidos recebidos" fullWidth={!wide} onPress={() => navigation.navigate('SellerOrders')} style={[styles.actionButton, wide && styles.actionButtonWide]} />
-      </View>
+      <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Gerenciamento da loja</Text><Text style={styles.sectionSubtitle}>Acesse as ferramentas do seu negócio.</Text></View></View>
+      <AppCard padding={0} style={styles.managementList}>
+        <ManagementItem icon="store-edit-outline" title="Personalizar loja" onPress={() => navigation.navigate('SellerStoreBranding')} />
+        <ManagementItem icon="cog-outline" title="Configurações da loja" onPress={() => navigation.navigate('SellerStoreSettings')} />
+        <ManagementItem icon="view-grid-outline" title="Meus produtos" onPress={() => navigation.navigate('MyProducts')} />
+        <ManagementItem icon="clipboard-arrow-down-outline" title="Pedidos recebidos" onPress={() => navigation.navigate('SellerOrders')} last />
+      </AppCard>
     </AppScreen>
   );
 }
@@ -254,24 +256,29 @@ function MetricCard({ icon, label, value, wide }: { icon: keyof typeof MaterialC
   return <AppCard style={[styles.metricCard, wide && styles.metricCardWide]}><View style={styles.metricIcon}><MaterialCommunityIcons name={icon} size={21} color={colors.primary} /></View><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></AppCard>;
 }
 
+function ManagementItem({ icon, title, onPress, last = false }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; onPress: () => void; last?: boolean }) {
+  return <TouchableOpacity accessibilityRole="button" style={[styles.managementItem, !last && styles.managementItemBorder]} onPress={onPress}><View style={styles.managementIcon}><MaterialCommunityIcons name={icon} size={20} color={colors.primary} /></View><Text style={styles.managementTitle}>{title}</Text><MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} /></TouchableOpacity>;
+}
+
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
+  storeHero: { backgroundColor: '#123B7A', borderRadius: radius.xl, overflow: 'hidden', padding: spacing.lg, gap: spacing.md },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   headerCopy: { flex: 1, gap: spacing.xs },
-  eyebrow: { ...typography.caption, color: colors.textSecondary },
-  title: { ...typography.heading1, color: colors.text },
-  subtitle: { ...typography.bodySmall, color: colors.textSecondary },
-  refreshButton: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  eyebrow: { ...typography.caption, color: '#A9DCD0', letterSpacing: 0.7, fontWeight: '700' },
+  title: { ...typography.heading1, color: colors.white },
+  subtitle: { ...typography.bodySmall, color: '#C9D9FF' },
+  refreshButton: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   demoBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: '#FBF1DF', borderWidth: 1, borderColor: '#F5D9A0' },
   demoBannerText: { ...typography.caption, color: colors.warning, flex: 1 },
-  storeCard: { flexDirection: 'row', gap: spacing.md, borderWidth: 1, borderColor: colors.border },
-  storeCardWide: { padding: spacing.xl },
-  storeIcon: { width: 64, height: 64, borderRadius: radius.lg, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  storeCard: { flexDirection: 'row', gap: spacing.md, padding: 0, backgroundColor: 'transparent' },
+  storeCardWide: { padding: 0 },
+  storeIcon: { width: 64, height: 64, borderRadius: radius.lg, backgroundColor: '#E8F0FF', alignItems: 'center', justifyContent: 'center' },
   storeCopy: { flex: 1, gap: spacing.xs },
-  storeName: { ...typography.heading2, color: colors.text },
+  storeName: { ...typography.heading2, color: colors.white },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  storePhone: { ...typography.caption, color: colors.textSecondary },
-  storeDescription: { ...typography.bodySmall, color: colors.textSecondary },
+  storePhone: { ...typography.caption, color: '#C9D9FF' },
+  storeDescription: { ...typography.bodySmall, color: '#C9D9FF' },
   warningCard: { flexDirection: 'row', gap: spacing.sm, backgroundColor: '#FBF1DF', borderWidth: 1, borderColor: '#F5D9A0' },
   warningCopy: { flex: 1, gap: spacing.xs },
   warningTitle: { ...typography.heading4, color: colors.warning },
@@ -280,7 +287,7 @@ const styles = StyleSheet.create({
   infoText: { ...typography.bodySmall, color: colors.textSecondary, flex: 1 },
   metricsGrid: { gap: spacing.md },
   metricsGridWide: { flexDirection: 'row' },
-  metricCard: { flex: 1, borderWidth: 1, borderColor: colors.border, gap: spacing.xs },
+  metricCard: { flex: 1, padding: spacing.md, borderWidth: 1, borderColor: colors.border, gap: spacing.xs, ...shadows.subtle },
   metricCardWide: { minWidth: 0 },
   metricIcon: { width: 40, height: 40, borderRadius: radius.md, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
   metricValue: { ...typography.heading2, color: colors.primary },
@@ -289,6 +296,11 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
   sectionTitle: { ...typography.heading2, color: colors.text },
   sectionSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },
+  managementList: { width: '100%', overflow: 'hidden', borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
+  managementItem: { minHeight: 64, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface },
+  managementItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  managementIcon: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  managementTitle: { ...typography.heading4, color: '#123B7A', flex: 1 },
   settingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   settingIcon: { width: 42, height: 42, borderRadius: radius.md, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   settingCopy: { flex: 1, gap: 2 },
