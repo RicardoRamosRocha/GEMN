@@ -1,10 +1,10 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
 
-import { AppBadge, AppButton, AppCard, AppInput, AppScreen } from '../components/ui';
+import { AppBadge, AppButton, AppCard, AppHeader, AppInput, AppScreen } from '../components/ui';
 import { listMyOrders, OrderServiceError } from '../services/orders';
 import { cancelPendingOrder, PendingOrderCancellationServiceError } from '../services/pendingOrderCancellation';
 import { requestOrderCancellation } from '../services/cancellationRequests';
@@ -32,7 +32,7 @@ function statusPresentation(status: OrderStatus) {
   if (status === 'cancelado') return { icon: 'close-circle-outline' as const, color: colors.error, style: styles.statusCancelled, textStyle: styles.statusTextCancelled };
   if (status === 'expirado') return { icon: 'timer-off-outline' as const, color: colors.error, style: styles.statusExpired, textStyle: styles.statusTextExpired };
   if (status === 'concluido') return { icon: 'check-circle' as const, color: colors.success, style: styles.status, textStyle: styles.statusText };
-  return { icon: 'progress-check' as const, color: colors.primary, style: styles.status, textStyle: styles.statusTextConfirmed };
+  return { icon: 'progress-check' as const, color: colors.brand, style: styles.status, textStyle: styles.statusTextConfirmed };
 }
 
 function formatReal(value: number) {
@@ -67,6 +67,27 @@ function friendlyPendingCancellationError(error: unknown) {
   if (error instanceof PendingOrderCancellationServiceError) return error.message;
   if (error instanceof Error) return error.message;
   return 'Não foi possível cancelar o pedido. Tente novamente.';
+}
+
+function OrderProductThumbnail({ imageUrl, name }: { imageUrl?: string; name: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  return (
+    <View style={styles.productThumbnail} accessibilityLabel={imageUrl && !imageFailed ? `Imagem de ${name}` : `Imagem indisponível de ${name}`}>
+      {imageUrl && !imageFailed ? (
+        <Image
+          accessibilityLabel={`Imagem de ${name}`}
+          source={{ uri: imageUrl }}
+          style={styles.productThumbnailImage}
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <View style={styles.productThumbnailPlaceholder}>
+          <MaterialCommunityIcons name="image-outline" size={26} color={colors.brand} />
+        </View>
+      )}
+    </View>
+  );
 }
 
 function latestRequestsByOrder(requests: CancellationRequestQuery[]) {
@@ -280,20 +301,13 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
   }
 
   return (
-    <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Voltar" style={styles.backButton} onPress={() => navigation?.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>Histórico de compras</Text>
-          <Text style={styles.title}>Meus pedidos</Text>
-          <Text style={styles.subtitle}>Acompanhe suas compras na comunidade</Text>
-        </View>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar pedidos" style={styles.refreshButton} disabled={loading || refreshing} onPress={() => { void loadOrders(true); }}>
-          <MaterialCommunityIcons name="refresh" size={22} color={loading || refreshing ? colors.textSecondary : colors.primary} />
-        </TouchableOpacity>
-      </View>
+    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
+      <AppHeader
+        title="Meus pedidos"
+        subtitle="Acompanhe suas compras na comunidade"
+        onBack={() => navigation?.goBack()}
+        action={<TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar pedidos" accessibilityState={{ busy: refreshing, disabled: loading || refreshing }} style={styles.refreshButton} disabled={loading || refreshing} onPress={() => { void loadOrders(true); }}><MaterialCommunityIcons name="refresh" size={21} color={loading || refreshing ? colors.textMuted : colors.brand} /></TouchableOpacity>}
+      />
       {fixturesEnabled ? <View style={styles.demoBanner} accessibilityRole="text">
         <MaterialCommunityIcons name="flask-outline" size={18} color={colors.warning} />
         <Text style={styles.demoBannerText}>Modo de demonstração · dados sintéticos locais</Text>
@@ -301,7 +315,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
 
       {loading ? (
         <View style={styles.feedbackState}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.brand} />
           <Text style={styles.feedbackText}>Carregando seus pedidos...</Text>
         </View>
       ) : errorMessage ? (
@@ -313,7 +327,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
         </AppCard>
       ) : orders.length === 0 ? (
         <AppCard style={styles.feedbackCard}>
-          <MaterialCommunityIcons name="clipboard-text-outline" size={42} color={colors.primary} />
+          <MaterialCommunityIcons name="clipboard-text-outline" size={42} color={colors.brand} />
           <Text style={styles.feedbackTitle}>Você ainda não tem pedidos</Text>
           <Text style={styles.feedbackText}>Seus pedidos registrados aparecerão aqui.</Text>
           <AppButton title="Atualizar" variant="outline" onPress={() => { void loadOrders(true); }} />
@@ -340,9 +354,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                   <View style={styles.divider} />
 
                   <View style={styles.productRow}>
-                    <View style={styles.productIcon}>
-                      <MaterialCommunityIcons name="package-variant-closed" size={27} color={colors.primary} />
-                    </View>
+                    <OrderProductThumbnail imageUrl={item?.imagemPrincipalUrl} name={item?.nomeItem ?? 'item do pedido'} />
                     <View style={styles.productInfo}>
                       <Text style={styles.productName}>{item?.nomeItem ?? 'Item do pedido'}</Text>
                       <Text style={styles.quantity}>Quantidade: {item?.quantidade ?? order.items.reduce((sum, current) => sum + current.quantidade, 0)}</Text>
@@ -369,7 +381,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                     const request = cancellationRequests[order.id];
                     return <View style={styles.cancellationStatus}>
                       <View style={styles.cancellationStatusHeader}>
-                        <MaterialCommunityIcons name={requestStatus.icon} size={18} color={colors.primary} />
+                        <MaterialCommunityIcons name={requestStatus.icon} size={18} color={colors.brand} />
                         <AppBadge label={requestStatus.label} variant={requestStatus.variant} />
                       </View>
                       {request?.status === 'rejeitada' && request.motivoDecisao ? <Text style={styles.cancellationNote}>Motivo: {request.motivoDecisao}</Text> : null}
@@ -385,7 +397,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
       )}
 
       {!loading && !errorMessage && orders.length > 0 ? <AppCard style={styles.infoBox}>
-        <View style={styles.infoIcon}><MaterialCommunityIcons name="information-outline" size={20} color={colors.primary} /></View>
+        <View style={styles.infoIcon}><MaterialCommunityIcons name="information-outline" size={20} color={colors.brand} /></View>
         <View style={styles.infoCopy}>
           <Text style={styles.infoTitle}>Seu histórico GEMN</Text>
           <Text style={styles.infoText}>Pedidos pendentes representam uma intenção registrada. Pagamentos e débitos GEMN não são realizados nesta etapa.</Text>
@@ -454,14 +466,8 @@ function CancellationModal({ order, reason, processing, errorMessage, onReasonCh
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  backButton: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  refreshButton: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  headerCopy: { flex: 1, gap: spacing.xs },
-  eyebrow: { ...typography.caption, color: colors.textSecondary },
-  title: { ...typography.heading1, color: colors.text },
-  subtitle: { ...typography.bodySmall, color: colors.textSecondary },
+  content: { paddingTop: spacing.xs, paddingBottom: spacing.xxl, gap: spacing.md },
+  refreshButton: { width: 44, height: 44, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
   feedbackState: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxl },
   feedbackCard: { alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
   feedbackTitle: { ...typography.heading3, color: colors.text, textAlign: 'center' },
@@ -475,18 +481,20 @@ const styles = StyleSheet.create({
   orderHeaderCopy: { flex: 1, minWidth: 0 },
   orderLabel: { ...typography.caption, color: colors.textSecondary },
   orderId: { ...typography.label, color: colors.text, marginTop: spacing.xs },
-  status: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, minHeight: 28, borderRadius: radius.full, backgroundColor: colors.primaryLight },
-  statusPending: { backgroundColor: colors.secondaryLight },
-  statusCancelled: { backgroundColor: '#FDECEC' },
-  statusExpired: { backgroundColor: '#FDECEC' },
+  status: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, minHeight: 28, borderRadius: radius.full, backgroundColor: colors.brandLight },
+  statusPending: { backgroundColor: colors.gemnLight },
+  statusCancelled: { backgroundColor: colors.surfaceMuted },
+  statusExpired: { backgroundColor: colors.surfaceMuted },
   statusText: { ...typography.caption, color: colors.success, fontWeight: '600' },
   statusTextPending: { color: colors.warning },
-  statusTextConfirmed: { color: colors.primary },
+  statusTextConfirmed: { color: colors.brand },
   statusTextCancelled: { color: colors.error },
   statusTextExpired: { color: colors.error },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
   productRow: { flexDirection: 'row', alignItems: 'center' },
-  productIcon: { width: 56, height: 56, borderRadius: radius.md, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  productThumbnail: { width: 64, height: 64, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border, flexShrink: 0 },
+  productThumbnailImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  productThumbnailPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandLight },
   productInfo: { flex: 1, marginLeft: spacing.md },
   productName: { ...typography.heading3, color: colors.text },
   quantity: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
@@ -494,9 +502,9 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
   summaryLabel: { ...typography.bodySmall, color: colors.textSecondary, flex: 1 },
   summaryValue: { ...typography.caption, color: colors.textSecondary, fontWeight: '600' },
-  total: { ...typography.heading2, color: colors.primary },
+  total: { ...typography.heading2, color: colors.brandDark },
   pendingNote: { ...typography.caption, color: colors.warning, marginTop: spacing.md },
-  infoBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight, padding: spacing.md, borderWidth: 1, borderColor: colors.primaryLight },
+  infoBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.brandLight, padding: spacing.md, borderWidth: 1, borderColor: colors.brandLight },
   infoIcon: { width: 38, height: 38, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   infoCopy: { flex: 1, marginLeft: spacing.md, gap: spacing.xs },
   infoTitle: { ...typography.label, color: colors.text },
@@ -505,7 +513,7 @@ const styles = StyleSheet.create({
   cancellationStatus: { marginTop: spacing.md, gap: spacing.xs },
   cancellationStatusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   cancellationNote: { ...typography.caption, color: colors.textSecondary },
-  warningBox: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: '#FBF1DF', padding: spacing.md, borderWidth: 1, borderColor: '#F5D9A0' },
+  warningBox: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.gemnLight, padding: spacing.md, borderWidth: 1, borderColor: colors.gemnLight },
   warningBoxText: { ...typography.caption, color: colors.warning, flex: 1 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.45)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
   modalCard: { width: '100%', maxWidth: 480, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
@@ -514,6 +522,6 @@ const styles = StyleSheet.create({
   modalError: { ...typography.bodySmall, color: colors.error },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.sm },
   modalButton: { flex: 1 },
-  demoBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: '#FBF1DF', borderWidth: 1, borderColor: '#F5D9A0' },
+  demoBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.gemnLight, borderWidth: 1, borderColor: colors.gemnLight },
   demoBannerText: { ...typography.caption, color: colors.warning, flex: 1 },
 });

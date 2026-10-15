@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AppCard, AppScreen } from '../components/ui';
 import { CategoryChip } from '../components/CategoryChip';
+import { HorizontalProductCarousel } from '../components/HorizontalProductCarousel';
 import { ProductCard } from '../components/ProductCard';
 import { WalletCard } from '../components/WalletCard';
 import { useProducts } from '../context/ProductsContext';
@@ -32,10 +33,6 @@ function formatPrice(value: number) {
 export default function HomeScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
   const desktop = width >= layout.breakpoints.desktop;
-  const tablet = width >= layout.breakpoints.tablet;
-  const horizontalPadding = tablet ? layout.desktopHorizontalPadding : layout.mobileHorizontalPadding;
-  const contentWidth = Math.min(width - horizontalPadding * 2, layout.contentMaxWidth - horizontalPadding * 2);
-  const productWidth = desktop ? Math.floor((contentWidth - spacing.md * 3) / 4) : tablet ? Math.floor((contentWidth - spacing.md * 2) / 3) : Math.floor((contentWidth - spacing.sm) / 2);
   const { marketplaceProducts, marketplaceLoading, marketplaceError, categories, categoriesLoading, categoriesError } = useProducts();
   const spotlightProducts = marketplaceProducts.slice(0, 6);
   const visibleCategories = categories.slice(0, 5);
@@ -96,9 +93,10 @@ export default function HomeScreen({ navigation }: any) {
       </View>
 
       {marketplaceLoading ? <View style={styles.inlineFeedback}><ActivityIndicator color={colors.brand} /><Text style={styles.helperText}>Carregando destaques...</Text></View> : marketplaceError ? <AppCard style={styles.feedbackCard}><Text style={styles.errorText}>{marketplaceError}</Text></AppCard> : spotlightProducts.length === 0 ? <AppCard style={styles.emptyCard}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.brand} /><Text style={styles.emptyTitle}>Ainda não há destaques</Text><Text style={styles.helperText}>Novos produtos e serviços aparecerão aqui.</Text></AppCard> : (
-        <View style={[styles.productsGrid, desktop && styles.productsGridDesktop]}>
-          {spotlightProducts.map((product, index) => <HomeProductCard key={product.id} product={product} width={productWidth} onPress={() => navigation.navigate('Product', { listing: product, listingSequence: spotlightProducts, listingIndex: index })} />)}
-        </View>
+        <HorizontalProductCarousel
+          products={spotlightProducts}
+          renderItem={(product, index) => <HomeProductCard product={product} onPress={() => navigation.navigate('Product', { listing: product, listingSequence: spotlightProducts, listingIndex: index })} />}
+        />
       )}
 
       <View style={styles.quickLinks}>
@@ -109,9 +107,9 @@ export default function HomeScreen({ navigation }: any) {
   );
 }
 
-function HomeProductCard({ product, width, onPress }: { product: GemnProduct; width: number; onPress: () => void }) {
+function HomeProductCard({ product, onPress }: { product: GemnProduct; onPress: () => void }) {
   const eligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
-  return <View style={{ width }}><ProductCard layout="home" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={formatPrice(product.price)} seller={product.sellerName ?? 'Comunidade GEMN'} coinPrice={eligibility.enabled && eligibility.value !== undefined ? `${eligibility.value} GEMN` : undefined} acceptanceGemn={eligibility.enabled} onPress={onPress} /></View>;
+  return <ProductCard layout="home" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={formatPrice(product.price)} seller={product.sellerName ?? 'Comunidade GEMN'} coinPrice={eligibility.enabled && eligibility.value !== undefined ? `${eligibility.value} GEMN` : undefined} acceptanceGemn={eligibility.enabled} onPress={onPress} />;
 }
 
 function QuickLink({ icon, title, onPress }: { icon: IconName; title: string; onPress: () => void }) {
@@ -133,8 +131,6 @@ const styles = StyleSheet.create({
   seeAll: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   seeAllText: { ...typography.bodySmall, color: colors.textSecondary },
   categoriesRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.xs },
-  productsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  productsGridDesktop: { gap: spacing.md },
   quickLinks: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   quickLink: { flex: 1, minHeight: 44, paddingHorizontal: spacing.smMd, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   quickLinkText: { ...typography.caption, color: colors.brandDark, fontWeight: '700', flex: 1 },

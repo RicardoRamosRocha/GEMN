@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
-import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
+import { AppBadge, AppButton, AppCard, AppHeader, AppScreen } from '../components/ui';
 import type { OrderConfirmationParams } from './ProductScreen';
 import type { OrderStatus } from '../types/orders';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
@@ -44,14 +44,14 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
   const paymentLabel = formaPagamento === 'real' ? 'Reais' : formaPagamento === 'misto' ? 'Misto (Reais + GEMN)' : '100% GEMN';
 
   return (
-    <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
+    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
+      <AppHeader title="Pedido criado" subtitle="Resumo e acompanhamento do pedido" onBack={() => navigation?.goBack()} />
       <View style={[styles.confirmation, wide && styles.confirmationWide]}>
         <View style={styles.hero}>
           <View style={styles.successIcon}>
             <MaterialCommunityIcons name="check" size={34} color={colors.white} />
           </View>
           <AppBadge label="PEDIDO REGISTRADO" variant="success" />
-          <Text style={styles.title}>Pedido criado</Text>
           <Text style={styles.subtitle}>Seu pedido está com status {statusLabels[status]} e aguardando processamento.</Text>
         </View>
 
@@ -60,14 +60,14 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
             <Text style={styles.orderNumberLabel}>Identificador do pedido</Text>
             <Text style={styles.orderNumberValue}>{orderId}</Text>
           </View>
-          <MaterialCommunityIcons name="clock-check-outline" size={28} color={colors.primary} />
+          <MaterialCommunityIcons name="clock-check-outline" size={28} color={colors.brand} />
         </View>
 
         <View style={[styles.details, wide && styles.detailsWide]}>
           <AppCard elevated={wide} style={styles.card}>
             <Text style={styles.cardTitle}>Resumo do pedido</Text>
             <View style={styles.productRow}>
-              <View style={styles.productIcon}><MaterialCommunityIcons name="package-variant-closed" size={28} color={colors.primary} /></View>
+              <View style={styles.productIcon}><MaterialCommunityIcons name="package-variant-closed" size={28} color={colors.brand} /></View>
               <View style={styles.productInfo}>
                 <Text style={styles.productName}>{itemName}</Text>
                 <Text style={styles.quantity}>Quantidade: {quantidade}</Text>
@@ -77,7 +77,7 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
             <View style={styles.row}>
               <Text style={styles.label}>Forma escolhida</Text>
               <View style={styles.paymentValue}>
-                <MaterialCommunityIcons name={formaPagamento === 'real' ? 'cash' : 'star-four-points'} size={16} color={formaPagamento === 'real' ? colors.primary : colors.secondary} />
+                <MaterialCommunityIcons name={formaPagamento === 'real' ? 'cash' : 'star-four-points'} size={16} color={formaPagamento === 'real' ? colors.brand : colors.gemn} />
                 <Text style={styles.value}>{paymentLabel}</Text>
               </View>
             </View>
@@ -106,7 +106,7 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
               <View style={styles.stepCopy}><Text style={styles.stepTitle}>Pedido recebido</Text><Text style={styles.stepText}>Aguardando processamento</Text></View>
             </View>
             <View style={styles.step}>
-              <View style={styles.stepIcon}><MaterialCommunityIcons name="clock-outline" size={17} color={colors.secondary} /></View>
+              <View style={styles.stepIcon}><MaterialCommunityIcons name="clock-outline" size={17} color={colors.gemn} /></View>
               <View style={styles.stepCopy}><Text style={styles.stepTitle}>Processamento</Text><Text style={styles.stepText}>Novas atualizações aparecerão aqui</Text></View>
             </View>
             <View style={styles.stepLast}>
@@ -127,22 +127,21 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl },
+  content: { paddingTop: spacing.xs, paddingBottom: spacing.xxl },
   confirmation: { width: '100%', maxWidth: 620, alignSelf: 'center', gap: spacing.md },
   confirmationWide: { maxWidth: 840, gap: spacing.lg },
   hero: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
   successIcon: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center', ...shadows.floating },
-  title: { ...typography.heading1, color: colors.text, textAlign: 'center', marginTop: spacing.xs },
   subtitle: { ...typography.bodySmall, color: colors.textSecondary, textAlign: 'center' },
-  orderNumber: { minHeight: 76, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.lg, backgroundColor: colors.primaryLight, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  orderNumber: { minHeight: 76, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.lg, backgroundColor: colors.brandLight, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   orderNumberLabel: { ...typography.caption, color: colors.textSecondary },
-  orderNumberValue: { ...typography.heading3, color: colors.primary, marginTop: spacing.xs },
+  orderNumberValue: { ...typography.heading3, color: colors.brandDark, marginTop: spacing.xs },
   details: { gap: spacing.md },
   detailsWide: { flexDirection: 'row', alignItems: 'stretch' },
   card: { flex: 1, borderWidth: 1, borderColor: colors.border },
   cardTitle: { ...typography.heading3, color: colors.text, marginBottom: spacing.md },
   productRow: { flexDirection: 'row', alignItems: 'center' },
-  productIcon: { width: 56, height: 56, borderRadius: radius.md, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  productIcon: { width: 56, height: 56, borderRadius: radius.md, backgroundColor: colors.brandLight, alignItems: 'center', justifyContent: 'center' },
   productInfo: { flex: 1, marginLeft: spacing.md },
   productName: { ...typography.label, color: colors.text },
   quantity: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
@@ -153,7 +152,7 @@ const styles = StyleSheet.create({
   value: { ...typography.label, color: colors.text },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md },
   totalLabel: { ...typography.heading3, color: colors.text },
-  total: { ...typography.heading2, color: colors.primary },
+  total: { ...typography.heading2, color: colors.brandDark },
   stepsCard: { minWidth: 0 },
   step: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
   stepLast: { flexDirection: 'row', alignItems: 'center' },

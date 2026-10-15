@@ -42,6 +42,8 @@ export type OrderItem = {
   subtotalGemn: number | null;
   cashbackPercentual: number;
   cashbackPrevisto: number;
+  imagemPrincipalSnapshot: string | null;
+  imagemPrincipalUrl?: string;
   criadoEm: string;
   atualizadoEm: string;
 };

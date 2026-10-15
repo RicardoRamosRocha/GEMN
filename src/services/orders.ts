@@ -24,7 +24,7 @@ export class OrderServiceError extends Error {
 
 type UnknownRecord = Record<string, unknown>;
 
-const ORDER_SELECT = 'id,status,forma_pagamento,total_real,total_gemn,gemn_utilizado,valor_devido_real,criado_em,atualizado_em,order_items(id,order_id,listing_id,seller_id,nome_item,tipo,quantidade,preco_real_unitario,preco_gemn_unitario,subtotal_real,subtotal_gemn,cashback_percentual,cashback_previsto,criado_em,atualizado_em)';
+const ORDER_SELECT = 'id,status,forma_pagamento,total_real,total_gemn,gemn_utilizado,valor_devido_real,criado_em,atualizado_em,order_items(id,order_id,listing_id,seller_id,nome_item,tipo,quantidade,preco_real_unitario,preco_gemn_unitario,subtotal_real,subtotal_gemn,cashback_percentual,cashback_previsto,imagem_principal_snapshot,criado_em,atualizado_em)';
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -33,6 +33,14 @@ function isRecord(value: unknown): value is UnknownRecord {
 function requiredString(value: unknown, field: string): string {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new OrderServiceError('unexpected', `Retorno inválido: ${field} ausente.`);
+  }
+  return value;
+}
+
+function nullableString(value: unknown, field: string): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value !== 'string') {
+    throw new OrderServiceError('unexpected', `Retorno inválido: ${field} não é texto.`);
   }
   return value;
 }
@@ -120,6 +128,7 @@ function normalizeRpcResult(data: unknown): OrderRpcResult {
 function normalizeItem(value: unknown): OrderItem {
   if (!isRecord(value)) throw new OrderServiceError('unexpected', 'Item de pedido inválido no retorno.');
   if (value.tipo !== 'produto' && value.tipo !== 'servico') throw new OrderServiceError('unexpected', 'Tipo de item inválido no retorno.');
+  const imagemPrincipalSnapshot = nullableString(value.imagem_principal_snapshot, 'item.imagem_principal_snapshot');
   return {
     id: requiredString(value.id, 'item.id'),
     orderId: requiredString(value.order_id, 'item.order_id'),
@@ -134,6 +143,8 @@ function normalizeItem(value: unknown): OrderItem {
     subtotalGemn: finiteNumber(value.subtotal_gemn, 'item.subtotal_gemn', true),
     cashbackPercentual: finiteNumber(value.cashback_percentual, 'item.cashback_percentual') as number,
     cashbackPrevisto: finiteNumber(value.cashback_previsto, 'item.cashback_previsto') as number,
+    imagemPrincipalSnapshot,
+    ...(imagemPrincipalSnapshot ? { imagemPrincipalUrl: supabase.storage.from('listing-images').getPublicUrl(imagemPrincipalSnapshot).data.publicUrl } : {}),
     criadoEm: requiredString(value.criado_em, 'item.criado_em'),
     atualizadoEm: requiredString(value.atualizado_em, 'item.atualizado_em'),
   };

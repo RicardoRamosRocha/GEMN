@@ -30,6 +30,7 @@ function fixtureOrder(id: string, itemName: string): Order {
       subtotalGemn: null,
       cashbackPercentual: 5,
       cashbackPrevisto: 6.25,
+      imagemPrincipalSnapshot: null,
       criadoEm: createdAt,
       atualizadoEm: createdAt,
     }],

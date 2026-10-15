@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, StyleSheet, Text, View, useWindowDimensions }
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
+import { HorizontalProductCarousel } from '../components/HorizontalProductCarousel';
 import { ProductCard } from '../components/ProductCard';
 import { isGemnUiFixturesEnabled } from '../dev/ordersUiFixtures';
 import { sellerStorefrontUiFixtures, type SellerStorefrontFixtureScenario } from '../dev/sellerStorefrontUiFixtures';
@@ -62,12 +63,6 @@ function listingAsProduct(listing: SellerStorefrontListing, sellerName: string, 
 export default function SellerStorefrontScreen({ route, navigation }: StorefrontScreenProps) {
   const { width } = useWindowDimensions();
   const desktop = width >= layout.breakpoints.desktop;
-  const tablet = width >= layout.breakpoints.tablet;
-  const columns = desktop ? 4 : tablet ? 3 : width >= 360 ? 2 : 1;
-  const horizontalPadding = tablet ? layout.desktopHorizontalPadding : layout.mobileHorizontalPadding;
-  const contentWidth = Math.min(width - horizontalPadding * 2, layout.contentMaxWidth - horizontalPadding * 2);
-  const catalogGap = desktop ? spacing.lg : spacing.md;
-  const catalogItemWidth = (contentWidth - catalogGap * (columns - 1)) / columns;
   const sellerId = route?.params?.sellerId;
   const fixturesEnabled = isGemnUiFixturesEnabled();
   const [storefront, setStorefront] = React.useState<SellerStorefront | null>(null);
@@ -130,7 +125,7 @@ export default function SellerStorefrontScreen({ route, navigation }: Storefront
 
       <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Produtos e serviços</Text><Text style={styles.sectionSubtitle}>{listings.length === 0 ? 'Nenhum anúncio publicado no momento.' : `${listings.length} anúncio${listings.length === 1 ? '' : 's'} publicado${listings.length === 1 ? '' : 's'}`}</Text></View></View>
 
-      {listings.length === 0 ? <AppCard style={styles.emptyCard}><View style={styles.emptyIcon}><MaterialCommunityIcons name="package-variant-closed" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>Vitrine em preparação</Text><Text style={styles.emptyText}>Este vendedor ainda não publicou produtos ou serviços.</Text></AppCard> : <View style={[styles.catalog, desktop && styles.catalogWide]}>{listings.map((listing) => { const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: seller.aceitaGemn, listingAcceptsGemn: listing.acceptsGemn, gemnValue: listing.gemnValue }); const product = listingAsProduct(listing, seller.nomeNegocio, seller.aceitaGemn); const acceptanceLabel = gemnEligibility.enabled ? 'Aceita GEMN neste anúncio' : listing.acceptsGemn && !seller.aceitaGemn ? 'GEMN indisponível no momento' : 'Pagamento somente em reais'; return <View key={listing.id} style={[styles.catalogItem, { width: catalogItemWidth }]}><ProductCard layout="marketplace" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} nameTestID={`seller-storefront-listing-name-${listing.id}`} price={product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} acceptanceLabel={acceptanceLabel} acceptanceGemn={gemnEligibility.enabled} emphasizeName seller={seller.nomeNegocio} onPress={() => navigation.navigate('Product', { listing: product })} /></View>; })}</View>}
+      {listings.length === 0 ? <AppCard style={styles.emptyCard}><View style={styles.emptyIcon}><MaterialCommunityIcons name="package-variant-closed" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>Vitrine em preparação</Text><Text style={styles.emptyText}>Este vendedor ainda não publicou produtos ou serviços.</Text></AppCard> : <HorizontalProductCarousel products={listings.map((listing) => listingAsProduct(listing, seller.nomeNegocio, seller.aceitaGemn))} renderItem={(product) => { const listing = listings.find((item) => item.id === product.id); const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: seller.aceitaGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue }); const acceptanceLabel = gemnEligibility.enabled ? 'Aceita GEMN neste anúncio' : listing?.acceptsGemn && !seller.aceitaGemn ? 'GEMN indisponível no momento' : 'Pagamento somente em reais'; return <ProductCard layout="home" icon={product.icon} imageUrl={product.imageUrl} category={product.category} showCategory name={product.name} nameTestID={`seller-storefront-listing-name-${product.id}`} price={product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} acceptanceLabel={acceptanceLabel} acceptanceGemn={gemnEligibility.enabled} seller={seller.nomeNegocio} onPress={() => navigation.navigate('Product', { listing: product })} />; }} />}
     </AppScreen>
   );
 }
@@ -163,9 +158,6 @@ const styles = StyleSheet.create({
   sectionHeader: { maxWidth: layout.contentMaxWidth, width: '100%', alignSelf: 'center', gap: spacing.xs, paddingTop: spacing.sm },
   sectionTitle: { ...typography.heading2, color: colors.text },
   sectionSubtitle: { ...typography.bodySmall, color: colors.textSecondary },
-  catalog: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, maxWidth: layout.contentMaxWidth, width: '100%', alignSelf: 'center' },
-  catalogWide: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
-  catalogItem: { minWidth: 0 },
   emptyCard: { alignItems: 'center', gap: spacing.sm, maxWidth: 560, width: '100%', alignSelf: 'center', paddingVertical: spacing.xl, borderWidth: 1, borderColor: colors.border },
   emptyIcon: { width: 64, height: 64, borderRadius: radius.full, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { ...typography.heading3, color: colors.text },

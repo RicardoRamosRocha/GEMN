@@ -8,11 +8,11 @@ type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 export type ProductCardProps = {
   icon: IconName; category: string; name: string; price: string; seller: string;
   coinPrice?: string; acceptanceLabel?: string; acceptanceGemn?: boolean; emphasizeName?: boolean; nameTestID?: string;
-  rating?: string; imageUrl?: string; onPress: () => void;
+  rating?: string; imageUrl?: string; showCategory?: boolean; onPress: () => void;
   layout?: 'default' | 'marketplace' | 'home' | 'marketplaceList';
 };
 
-export function ProductCard({ icon, category, name, price, seller, coinPrice, acceptanceLabel, acceptanceGemn = false, emphasizeName = false, nameTestID, rating, imageUrl, onPress, layout: cardLayout = 'default' }: ProductCardProps) {
+export function ProductCard({ icon, category, name, price, seller, coinPrice, acceptanceLabel, acceptanceGemn = false, emphasizeName = false, nameTestID, rating, imageUrl, showCategory = false, onPress, layout: cardLayout = 'default' }: ProductCardProps) {
   const compact = useWindowDimensions().width < layout.breakpoints.tablet;
   const marketplace = cardLayout === 'marketplace';
   const home = cardLayout === 'home';
@@ -24,7 +24,7 @@ export function ProductCard({ icon, category, name, price, seller, coinPrice, ac
       <AppCard padding={0} style={[styles.card, compactCard && styles.cardCompact, marketplace && styles.marketplaceCard, home && styles.homeCard, marketplaceList && styles.marketplaceListCard, compact && marketplace && styles.marketplaceCardCompact]}>
         <View style={[!marketplace && !home && !marketplaceList && styles.visual, compactCard && styles.visualCompact, marketplace && styles.marketplaceVisual, home && styles.homeVisual, marketplaceList && styles.marketplaceListVisual]}>
           {imageUrl && !imageFailed ? <Image source={{ uri: imageUrl }} style={styles.image} onError={() => setImageFailed(true)} /> : <View style={[styles.iconDisc, compactCard && styles.iconDiscCompact, marketplace && styles.marketplaceIconDisc, home && styles.homeIconDisc, marketplaceList && styles.marketplaceListIconDisc]}><MaterialCommunityIcons name={icon} size={compact || marketplace || home || marketplaceList ? 30 : 38} color={colors.primary} /></View>}
-          {(!compact || marketplace) && !home && !marketplaceList ? <View style={[styles.category, compact && marketplace && styles.categoryCompact]}><AppBadge label={category} /></View> : null}
+          {(!compact || marketplace || showCategory) && !marketplaceList ? <View style={[styles.category, compact && marketplace && styles.categoryCompact]}><AppBadge label={category} /></View> : null}
         </View>
         <View style={[styles.info, compactCard && styles.infoCompact, marketplace && styles.marketplaceInfo, home && styles.homeInfo, marketplaceList && styles.marketplaceListInfo, compact && marketplace && styles.marketplaceInfoCompact]}>
           <Text testID={nameTestID} accessibilityRole="text" style={[styles.name, compactCard && styles.nameCompact, marketplace && styles.marketplaceName, home && styles.homeName, marketplaceList && styles.marketplaceListName, compact && marketplace && styles.marketplaceNameCompact, emphasizeName && styles.emphasizedName]} numberOfLines={marketplace || home || marketplaceList ? 2 : compact ? 1 : 2}>{name}</Text>
