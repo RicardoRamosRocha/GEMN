@@ -8,15 +8,16 @@ import type { GemnProduct } from '../context/ProductsContext';
 type HorizontalProductCarouselProps = {
   products: GemnProduct[];
   renderItem: (product: GemnProduct, index: number) => React.ReactNode;
+  variant?: 'default' | 'home';
 };
 
-export function HorizontalProductCarousel({ products, renderItem }: HorizontalProductCarouselProps) {
+export function HorizontalProductCarousel({ products, renderItem, variant = 'default' }: HorizontalProductCarouselProps) {
   const { width } = useWindowDimensions();
   const scrollRef = React.useRef<ScrollView>(null);
   const [offset, setOffset] = React.useState(0);
   const desktop = width >= layout.breakpoints.desktop;
-  const gap = desktop ? spacing.md : spacing.smMd;
-  const cardWidth = desktop ? 300 : Math.min(286, Math.max(220, width * 0.74));
+  const gap = variant === 'home' ? spacing.smMd : desktop ? spacing.md : spacing.smMd;
+  const cardWidth = desktop ? variant === 'home' ? 240 : 300 : variant === 'home' ? Math.min(320, Math.max(252, width * 0.78)) : Math.min(286, Math.max(220, width * 0.74));
   const step = cardWidth + gap;
 
   function scrollBy(direction: -1 | 1) {
@@ -63,7 +64,7 @@ export function HorizontalProductCarousel({ products, renderItem }: HorizontalPr
 
 const styles = StyleSheet.create({
   wrapper: { width: '100%', position: 'relative' },
-  list: { paddingRight: spacing.lg, alignItems: 'flex-start' },
+  list: { paddingRight: spacing.lg, alignItems: 'flex-start', justifyContent: 'flex-start', flexGrow: 0 },
   item: { alignSelf: 'flex-start' },
   controls: { position: 'absolute', right: spacing.xs, top: -spacing.xl, zIndex: 2, flexDirection: 'row', gap: spacing.xs },
   arrow: { width: 36, height: 36, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, ...shadows.subtle },

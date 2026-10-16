@@ -118,17 +118,18 @@ export default function MarketplaceScreen({ navigation, route }: any) {
       <View style={styles.marketHeader}><Text style={styles.marketTitle}>Marketplace</Text></View>
 
       <View style={styles.modeSwitcher} accessibilityRole="tablist">
-        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'products' }} onPress={() => setMode('products')} style={[styles.modeButton, mode === 'products' && styles.modeButtonActive]}><MaterialCommunityIcons name="view-grid-outline" size={19} color={mode === 'products' ? colors.primary : colors.textSecondary} /><Text style={[styles.modeButtonText, mode === 'products' && styles.modeButtonTextActive]}>Produtos e serviços</Text></Pressable>
-        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'stores' }} onPress={() => setMode('stores')} style={[styles.modeButton, mode === 'stores' && styles.modeButtonActive]}><MaterialCommunityIcons name="storefront-outline" size={19} color={mode === 'stores' ? colors.primary : colors.textSecondary} /><Text style={[styles.modeButtonText, mode === 'stores' && styles.modeButtonTextActive]}>Lojas</Text></Pressable>
+        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'products' }} onPress={() => setMode('products')} style={[styles.modeButton, mode === 'products' && styles.modeButtonActive]}><MaterialCommunityIcons name="view-grid-outline" size={19} color={colors.brand} /><Text style={[styles.modeButtonText, mode === 'products' && styles.modeButtonTextActive]}>Produtos e serviços</Text></Pressable>
+        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'stores' }} onPress={() => setMode('stores')} style={[styles.modeButton, mode === 'stores' && styles.modeButtonActive]}><MaterialCommunityIcons name="storefront-outline" size={19} color={colors.brand} /><Text style={[styles.modeButtonText, mode === 'stores' && styles.modeButtonTextActive]}>Lojas</Text></Pressable>
       </View>
 
       <View style={styles.searchRow}>
         <View style={styles.searchField}>
           <AppInput
-            variant="search"
+            variant="marketplaceSearch"
             icon="magnify"
             accessibilityLabel={mode === 'stores' ? 'Buscar lojas' : 'Buscar no marketplace'}
             placeholder={mode === 'stores' ? 'Buscar por nome ou descrição' : 'Buscar produtos ou serviços...'}
+            placeholderTextColor={colors.textSecondary}
             value={searchValue}
             onChangeText={mode === 'stores' ? setStoreSearch : setSearch}
             returnKeyType="search"
@@ -143,7 +144,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
       {mode === 'products' ? <View style={styles.filterSection}>
         <Text style={styles.eyebrow}>Explore por categoria</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>
-          {marketplaceCategories.map((category, index) => <CategoryChip key={category.label} compact hideIcon icon={category.icon} label={category.label} tone={index} onPress={() => setSelectedCategory(category.label)} selected={selectedCategory === category.label} />)}
+          {marketplaceCategories.map((category, index) => <CategoryChip key={category.label} compact variant="marketplace" icon={category.icon} label={category.label} tone={index} onPress={() => setSelectedCategory(category.label)} selected={selectedCategory === category.label} />)}
         </ScrollView>
       </View> : null}
 
@@ -228,18 +229,18 @@ const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.md },
   marketHeader: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   marketTitle: { ...typography.heading2, color: colors.text },
-  modeSwitcher: { flexDirection: 'row', backgroundColor: colors.surfaceMuted, borderRadius: radius.full, padding: spacing.xxs, gap: spacing.xxs, borderWidth: 1, borderColor: colors.border },
-  modeButton: { flex: 1, minHeight: 38, borderRadius: radius.full, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm },
+  modeSwitcher: { flexDirection: 'row', backgroundColor: colors.brandLight, borderRadius: radius.full, padding: spacing.xs, gap: spacing.xxs, borderWidth: 1, borderColor: colors.brandLight },
+  modeButton: { flex: 1, minHeight: 40, borderRadius: radius.full, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.md },
   modeButtonActive: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
-  modeButtonText: { ...typography.caption, color: colors.textSecondary, textAlign: 'center' },
+  modeButtonText: { ...typography.caption, color: colors.brandDark, textAlign: 'center' },
   modeButtonTextActive: { color: colors.brandDark, fontWeight: '700' },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   searchField: { flex: 1, position: 'relative' },
   searchInputContainer: { width: '100%' },
   searchInput: { paddingRight: spacing.xl },
   clearSearchButton: { position: 'absolute', top: 6, right: spacing.xs, width: 40, height: 40, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
-  filterButton: { width: 52, height: 52, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border, position: 'relative' },
-  filterButtonActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+  filterButton: { width: 52, height: 52, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandLight, borderWidth: 1, borderColor: colors.border, position: 'relative' },
+  filterButtonActive: { backgroundColor: colors.brandDark, borderColor: colors.brandDark },
   filterIndicator: { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: radius.full, backgroundColor: colors.gemn, borderWidth: 1, borderColor: colors.white },
   filterSection: { gap: spacing.sm, paddingTop: spacing.xs },
   eyebrow: { ...typography.caption, color: colors.brand, fontWeight: '700', letterSpacing: 0.8 },

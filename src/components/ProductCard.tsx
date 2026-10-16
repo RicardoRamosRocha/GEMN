@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   visualCompact: { width: 96, minHeight: 110, height: 'auto', flexShrink: 0 },
   marketplaceCard: { width: '100%', overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, height: 'auto' },
   marketplaceCardCompact: { borderRadius: radius.md },
-  homeCard: { borderRadius: radius.md, alignSelf: 'flex-start' },
+  homeCard: { width: '100%', borderRadius: radius.md, alignSelf: 'flex-start' },
   marketplaceListCard: { flexDirection: 'row', minHeight: 116, height: 'auto', borderRadius: radius.md },
   marketplaceVisual: { width: '100%', aspectRatio: 1, alignSelf: 'stretch', overflow: 'hidden', backgroundColor: colors.surfaceMuted },
   homeVisual: { width: '100%', aspectRatio: 1.48, overflow: 'hidden', backgroundColor: colors.surfaceMuted },
