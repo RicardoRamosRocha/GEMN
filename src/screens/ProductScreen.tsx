@@ -7,6 +7,7 @@ import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
 import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { OrderServiceError, createOrder } from '../services/orders';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import type { GemnProduct } from '../context/ProductsContext';
 import type { OrderRpcResult } from '../types/orders';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
@@ -65,6 +66,7 @@ function SellerCard({ storeName, onPress, disabled }: { storeName: string; onPre
 export default function ProductScreen({ route, navigation }: ProductScreenProps) {
   const { width } = useWindowDimensions();
   const { user } = useAuth();
+  const { addItem } = useCart();
   const wide = width >= layout.breakpoints.tablet;
   const productImageHeight = Math.min(300, Math.max(220, Math.round(width * 0.66)));
   const listing = route?.params?.listing;
@@ -75,6 +77,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
   const [gemnInput, setGemnInput] = useState('0');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [cartFeedback, setCartFeedback] = useState<string | null>(null);
   const intentRef = useRef<{ signature: string; key: string } | null>(null);
   const name = listing?.name ?? 'Anúncio indisponível';
   const numericPrice = listing?.price ?? 0;
@@ -154,6 +157,15 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
     }
   }
 
+  function handleAddToCart() {
+    if (!listing) {
+      setCartFeedback('Este anúncio não está disponível.');
+      return;
+    }
+    addItem({ listingId: listing.id, sellerId: listing.sellerId, quantity });
+    setCartFeedback(`${quantity} ${quantity === 1 ? 'unidade adicionada' : 'unidades adicionadas'} ao carrinho.`);
+  }
+
   return (
     <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
@@ -224,6 +236,8 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
           </View>
           {errorMessage ? <Text accessibilityRole="alert" style={styles.error}>{errorMessage}</Text> : null}
           <Text style={styles.paymentNote}>A forma escolhida registra apenas sua intenção de pagamento. Nenhum pagamento ou débito GEMN é realizado nesta etapa.</Text>
+          {cartFeedback ? <Text accessibilityRole="text" style={styles.cartFeedback}>{cartFeedback}</Text> : null}
+          <AppButton title="Adicionar ao carrinho" variant="outline" fullWidth onPress={handleAddToCart} disabled={!listing} style={styles.cartButton} />
           <AppButton title="Registrar pedido" fullWidth onPress={() => { void handleConfirmPurchase(); }} loading={isSubmitting} disabled={!listing} style={styles.confirmButton} />
         </AppCard>
       </View>
@@ -299,6 +313,8 @@ const styles = StyleSheet.create({
   totalLabel: { ...typography.heading3, color: colors.text },
   totalValue: { ...typography.heading2, color: colors.brandDark },
   confirmButton: { width: '100%', marginTop: spacing.sm, backgroundColor: colors.brand },
+  cartButton: { width: '100%', marginTop: spacing.sm },
+  cartFeedback: { ...typography.caption, color: colors.success, textAlign: 'center', marginTop: spacing.xs },
   error: { ...typography.bodySmall, color: colors.error },
   paymentNote: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
 });

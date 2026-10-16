@@ -8,6 +8,7 @@ import { HorizontalProductCarousel } from '../components/HorizontalProductCarous
 import { ProductCard } from '../components/ProductCard';
 import { WalletCard } from '../components/WalletCard';
 import { useProducts } from '../context/ProductsContext';
+import { useCart } from '../context/CartContext';
 import type { GemnProduct } from '../context/ProductsContext';
 import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
@@ -34,6 +35,7 @@ export default function HomeScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
   const desktop = width >= layout.breakpoints.desktop;
   const { marketplaceProducts, marketplaceLoading, marketplaceError, categories, categoriesLoading, categoriesError } = useProducts();
+  const { itemCount } = useCart();
   const spotlightProducts = marketplaceProducts.slice(0, 6);
   const visibleCategories = categories.slice(0, 5);
 
@@ -50,9 +52,15 @@ export default function HomeScreen({ navigation }: any) {
       <View style={[styles.greenHeader, desktop && styles.greenHeaderWide]}>
         <View style={styles.headerTop}>
           <Text style={styles.logo}>GEMN</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={openProfile} style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}>
-            <MaterialCommunityIcons name="account-outline" size={23} color={colors.white} />
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Abrir carrinho" onPress={() => navigation.navigate('Cart')} style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}>
+              <MaterialCommunityIcons name="cart-outline" size={23} color={colors.white} />
+              {itemCount > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount > 99 ? '99+' : itemCount}</Text></View> : null}
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={openProfile} style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}>
+              <MaterialCommunityIcons name="account-outline" size={23} color={colors.white} />
+            </Pressable>
+          </View>
         </View>
         <Pressable accessibilityRole="search" accessibilityLabel="Buscar produtos ou serviços" onPress={() => openMarketplace({ search: '' })} style={({ pressed }) => [styles.searchBar, pressed && styles.pressed]}>
           <MaterialCommunityIcons name="magnify" size={22} color={colors.brandDark} />
@@ -114,8 +122,11 @@ const styles = StyleSheet.create({
   greenHeader: { minHeight: 168, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.smMd, borderRadius: radius.xl, backgroundColor: colors.brandDark, gap: spacing.md },
   greenHeaderWide: { paddingHorizontal: spacing.lg },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   logo: { ...typography.heading1, color: colors.white, fontSize: 32, lineHeight: 38, letterSpacing: 1.1 },
   profileButton: { width: 42, height: 42, borderRadius: radius.full, backgroundColor: colors.brandOverlay, alignItems: 'center', justifyContent: 'center' },
+  cartBadge: { position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, paddingHorizontal: 3, borderRadius: radius.full, backgroundColor: colors.gemn, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.brandDark },
+  cartBadgeText: { ...typography.caption, color: colors.brandDark, fontSize: 10, lineHeight: 12, fontWeight: '700' },
   searchBar: { minHeight: 52, paddingHorizontal: spacing.md, borderRadius: radius.full, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   searchPlaceholder: { ...typography.body, color: colors.textSecondary, flex: 1 },
   walletOverlap: { marginTop: -spacing.md, paddingHorizontal: spacing.xs, zIndex: 2 },

@@ -29,7 +29,9 @@ import AdminSellerApplicationsScreen from './src/screens/AdminSellerApplications
 import AdminSellerApplicationDetailScreen from './src/screens/AdminSellerApplicationDetailScreen';
 import AdminCancellationRequestsScreen from './src/screens/AdminCancellationRequestsScreen';
 import AdminCancellationRequestDetailScreen from './src/screens/AdminCancellationRequestDetailScreen';
+import CartScreen from './src/screens/CartScreen';
 import { ProductsProvider } from './src/context/ProductsContext';
+import { CartProvider } from './src/context/CartContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -87,6 +89,7 @@ function HomeStack() {
           headerShown: false,
         }}
       />
+      <Stack.Screen name="Cart" component={CartScreen} options={{ title: 'Carrinho', headerShown: false }} />
       <Stack.Screen
         name="SellerStorefront"
         component={SellerStorefrontScreen}
@@ -118,6 +121,7 @@ function MarketplaceStack() {
           headerShown: false,
         }}
       />
+      <Stack.Screen name="Cart" component={CartScreen} options={{ title: 'Carrinho', headerShown: false }} />
       <Stack.Screen
         name="SellerStorefront"
         component={SellerStorefrontScreen}
@@ -220,7 +224,8 @@ function AuthenticatedApp() {
 
   return (
     <ProductsProvider>
-      <NavigationContainer>
+      <CartProvider>
+        <NavigationContainer>
         <Tab.Navigator
           screenOptions={{
             headerShown: false,
@@ -287,7 +292,8 @@ function AuthenticatedApp() {
           }}
         />
         </Tab.Navigator>
-      </NavigationContainer>
+        </NavigationContainer>
+      </CartProvider>
     </ProductsProvider>
   );
 }

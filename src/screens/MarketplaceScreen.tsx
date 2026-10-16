@@ -6,6 +6,7 @@ import { CategoryChip } from '../components/CategoryChip';
 import { ProductCard } from '../components/ProductCard';
 import { SellerDirectoryCard } from '../components/SellerDirectoryCard';
 import { useProducts } from '../context/ProductsContext';
+import { useCart } from '../context/CartContext';
 import type { GemnProduct } from '../context/ProductsContext';
 import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { listActiveSellerDirectory, SellerDirectoryServiceError } from '../services/sellerDirectory';
@@ -39,6 +40,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
   const carouselVisibleCards = desktop ? 3.35 : tablet ? 2.35 : 1.35;
   const carouselCardWidth = Math.floor(contentWidth / carouselVisibleCards);
   const { marketplaceProducts, marketplaceLoading, marketplaceError, refreshMarketplaceProducts, categories: activeCategories } = useProducts();
+  const { itemCount } = useCart();
   const [mode, setMode] = React.useState<'products' | 'stores'>('products');
   const [search, setSearch] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('Todas');
@@ -115,7 +117,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
 
   return (
     <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
-      <View style={styles.marketHeader}><Text style={styles.marketTitle}>Marketplace</Text></View>
+      <View style={styles.marketHeader}><Text style={styles.marketTitle}>Marketplace</Text><Pressable accessibilityRole="button" accessibilityLabel="Abrir carrinho" onPress={() => navigation.navigate('Cart')} style={styles.cartButton}><MaterialCommunityIcons name="cart-outline" size={23} color={colors.brand} />{itemCount > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount > 99 ? '99+' : itemCount}</Text></View> : null}</Pressable></View>
 
       <View style={styles.modeSwitcher} accessibilityRole="tablist">
         <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'products' }} onPress={() => setMode('products')} style={[styles.modeButton, mode === 'products' && styles.modeButtonActive]}><MaterialCommunityIcons name="view-grid-outline" size={19} color={colors.brand} /><Text style={[styles.modeButtonText, mode === 'products' && styles.modeButtonTextActive]}>Produtos e serviços</Text></Pressable>
@@ -227,8 +229,11 @@ function ResponsiveGrid<T extends GridItem>({ items, columns, itemWidth, gap, re
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.md },
-  marketHeader: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  marketHeader: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', position: 'relative' },
   marketTitle: { ...typography.heading2, color: colors.text },
+  cartButton: { position: 'absolute', right: 0, width: 44, height: 44, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandLight },
+  cartBadge: { position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, paddingHorizontal: 3, borderRadius: radius.full, backgroundColor: colors.gemn, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.surface },
+  cartBadgeText: { ...typography.caption, color: colors.brandDark, fontSize: 10, lineHeight: 12, fontWeight: '700' },
   modeSwitcher: { flexDirection: 'row', backgroundColor: colors.brandLight, borderRadius: radius.full, padding: spacing.xs, gap: spacing.xxs, borderWidth: 1, borderColor: colors.brandLight },
   modeButton: { flex: 1, minHeight: 40, borderRadius: radius.full, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.md },
   modeButtonActive: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
