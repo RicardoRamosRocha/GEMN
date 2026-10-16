@@ -6,13 +6,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
 import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { OrderServiceError, createOrder } from '../services/orders';
-import { getSellerBranding } from '../services/sellerBranding';
 import { useAuth } from '../context/AuthContext';
 import type { GemnProduct } from '../context/ProductsContext';
 import type { OrderRpcResult } from '../types/orders';
-import type { SellerBrandingStore } from '../types/sellerBranding';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
-
 type ProductStackParamList = {
   Product: { listing: GemnProduct; listingSequence?: GemnProduct[]; listingIndex?: number };
   OrderConfirmation: OrderConfirmationParams;
@@ -38,9 +35,7 @@ function purchaseErrorMessage(error: unknown) {
   return 'Não foi possível registrar o pedido. Tente novamente.';
 }
 
-function SellerCard({ storeName, logoUrl, onPress, disabled }: { storeName: string; logoUrl?: string; onPress: () => void; disabled: boolean }) {
-  const [logoFailed, setLogoFailed] = useState(false);
-
+function SellerCard({ storeName, onPress, disabled }: { storeName: string; onPress: () => void; disabled: boolean }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -50,15 +45,10 @@ function SellerCard({ storeName, logoUrl, onPress, disabled }: { storeName: stri
       onPress={onPress}
       style={({ pressed }) => [styles.sellerCard, pressed && !disabled && styles.sellerCardPressed]}
     >
-      <View style={styles.sellerLogo}>
-        {logoUrl && !logoFailed ? (
-          <Image accessibilityLabel={`Logotipo de ${storeName}`} source={{ uri: logoUrl }} style={styles.sellerLogoImage} onError={() => setLogoFailed(true)} />
-        ) : (
-          <MaterialCommunityIcons name="store-outline" size={28} color={colors.brand} />
-        )}
-      </View>
+      <View style={styles.sellerLogo}><MaterialCommunityIcons name="store-outline" size={24} color={colors.brand} /></View>
       <View style={styles.sellerCardCopy}>
-        <Text style={styles.sellerCardName} numberOfLines={1}>{storeName}</Text>
+        <Text style={styles.sellerCardLabel}>Vendido por</Text>
+        <Text style={styles.sellerCardName}>{storeName}</Text>
         <View style={styles.sellerApproved}>
           <MaterialCommunityIcons name="check-decagram" size={14} color={colors.success} />
           <Text style={styles.sellerApprovedText}>Vendedor aprovado</Text>
@@ -85,7 +75,6 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
   const [gemnInput, setGemnInput] = useState('0');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [sellerBranding, setSellerBranding] = useState<SellerBrandingStore | null>(null);
   const intentRef = useRef<{ signature: string; key: string } | null>(null);
   const name = listing?.name ?? 'Anúncio indisponível';
   const numericPrice = listing?.price ?? 0;
@@ -127,21 +116,6 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
     setErrorMessage(null);
   }, [listing?.id]);
 
-  useEffect(() => {
-    let mounted = true;
-    setSellerBranding(null);
-    if (!listing?.sellerId) return () => { mounted = false; };
-
-    void getSellerBranding(listing.sellerId)
-      .then((store) => {
-        if (mounted) setSellerBranding(store);
-      })
-      .catch(() => {
-        // O cartão continua utilizável com os dados do anúncio se o branding não estiver disponível.
-      });
-
-    return () => { mounted = false; };
-  }, [listing?.sellerId]);
 
   async function handleConfirmPurchase() {
     if (isSubmitting) return;
@@ -198,12 +172,11 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
             </View>
             <View style={styles.productCopy}>
               <Text style={styles.productName}>{name}</Text>
-              <SellerCard
-                storeName={sellerBranding?.storeName ?? listing?.sellerName ?? 'Comunidade Mundo Novo'}
-                logoUrl={sellerBranding?.branding.logoUrl}
-                disabled={!listing?.sellerId}
-                onPress={() => { if (listing?.sellerId) navigation.navigate('SellerStorefront', { sellerId: listing.sellerId }); }}
-              />
+              {listing?.sellerName && listing.sellerId ? <SellerCard
+                storeName={listing.sellerName}
+                disabled={false}
+                onPress={() => navigation.navigate('SellerStorefront', { sellerId: listing.sellerId })}
+              /> : null}
               <View style={styles.priceRow}><Text style={styles.price}>{price}</Text></View>
               {gemnEligibility.enabled ? <View style={styles.gemnLine}><MaterialCommunityIcons name="star-four-points" size={15} color={colors.gemn} /><Text style={styles.gemnText}>Aceita Moeda GEMN · {gemnEligibility.value} GEMN por unidade</Text></View> : <View style={styles.gemnLine}><MaterialCommunityIcons name="information-outline" size={15} color={colors.textSecondary} /><Text style={styles.gemnMutedText}>Pagamento somente em reais</Text></View>}
             </View>
@@ -283,12 +256,12 @@ const styles = StyleSheet.create({
   iconDisc: { width: 116, height: 116, borderRadius: radius.full, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...shadows.subtle },
   productCopy: { flex: 1, padding: spacing.md, gap: spacing.sm },
   productName: { ...typography.heading1, color: colors.brandDark },
-  sellerCard: { minHeight: 84, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  sellerCard: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, padding: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
   sellerCardPressed: { opacity: 0.82, backgroundColor: colors.brandLight },
-  sellerLogo: { width: 72, height: 72, borderRadius: radius.md, padding: spacing.xs, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexShrink: 0 },
-  sellerLogoImage: { width: '100%', height: '100%', resizeMode: 'contain' },
+  sellerLogo: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight, borderWidth: 1, borderColor: colors.border, flexShrink: 0 },
   sellerCardCopy: { flex: 1, minWidth: 0, gap: 2 },
-  sellerCardName: { ...typography.heading4, color: colors.text },
+  sellerCardLabel: { ...typography.caption, color: colors.textSecondary },
+  sellerCardName: { ...typography.heading4, color: colors.brandDark, fontWeight: '600', flexShrink: 1 },
   sellerApproved: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   sellerApprovedText: { ...typography.caption, color: colors.brand, fontWeight: '600' },
   sellerVisit: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },

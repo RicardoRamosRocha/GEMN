@@ -52,7 +52,7 @@ export function HorizontalProductCarousel({ products, renderItem }: HorizontalPr
         onScroll={(event) => setOffset(event.nativeEvent.contentOffset.x)}
       >
         {products.map((product, index) => (
-          <View key={product.id} style={{ width: cardWidth }}>
+          <View key={product.id} style={[styles.item, { width: cardWidth }]}>
             {renderItem(product, index)}
           </View>
         ))}
@@ -63,7 +63,8 @@ export function HorizontalProductCarousel({ products, renderItem }: HorizontalPr
 
 const styles = StyleSheet.create({
   wrapper: { width: '100%', position: 'relative' },
-  list: { paddingRight: spacing.lg },
+  list: { paddingRight: spacing.lg, alignItems: 'flex-start' },
+  item: { alignSelf: 'flex-start' },
   controls: { position: 'absolute', right: spacing.xs, top: -spacing.xl, zIndex: 2, flexDirection: 'row', gap: spacing.xs },
   arrow: { width: 36, height: 36, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
   arrowDisabled: { opacity: 0.55 },

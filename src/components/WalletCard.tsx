@@ -37,7 +37,7 @@ export function WalletCard({ onPress, refreshKey = 0, compact = false, embedded 
     <View style={[styles.body, embedded && styles.embeddedBody, compact && !embedded && styles.compactBody]}>
       <View style={styles.heading}>
         <MaterialCommunityIcons name="wallet-outline" size={18} color={embedded ? colors.white : colors.brand} />
-        <Text style={[styles.label, !embedded && styles.labelSurface]}>{embedded ? 'MINHA CARTEIRA' : 'SUA CARTEIRA'}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={[styles.label, !embedded && styles.labelSurface]}>{embedded ? 'MINHA CARTEIRA' : 'SUA CARTEIRA'}</Text>
       </View>
       {loading ? (
         <View style={styles.feedback}><ActivityIndicator color={embedded ? colors.white : colors.brand} /><Text style={[styles.feedbackText, !embedded && styles.feedbackTextSurface]}>Consultando saldo...</Text></View>
@@ -94,8 +94,8 @@ const styles = StyleSheet.create({
   embeddedPressable: { borderTopWidth: 1, borderTopColor: colors.brandDivider },
   embeddedBody: { padding: spacing.lg, paddingTop: spacing.md },
   pressed: { opacity: 0.9 },
-  heading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  label: { ...typography.caption, color: colors.brandLight, fontWeight: '700', letterSpacing: 0.8 },
+  heading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minWidth: 0 },
+  label: { ...typography.caption, color: colors.brandLight, fontWeight: '700', letterSpacing: 0.8, flex: 1, minWidth: 0, flexShrink: 1 },
   labelSurface: { color: colors.brandDark },
   moneyLabel: { ...typography.caption, color: colors.brandLight, marginTop: spacing.md },
   moneyLabelSurface: { color: colors.textSecondary },

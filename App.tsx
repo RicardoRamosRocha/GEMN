@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFonts as useOutfitFonts, Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold, Outfit_800ExtraBold } from '@expo-google-fonts/outfit';
 import { useFonts as useGeistFonts, Geist_400Regular, Geist_500Medium, Geist_600SemiBold } from '@expo-google-fonts/geist';
 
@@ -215,6 +216,8 @@ function ProfileStack() {
 }
 
 function AuthenticatedApp() {
+  const insets = useSafeAreaInsets();
+
   return (
     <ProductsProvider>
       <NavigationContainer>
@@ -225,9 +228,10 @@ function AuthenticatedApp() {
             tabBarInactiveTintColor: colors.textMuted,
             tabBarLabelStyle: { ...typography.label, fontSize: 12 },
             tabBarStyle: {
-              height: 72,
-              paddingTop: spacing.sm,
-              paddingBottom: spacing.sm,
+              // Keep the tab content above Android's navigation bar and iOS's home indicator.
+              height: 64 + insets.bottom,
+              paddingTop: spacing.xs,
+              paddingBottom: insets.bottom + spacing.xs,
               backgroundColor: colors.surface,
               borderTopWidth: 1,
               borderTopColor: colors.border,
@@ -310,9 +314,11 @@ export default function App() {
   if (!outfitLoaded || !geistLoaded) return <AuthLoadingScreen />;
 
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

@@ -16,7 +16,9 @@ type ListingRelation<T> = T | T[] | null;
 type ListingRow = { id: string; seller_id: string; category_id: string; tipo: 'produto' | 'servico'; nome: string; descricao: string; preco_real: number | string; aceita_gemn: boolean; preco_gemn: number | string | null; imagem_principal: string | null; status: ListingStatus; categories?: ListingRelation<{ id: string; nome: string; ativo: boolean }>; sellers?: ListingRelation<{ id: string; nome_negocio: string; status: string; aceita_gemn: boolean }> };
 type SellerRow = { id: string; status: string };
 type ProductMutationResult = { product?: GemnProduct; error?: string };
-type ProductsContextValue = { products: GemnProduct[]; productsLoading: boolean; productsError: string | null; refreshProducts: () => Promise<void>; marketplaceProducts: GemnProduct[]; marketplaceLoading: boolean; marketplaceError: string | null; refreshMarketplaceProducts: () => Promise<void>; categories: ProductCategory[]; categoriesLoading: boolean; categoriesError: string | null; refreshCategories: () => Promise<void>; addProduct: (product: NewGemnProduct, image?: ListingImage) => Promise<ProductMutationResult>; updateProduct: (id: string, product: NewGemnProduct, image?: ListingImage) => Promise<ProductMutationResult>; updateProductStatus: (id: string, status: ListingStatus) => Promise<ProductMutationResult> };
+export type ProductDeletionAction = 'deleted' | 'archived';
+type ProductDeletionResult = { action?: ProductDeletionAction; error?: string };
+type ProductsContextValue = { products: GemnProduct[]; productsLoading: boolean; productsError: string | null; refreshProducts: () => Promise<void>; marketplaceProducts: GemnProduct[]; marketplaceLoading: boolean; marketplaceError: string | null; refreshMarketplaceProducts: () => Promise<void>; categories: ProductCategory[]; categoriesLoading: boolean; categoriesError: string | null; refreshCategories: () => Promise<void>; addProduct: (product: NewGemnProduct, image?: ListingImage) => Promise<ProductMutationResult>; updateProduct: (id: string, product: NewGemnProduct, image?: ListingImage) => Promise<ProductMutationResult>; updateProductStatus: (id: string, status: ListingStatus) => Promise<ProductMutationResult>; deleteProduct: (id: string) => Promise<ProductDeletionResult> };
 const ProductsContext = createContext<ProductsContextValue | undefined>(undefined);
 const listingSelect = 'id,seller_id,category_id,tipo,nome,descricao,preco_real,aceita_gemn,preco_gemn,imagem_principal,status,categories(id,nome,ativo),sellers(id,nome_negocio,status,aceita_gemn)';
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -61,7 +63,8 @@ function friendlyError(error: unknown) {
   if (message.includes('imagem') || message.includes('5 mb') || message.includes('mime')) return errorRecord?.message ?? (error instanceof Error ? error.message : String(error));
   if (code === 'PGRST116' || message.includes('0 rows') || message.includes('no rows')) return 'O anúncio não foi encontrado ou você não tem permissão para alterá-lo.';
   if (message.includes('network') || message.includes('fetch')) return 'Não foi possível conectar ao GEMN. Verifique sua internet e tente novamente.';
-  if (message.includes('seller') || message.includes('permission') || message.includes('row-level security')) return 'Sua conta não tem autorização para realizar esta ação.';
+  if (message.includes('seller') || message.includes('permission') || message.includes('row-level security') || message.includes('nao autorizado') || message.includes('não autorizado')) return 'Sua conta não tem autorização para realizar esta ação.';
+  if (message.includes('anuncio nao encontrado') || message.includes('anúncio não encontrado')) return 'O anúncio já foi removido ou não está mais disponível.';
   if (message.includes('category') || message.includes('categoria')) return 'A categoria selecionada não está mais disponível.';
   return 'Não foi possível carregar ou salvar os anúncios. Tente novamente.';
 }
@@ -187,7 +190,18 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     return { product: mapped };
   }, [user]);
 
-  const value = useMemo(() => ({ products, productsLoading, productsError, refreshProducts, marketplaceProducts, marketplaceLoading, marketplaceError, refreshMarketplaceProducts, categories, categoriesLoading, categoriesError, refreshCategories, addProduct, updateProduct, updateProductStatus }), [products, productsLoading, productsError, refreshProducts, marketplaceProducts, marketplaceLoading, marketplaceError, refreshMarketplaceProducts, categories, categoriesLoading, categoriesError, refreshCategories, addProduct, updateProduct, updateProductStatus]);
+  const deleteProduct = useCallback(async (id: string): Promise<ProductDeletionResult> => {
+    if (!user) return { error: 'E necessario estar autenticado para remover um anuncio.' };
+    const { data, error } = await supabase.rpc('delete_or_archive_listing', { p_listing_id: id });
+    if (error) return { error: friendlyError(error) };
+    const result = Array.isArray(data) ? data[0] as { action?: ProductDeletionAction } | undefined : data as { action?: ProductDeletionAction } | null;
+    if (result?.action !== 'deleted' && result?.action !== 'archived') return { error: 'A operacao de remocao retornou uma resposta invalida.' };
+    setProducts((current) => current.filter((item) => item.id !== id));
+    setMarketplaceProducts((current) => current.filter((item) => item.id !== id));
+    return { action: result.action };
+  }, [user]);
+
+  const value = useMemo(() => ({ products, productsLoading, productsError, refreshProducts, marketplaceProducts, marketplaceLoading, marketplaceError, refreshMarketplaceProducts, categories, categoriesLoading, categoriesError, refreshCategories, addProduct, updateProduct, updateProductStatus, deleteProduct }), [products, productsLoading, productsError, refreshProducts, marketplaceProducts, marketplaceLoading, marketplaceError, refreshMarketplaceProducts, categories, categoriesLoading, categoriesError, refreshCategories, addProduct, updateProduct, updateProductStatus, deleteProduct]);
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;
 }
 

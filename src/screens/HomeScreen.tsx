@@ -95,25 +95,17 @@ export default function HomeScreen({ navigation }: any) {
       {marketplaceLoading ? <View style={styles.inlineFeedback}><ActivityIndicator color={colors.brand} /><Text style={styles.helperText}>Carregando destaques...</Text></View> : marketplaceError ? <AppCard style={styles.feedbackCard}><Text style={styles.errorText}>{marketplaceError}</Text></AppCard> : spotlightProducts.length === 0 ? <AppCard style={styles.emptyCard}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.brand} /><Text style={styles.emptyTitle}>Ainda não há destaques</Text><Text style={styles.helperText}>Novos produtos e serviços aparecerão aqui.</Text></AppCard> : (
         <HorizontalProductCarousel
           products={spotlightProducts}
-          renderItem={(product, index) => <HomeProductCard product={product} onPress={() => navigation.navigate('Product', { listing: product, listingSequence: spotlightProducts, listingIndex: index })} />}
+          renderItem={(product, index) => <HomeProductCard product={product} onPress={() => navigation.navigate('Product', { listing: product, listingSequence: spotlightProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} />}
         />
       )}
 
-      <View style={styles.quickLinks}>
-        <QuickLink icon="clipboard-text-outline" title="Meus pedidos" onPress={() => navigation.navigate('Perfil', { screen: 'Orders' })} />
-        <QuickLink icon="account-circle-outline" title="Minha conta" onPress={openProfile} />
-      </View>
     </AppScreen>
   );
 }
 
-function HomeProductCard({ product, onPress }: { product: GemnProduct; onPress: () => void }) {
+function HomeProductCard({ product, onPress, onSellerPress }: { product: GemnProduct; onPress: () => void; onSellerPress: (sellerId: string) => void }) {
   const eligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
-  return <ProductCard layout="home" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={formatPrice(product.price)} seller={product.sellerName ?? 'Comunidade GEMN'} coinPrice={eligibility.enabled && eligibility.value !== undefined ? `${eligibility.value} GEMN` : undefined} acceptanceGemn={eligibility.enabled} onPress={onPress} />;
-}
-
-function QuickLink({ icon, title, onPress }: { icon: IconName; title: string; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => [styles.quickLink, pressed && styles.pressed]}><MaterialCommunityIcons name={icon} size={19} color={colors.brand} /><Text style={styles.quickLinkText}>{title}</Text><MaterialCommunityIcons name="arrow-up-right" size={16} color={colors.textMuted} /></Pressable>;
+  return <ProductCard layout="home" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={formatPrice(product.price)} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} coinPrice={eligibility.enabled && eligibility.value !== undefined ? `${eligibility.value} GEMN` : undefined} acceptanceGemn={eligibility.enabled} onPress={onPress} />;
 }
 
 const styles = StyleSheet.create({
@@ -131,9 +123,6 @@ const styles = StyleSheet.create({
   seeAll: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   seeAllText: { ...typography.bodySmall, color: colors.textSecondary },
   categoriesRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.xs },
-  quickLinks: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  quickLink: { flex: 1, minHeight: 44, paddingHorizontal: spacing.smMd, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  quickLinkText: { ...typography.caption, color: colors.brandDark, fontWeight: '700', flex: 1 },
   inlineFeedback: { minHeight: 64, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   feedbackCard: { minHeight: 72, justifyContent: 'center' },
   emptyCard: { minHeight: 104, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },

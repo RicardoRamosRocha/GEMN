@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
@@ -30,7 +30,7 @@ function ProductThumbnail({ imageUrl, name }: { imageUrl?: string; name: string 
 export default function MyProductsScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
   const wide = width >= layout.breakpoints.tablet;
-  const { products, productsLoading, productsError, refreshProducts, updateProductStatus } = useProducts();
+  const { products, productsLoading, productsError, refreshProducts, updateProductStatus, deleteProduct } = useProducts();
   const [busyProductId, setBusyProductId] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
 
@@ -41,6 +41,30 @@ export default function MyProductsScreen({ navigation }: any) {
     const result = await updateProductStatus(id, status);
     setBusyProductId(null);
     if (result.error) setOperationError(result.error);
+  }
+
+  function confirmRemoval(product: typeof products[number]) {
+    if (busyProductId) return;
+    Alert.alert(
+      'Remover anúncio?',
+      'Sem pedidos, o anúncio será excluído definitivamente. Se houver histórico de pedidos, ele será apenas desativado para preservar os pedidos anteriores.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Continuar', style: 'destructive', onPress: () => { void handleRemoval(product.id); } },
+      ],
+    );
+  }
+
+  async function handleRemoval(id: string) {
+    setOperationError(null);
+    setBusyProductId(id);
+    const result = await deleteProduct(id);
+    setBusyProductId(null);
+    if (result.error) {
+      setOperationError(result.error);
+      return;
+    }
+    Alert.alert(result.action === 'deleted' ? 'Anúncio excluído' : 'Anúncio desativado', result.action === 'deleted' ? 'O anúncio foi removido definitivamente.' : 'O anúncio possui histórico de pedidos e foi desativado para preservar os pedidos anteriores.');
   }
 
   function goBack() {
@@ -116,7 +140,7 @@ export default function MyProductsScreen({ navigation }: any) {
                     {product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
                 </View>
-                <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Opções de ${product.name}`} style={styles.moreButton}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Opções de ${product.name}`} accessibilityState={{ busy: busyProductId === product.id }} style={styles.moreButton} onPress={() => confirmRemoval(product)} disabled={busyProductId !== null}>
                   <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>

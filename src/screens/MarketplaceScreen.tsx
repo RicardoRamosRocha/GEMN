@@ -166,7 +166,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
         {marketplaceError ? <AppCard style={styles.errorCard}><Text style={styles.errorText}>{marketplaceError}</Text><AppButton title="Tentar novamente" variant="outline" onPress={() => { void refreshMarketplaceProducts(); }} /></AppCard> : null}
         {marketplaceLoading ? <View style={styles.loadingState}><ActivityIndicator color={colors.primary} /><Text style={styles.helperText}>Carregando anúncios publicados...</Text></View> : null}
         {!marketplaceLoading && !marketplaceError && visibleProducts.length === 0 ? <AppCard style={styles.emptyCard}><View style={styles.emptyIcon}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>{hasActiveFilters ? 'Nenhum anúncio encontrado' : 'Ainda não há anúncios publicados'}</Text><Text style={styles.emptyBody}>{hasActiveFilters ? 'Tente buscar por outro termo ou limpar os filtros.' : 'Em breve, novos produtos e serviços da comunidade aparecerão aqui.'}</Text>{hasActiveFilters ? <AppButton title="Limpar filtros" size="compact" variant="outline" onPress={clearFilters} /> : null}</AppCard> : null}
-        {visibleProducts.length > 0 ? mobile ? <MarketplaceProductList products={visibleProducts} onPress={(product, index) => navigation.navigate('Product', { listing: product, listingSequence: visibleProducts, listingIndex: index })} /> : <MarketplaceProductCarousel products={visibleProducts} cardWidth={carouselCardWidth} gap={carouselGap} desktop={desktop} onPress={(product, index) => navigation.navigate('Product', { listing: product, listingSequence: visibleProducts, listingIndex: index })} /> : null}
+        {visibleProducts.length > 0 ? mobile ? <MarketplaceProductList products={visibleProducts} onPress={(product, index) => navigation.navigate('Product', { listing: product, listingSequence: visibleProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} /> : <MarketplaceProductCarousel products={visibleProducts} cardWidth={carouselCardWidth} gap={carouselGap} desktop={desktop} onPress={(product, index) => navigation.navigate('Product', { listing: product, listingSequence: visibleProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} /> : null}
       </> : <>
         {storesError ? <AppCard style={styles.errorCard}><Text style={styles.errorText}>{storesError}</Text><AppButton title="Tentar novamente" variant="outline" onPress={retryStores} /></AppCard> : null}
         {storesLoading ? <View style={styles.loadingState}><ActivityIndicator color={colors.primary} /><Text style={styles.helperText}>Carregando lojas...</Text></View> : null}
@@ -180,7 +180,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
 
 type GridItem = { id: string };
 
-function MarketplaceProductCarousel({ products, cardWidth, gap, desktop, onPress }: { products: GemnProduct[]; cardWidth: number; gap: number; desktop: boolean; onPress: (product: GemnProduct, index: number) => void }) {
+function MarketplaceProductCarousel({ products, cardWidth, gap, desktop, onPress, onSellerPress }: { products: GemnProduct[]; cardWidth: number; gap: number; desktop: boolean; onPress: (product: GemnProduct, index: number) => void; onSellerPress: (sellerId: string) => void }) {
   const scrollRef = React.useRef<ScrollView>(null);
   const [offset, setOffset] = React.useState(0);
   const step = cardWidth + gap;
@@ -196,19 +196,19 @@ function MarketplaceProductCarousel({ products, cardWidth, gap, desktop, onPress
       {products.map((product, index) => {
         const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
-        return <View key={product.id} style={[styles.carouselItem, { width: cardWidth }]}><ProductCard layout="marketplace" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? 'Comunidade GEMN'} onPress={() => onPress(product, index)} /></View>;
+        return <View key={product.id} style={[styles.carouselItem, { width: cardWidth }]}><ProductCard layout="marketplace" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} onPress={() => onPress(product, index)} /></View>;
       })}
       <View style={styles.carouselEnd} accessibilityLabel="Mais anúncios à direita"><MaterialCommunityIcons name="arrow-right" size={20} color={colors.brand} /></View>
     </ScrollView>
   </View>;
 }
 
-function MarketplaceProductList({ products, onPress }: { products: GemnProduct[]; onPress: (product: GemnProduct, index: number) => void }) {
+function MarketplaceProductList({ products, onPress, onSellerPress }: { products: GemnProduct[]; onPress: (product: GemnProduct, index: number) => void; onSellerPress: (sellerId: string) => void }) {
   return <View style={styles.mobileProductList}>
     {products.map((product, index) => {
       const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
       const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
-      return <ProductCard key={product.id} layout="marketplaceList" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? 'Comunidade GEMN'} onPress={() => onPress(product, index)} />;
+      return <ProductCard key={product.id} layout="marketplaceList" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} onPress={() => onPress(product, index)} />;
     })}
   </View>;
 }
