@@ -40,6 +40,7 @@ export type OrderItem = {
   precoGemnUnitario: number | null;
   subtotalReal: number;
   subtotalGemn: number | null;
+  gemnUtilizadoItem: number;
   cashbackPercentual: number;
   cashbackPrevisto: number;
   imagemPrincipalSnapshot: string | null;

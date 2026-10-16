@@ -356,7 +356,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                   <View style={styles.productRow}>
                     <OrderProductThumbnail imageUrl={item?.imagemPrincipalUrl} name={item?.nomeItem ?? 'item do pedido'} />
                     <View style={styles.productInfo}>
-                      <Text style={styles.productName}>{item?.nomeItem ?? 'Item do pedido'}</Text>
+                    <Text style={styles.productName}>{item?.nomeItem ?? 'Item do pedido'}{order.items.length > 1 ? ` + ${order.items.length - 1} item(ns)` : ''}</Text>
                       <Text style={styles.quantity}>Quantidade: {item?.quantidade ?? order.items.reduce((sum, current) => sum + current.quantidade, 0)}</Text>
                     </View>
                   </View>

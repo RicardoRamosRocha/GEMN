@@ -30,3 +30,15 @@ if (authorizationError.kind !== 'authorization' || expiredError.kind !== 'expire
 const retryKey = 'same-confirmation-key';
 const retryParams = { orderId: order.orderId, idempotencyKey: retryKey };
 if (retryParams.idempotencyKey !== retryKey) throw new Error('confirmation idempotency key was not preserved');
+
+const aggregated = __adminOrderTestables.normalizePendingOrder({
+  order_id: 'multi-order', buyer_id: 'buyer-id', item_count: 2,
+  item_id: 'first-item', listing_id: 'first-listing', nome_item: 'Primeiro item', tipo: 'produto', quantidade: 2,
+  forma_pagamento: 'real', total_real: 80, total_gemn: null, gemn_utilizado: 0, valor_devido_real: 80,
+  criado_em: '2026-10-13T10:00:00Z', expira_em: '2026-10-14T10:00:00Z', confirmavel: true,
+  items: [
+    { id: 'first-item', listing_id: 'first-listing', seller_id: 'seller-id', nome_item: 'Primeiro item', tipo: 'produto', quantidade: 2, subtotal_real: 50, subtotal_gemn: null, gemn_utilizado_item: 0, cashback_previsto: 0 },
+    { id: 'second-item', listing_id: 'second-listing', seller_id: 'seller-id', nome_item: 'Segundo item', tipo: 'servico', quantidade: 1, subtotal_real: 30, subtotal_gemn: null, gemn_utilizado_item: 0, cashback_previsto: 0 },
+  ],
+});
+if (aggregated.itemCount !== 2 || aggregated.items.length !== 2) throw new Error('aggregated administrative order normalization failed');

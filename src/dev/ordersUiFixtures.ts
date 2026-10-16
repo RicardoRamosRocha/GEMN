@@ -28,6 +28,7 @@ function fixtureOrder(id: string, itemName: string): Order {
       precoGemnUnitario: null,
       subtotalReal: 125,
       subtotalGemn: null,
+      gemnUtilizadoItem: 0,
       cashbackPercentual: 5,
       cashbackPrevisto: 6.25,
       imagemPrincipalSnapshot: null,

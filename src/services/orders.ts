@@ -24,7 +24,7 @@ export class OrderServiceError extends Error {
 
 type UnknownRecord = Record<string, unknown>;
 
-const ORDER_SELECT = 'id,status,forma_pagamento,total_real,total_gemn,gemn_utilizado,valor_devido_real,criado_em,atualizado_em,order_items(id,order_id,listing_id,seller_id,nome_item,tipo,quantidade,preco_real_unitario,preco_gemn_unitario,subtotal_real,subtotal_gemn,cashback_percentual,cashback_previsto,imagem_principal_snapshot,criado_em,atualizado_em)';
+const ORDER_SELECT = 'id,status,forma_pagamento,total_real,total_gemn,gemn_utilizado,valor_devido_real,criado_em,atualizado_em,order_items(id,order_id,listing_id,seller_id,nome_item,tipo,quantidade,preco_real_unitario,preco_gemn_unitario,subtotal_real,subtotal_gemn,gemn_utilizado_item,cashback_percentual,cashback_previsto,imagem_principal_snapshot,criado_em,atualizado_em)';
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -141,6 +141,7 @@ function normalizeItem(value: unknown): OrderItem {
     precoGemnUnitario: finiteNumber(value.preco_gemn_unitario, 'item.preco_gemn_unitario', true),
     subtotalReal: finiteNumber(value.subtotal_real, 'item.subtotal_real') as number,
     subtotalGemn: finiteNumber(value.subtotal_gemn, 'item.subtotal_gemn', true),
+    gemnUtilizadoItem: finiteNumber(value.gemn_utilizado_item ?? 0, 'item.gemn_utilizado_item') as number,
     cashbackPercentual: finiteNumber(value.cashback_percentual, 'item.cashback_percentual') as number,
     cashbackPrevisto: finiteNumber(value.cashback_previsto, 'item.cashback_previsto') as number,
     imagemPrincipalSnapshot,
@@ -152,16 +153,15 @@ function normalizeItem(value: unknown): OrderItem {
 
 function normalizeOrder(value: unknown): Order {
   if (!isRecord(value)) throw new OrderServiceError('unexpected', 'Pedido inválido no retorno.');
-  // order_items.order_id possui UNIQUE no MVP. Por isso, o PostgREST infere
-  // uma relacao 1:1 e retorna um objeto, em vez de uma lista. Aceitamos os
-  // dois formatos para manter o servico resiliente caso a cardinalidade mude.
+  // Pedidos antigos podem chegar com um objeto 1:1; pedidos multi-item chegam
+  // como lista. Aceitamos ambos para manter compatibilidade durante a migracao.
   const rawItemsValue = value.order_items;
   const rawItems = Array.isArray(rawItemsValue)
     ? rawItemsValue
     : isRecord(rawItemsValue)
       ? [rawItemsValue]
       : null;
-  if (!rawItems || rawItems.length !== 1) throw new OrderServiceError('unexpected', 'Itens do pedido ausentes ou invalidos no retorno.');
+  if (!rawItems || rawItems.length < 1) throw new OrderServiceError('unexpected', 'Itens do pedido ausentes ou invalidos no retorno.');
   return {
     id: requiredString(value.id, 'id'),
     status: orderStatus(value.status),

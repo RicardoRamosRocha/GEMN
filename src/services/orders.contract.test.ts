@@ -46,6 +46,7 @@ const order = __ordersTestables.normalizeOrder({
     preco_gemn_unitario: null,
     subtotal_real: '50.00',
     subtotal_gemn: null,
+    gemn_utilizado_item: '0.00',
     cashback_percentual: '0.00',
     cashback_previsto: '0.00',
     criado_em: now,

@@ -16,6 +16,21 @@ export type AdminPendingOrder = {
   criadoEm: string;
   expiraEm: string;
   confirmavel: boolean;
+  itemCount: number;
+  items: AdminPendingOrderItem[];
+};
+
+export type AdminPendingOrderItem = {
+  id: string;
+  listingId: string;
+  sellerId: string;
+  nomeItem: string;
+  tipo: 'produto' | 'servico';
+  quantidade: number;
+  subtotalReal: number;
+  subtotalGemn: number | null;
+  gemnUtilizadoItem: number;
+  cashbackPrevisto: number;
 };
 
 export type AdminOrderConfirmation = {
