@@ -85,3 +85,32 @@ export type CartCheckoutIntent = {
   createdAt: string;
   sellers: CartCheckoutSellerIntent[];
 };
+
+export type CartCheckoutItemInput = {
+  listingId: string;
+  quantity: number;
+};
+
+export type CartCheckoutOrderItem = {
+  orderItemId: string;
+  listingId: string;
+  quantity: number;
+  priceRealUnit: number;
+  subtotalReal: number;
+  gemnUsedItem: number;
+  cashbackPercentual: number;
+  cashbackEstimated: number;
+};
+
+export type CartCheckoutOrderResult = {
+  orderId: string;
+  sellerId: string;
+  status: 'pendente' | 'confirmado' | 'concluido' | 'cancelado' | 'expirado';
+  paymentMethod: 'real' | 'gemn' | 'misto';
+  totalReal: number;
+  totalGemn: number | null;
+  gemnUsed: number;
+  dueReal: number;
+  cashbackEstimated: number;
+  items: CartCheckoutOrderItem[];
+};

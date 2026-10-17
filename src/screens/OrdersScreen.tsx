@@ -12,6 +12,7 @@ import { listMyCancellationRequests } from '../services/cancellationRequestQueri
 import { CancellationRequestServiceError } from '../types/cancellationRequests';
 import type { CancellationRequestQuery } from '../types/cancellationRequestQueries';
 import type { Order, OrderStatus } from '../types/orders';
+import { orderItemNames, sortOrderItems, totalOrderUnits } from '../services/orderPresentation';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 import { cancellationUiFixtures, createFixtureCancellationRequest, fixtureRequestsByOrder, isGemnUiFixturesEnabled, ordersUiFixtures } from '../dev/ordersUiFixtures';
 
@@ -123,9 +124,14 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
   const [pendingSelectedOrder, setPendingSelectedOrder] = useState<Order | null>(null);
   const [pendingCancellationProcessing, setPendingCancellationProcessing] = useState(false);
   const [pendingCancellationError, setPendingCancellationError] = useState<string | null>(null);
+  const [expandedOrderIds, setExpandedOrderIds] = useState<Record<string, boolean>>({});
   const intentKeysRef = useRef<Record<string, string>>({});
   const pendingIntentKeysRef = useRef<Record<string, string>>({});
   const fixturesEnabled = isGemnUiFixturesEnabled();
+
+  function toggleOrderDetails(orderId: string) {
+    setExpandedOrderIds((current) => ({ ...current, [orderId]: !current[orderId] }));
+  }
 
   const loadCancellationRequests = useCallback(async () => {
     if (fixturesEnabled) {
@@ -335,7 +341,9 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
       ) : (
         <View style={[styles.ordersGrid, wide && styles.ordersGridWide]}>
           {orders.map((order) => {
-            const item = order.items[0];
+            const orderedItems = sortOrderItems(order.items);
+            const item = orderedItems[0];
+            const expanded = expandedOrderIds[order.id] === true;
             const status = statusPresentation(order.status);
             return (
               <View key={order.id} style={[styles.orderWrapper, wide && styles.orderWrapperWide]}>
@@ -356,8 +364,8 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                   <View style={styles.productRow}>
                     <OrderProductThumbnail imageUrl={item?.imagemPrincipalUrl} name={item?.nomeItem ?? 'item do pedido'} />
                     <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{item?.nomeItem ?? 'Item do pedido'}{order.items.length > 1 ? ` + ${order.items.length - 1} item(ns)` : ''}</Text>
-                      <Text style={styles.quantity}>Quantidade: {item?.quantidade ?? order.items.reduce((sum, current) => sum + current.quantidade, 0)}</Text>
+                    <Text style={styles.productName}>{orderItemNames(orderedItems)}</Text>
+                      <Text style={styles.quantity}>Quantidade total: {totalOrderUnits(orderedItems)} unidade{totalOrderUnits(orderedItems) === 1 ? '' : 's'}</Text>
                     </View>
                   </View>
 
@@ -375,6 +383,8 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                       <Text style={styles.summaryValue}>{formatGemn(order.gemnUtilizado)}</Text>
                     </View> : null}
                   </View>
+                  <AppButton title={expanded ? 'Ocultar detalhes' : 'Ver detalhes do pedido'} variant="outline" size="compact" onPress={() => toggleOrderDetails(order.id)} />
+                  {expanded ? <OrderDetails order={order} items={orderedItems} /> : null}
                   {order.status === 'pendente' ? <Text style={styles.pendingNote}>Pedido pendente não significa pagamento realizado.</Text> : null}
                   {requestStatusPresentation(cancellationRequests[order.id]) ? (() => {
                     const requestStatus = requestStatusPresentation(cancellationRequests[order.id])!;
@@ -415,6 +425,25 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
       <CancellationModal order={selectedOrder} reason={reason} processing={requestProcessing} errorMessage={requestError} onReasonChange={setReason} onCancel={closeCancellationModal} onConfirm={() => { void submitCancellationRequest(); }} />
     </AppScreen>
   );
+}
+
+function OrderDetails({ order, items }: { order: Order; items: Order['items'] }) {
+  const cashbackLabel = order.status === 'concluido' ? 'Cashback creditado' : 'Cashback estimado';
+  return <View style={styles.details}>
+    <Text style={styles.detailsTitle}>Detalhes do pedido</Text>
+    {items.map((item) => <View key={item.id} style={styles.detailItem}>
+      <View style={styles.detailItemHeader}><OrderProductThumbnail imageUrl={item.imagemPrincipalUrl} name={item.nomeItem} /><Text style={styles.detailItemName}>{item.nomeItem}</Text></View>
+      <Text style={styles.detailText}>{item.quantidade} × {formatReal(item.precoRealUnitario)} = {formatReal(item.subtotalReal)}</Text>
+      <Text style={styles.detailText}>GEMN utilizado: {formatGemn(item.gemnUtilizadoItem)}</Text>
+      <Text style={styles.detailText}>{cashbackLabel}: {formatReal(item.cashbackPrevisto)}</Text>
+    </View>)}
+    <View style={styles.detailTotals}>
+      <Text style={styles.detailText}>Status: {statusLabels[order.status]}</Text>
+      <Text style={styles.detailText}>Valor devido em reais: {formatReal(order.valorDevidoReal)}</Text>
+      <Text style={styles.detailText}>GEMN utilizado no pedido: {formatGemn(order.gemnUtilizado)}</Text>
+      <Text style={styles.detailText}>{cashbackLabel}: {formatReal(items.reduce((total, item) => total + item.cashbackPrevisto, 0))}</Text>
+    </View>
+  </View>;
 }
 
 function PendingCancellationModal({ order, processing, errorMessage, onCancel, onConfirm }: {
@@ -503,6 +532,13 @@ const styles = StyleSheet.create({
   summaryLabel: { ...typography.bodySmall, color: colors.textSecondary, flex: 1 },
   summaryValue: { ...typography.caption, color: colors.textSecondary, fontWeight: '600' },
   total: { ...typography.heading2, color: colors.brandDark },
+  details: { marginTop: spacing.sm, padding: spacing.md, gap: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border },
+  detailsTitle: { ...typography.label, color: colors.text },
+  detailItem: { gap: spacing.xs, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  detailItemHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  detailItemName: { ...typography.label, color: colors.text, flex: 1 },
+  detailText: { ...typography.caption, color: colors.textSecondary },
+  detailTotals: { gap: spacing.xs, paddingTop: spacing.xs },
   pendingNote: { ...typography.caption, color: colors.warning, marginTop: spacing.md },
   infoBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.brandLight, padding: spacing.md, borderWidth: 1, borderColor: colors.brandLight },
   infoIcon: { width: 38, height: 38, borderRadius: radius.md, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },

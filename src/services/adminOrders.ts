@@ -57,6 +57,17 @@ export async function listAdminPendingOrders(limit = 50, offset = 0): Promise<Ad
   if (error) throw normalizeError(error);
   return rows(data).map(normalizePendingOrder);
 }
+export async function countAdminPendingOrders(): Promise<number> {
+  const pageSize = 100;
+  let offset = 0;
+  let total = 0;
+  while (true) {
+    const page = await listAdminPendingOrders(pageSize, offset);
+    total += page.length;
+    if (page.length < pageSize) return total;
+    offset += page.length;
+  }
+}
 export async function confirmAdminOrder(orderId: string, idempotencyKey: string): Promise<AdminOrderConfirmation> { await requireAuthenticated(); const { data, error } = await supabase.rpc('confirm_order_payment', { p_order_id: orderId, p_idempotency_key: idempotencyKey }); if (error) throw normalizeError(error); return normalizeConfirmation(data); }
 
 export const __adminOrderTestables = { normalizePendingOrder, normalizePendingItem, normalizeConfirmation, normalizeError, paymentMethod, orderStatus, validatePagination };

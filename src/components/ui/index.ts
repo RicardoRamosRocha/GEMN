@@ -2,6 +2,8 @@ export { AppScreen } from './AppScreen';
 export type { AppScreenProps } from './AppScreen';
 export { AppHeader } from './AppHeader';
 export type { AppHeaderProps } from './AppHeader';
+export { AdminScreenHeader } from './AdminScreenHeader';
+export type { AdminScreenHeaderProps } from './AdminScreenHeader';
 export { AppButton } from './AppButton';
 export type { AppButtonProps, AppButtonVariant } from './AppButton';
 export { AppCard } from './AppCard';

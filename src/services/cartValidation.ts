@@ -12,6 +12,7 @@ import type {
   CartValidationResult,
 } from '../types/cart';
 import { CART_MAX_QUANTITY } from '../types/cart';
+import { getGemnPresentationEligibility } from './gemnPresentation';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -46,11 +47,6 @@ function numberValue(value: unknown, field: string): number {
 function requiredString(value: unknown, field: string): string {
   if (typeof value !== 'string' || value.trim() === '') throw new CartValidationError('unexpected', `Retorno inválido: ${field}.`);
   return value;
-}
-
-function nullableNumber(value: unknown, field: string) {
-  if (value === null || value === undefined) return null;
-  return numberValue(value, field);
 }
 
 function normalizeError(error: unknown): CartValidationError {
@@ -89,15 +85,17 @@ function mapCurrentListing(value: unknown): CartCurrentListing {
   const seller = sellerRelation(value.sellers);
   if (!seller) throw new CartValidationError('unexpected', 'O vendedor do anúncio não foi retornado.');
   if (value.status !== 'ativo' || seller.status !== 'ativo') throw new CartValidationError('unexpected', 'O anúncio retornado não está ativo.');
+  const sellerAcceptsGemn = seller.aceita_gemn === true;
+  const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn, listingAcceptsGemn: value.aceita_gemn === true, gemnValue: value.preco_gemn as number | string | null | undefined });
   return {
     listingId: requiredString(value.id, 'listing.id'),
     sellerId: requiredString(value.seller_id, 'listing.seller_id'),
     sellerName: requiredString(seller.nome_negocio, 'seller.nome_negocio'),
     name: requiredString(value.nome, 'listing.nome'),
     price: numberValue(value.preco_real, 'listing.preco_real'),
-    acceptsGemn: value.aceita_gemn === true,
-    gemnValue: nullableNumber(value.preco_gemn, 'listing.preco_gemn'),
-    sellerAcceptsGemn: seller.aceita_gemn === true,
+    acceptsGemn: gemnEligibility.enabled,
+    gemnValue: gemnEligibility.enabled ? gemnEligibility.value ?? null : null,
+    sellerAcceptsGemn,
     imageUrl: publicImageUrl(value.imagem_principal),
     active: true,
   };

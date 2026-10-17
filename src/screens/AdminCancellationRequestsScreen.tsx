@@ -3,7 +3,7 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, Toucha
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
+import { AdminScreenHeader, AppBadge, AppCard, AppScreen } from '../components/ui';
 import { listAdminCancellationRequests } from '../services/cancellationRequestQueries';
 import type { CancellationRequestQuery } from '../types/cancellationRequestQueries';
 import { CancellationRequestServiceError, type CancellationRequestStatus } from '../types/cancellationRequests';
@@ -37,10 +37,7 @@ export default function AdminCancellationRequestsScreen({ navigation }: any) {
       return;
     }
     try {
-      const [pending, failed] = await Promise.all([
-        listAdminCancellationRequests('pendente'),
-        listAdminCancellationRequests('execucao_falhou'),
-      ]);
+      const [pending, failed] = await Promise.all([listAdminCancellationRequests('pendente'), listAdminCancellationRequests('execucao_falhou')]);
       const byId = new Map<string, CancellationRequestQuery>();
       [...pending, ...failed].forEach((request) => byId.set(request.requestId, request));
       setRequests([...byId.values()].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm)));
@@ -52,46 +49,27 @@ export default function AdminCancellationRequestsScreen({ navigation }: any) {
     }
   }, []);
 
-  useFocusEffect(React.useCallback(() => { load(); }, [load]));
+  useFocusEffect(React.useCallback(() => { void load(); }, [load]));
 
-  return (
-    <AppScreen edges={['bottom']} contentContainerStyle={styles.screen}>
-      <View style={styles.heading}>
-        <View style={styles.headingCopy}>
-          <Text style={styles.eyebrow}>GEMN</Text>
-          <Text style={styles.title}>Cancelamentos</Text>
-          <Text style={styles.subtitle}>Solicitações aguardando decisão administrativa.</Text>
-        </View>
-        <MaterialCommunityIcons name="clipboard-text-clock-outline" size={34} color={colors.primary} />
-      </View>
-      {isAdminCancellationUiFixturesEnabled() ? <View style={styles.demoBanner} accessibilityRole="text"><MaterialCommunityIcons name="flask-outline" size={18} color={colors.warning} /><Text style={styles.demoBannerText}>Modo de demonstração — dados sintéticos locais</Text></View> : null}
-      <AppButton title="Atualizar" variant="outline" onPress={() => load(true)} disabled={loading || refreshing} />
-      {loading && !refreshing ? <ActivityIndicator color={colors.primary} style={styles.feedback} /> : null}
-      {errorMessage ? <Text accessibilityRole="alert" style={styles.error}>{errorMessage}</Text> : null}
-      {!loading && !errorMessage && requests.length === 0 ? <AppCard><Text style={styles.empty}>Nenhuma solicitação pendente ou com falha recuperável.</Text></AppCard> : null}
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />} contentContainerStyle={[styles.list, width >= 760 && styles.listWide]}>
-        {requests.map((request) => (
-          <TouchableOpacity key={request.requestId} accessibilityRole="button" onPress={() => navigation.navigate('AdminCancellationRequestDetail', { requestId: request.requestId })} style={[styles.itemWrap, width >= 760 && styles.itemWide]}>
-            <AppCard style={styles.item}>
-              <View style={styles.itemTop}><AppBadge label={statusLabel(request.status)} variant={statusVariant(request.status)} /><Text style={styles.role}>{request.requesterRole}</Text></View>
-              <Text style={styles.order}>Pedido {request.orderId.slice(0, 8)}</Text>
-              <Text style={styles.reason} numberOfLines={2}>{request.motivoSolicitacao}</Text>
-              <Text style={styles.date}>{new Date(request.criadoEm).toLocaleString('pt-BR')}</Text>
-            </AppCard>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </AppScreen>
-  );
+  function goBackToAdmin() {
+    if (navigation?.canGoBack?.()) navigation.goBack();
+    else navigation?.navigate?.('AdminHome');
+  }
+
+  return <AppScreen edges={['bottom']} contentContainerStyle={styles.screen}>
+    <AdminScreenHeader title="Cancelamentos" subtitle="Solicitações aguardando decisão administrativa." onBack={goBackToAdmin} onRefresh={() => { void load(true); }} refreshing={loading || refreshing} refreshLabel="Atualizar cancelamentos" />
+    {isAdminCancellationUiFixturesEnabled() ? <View style={styles.demoBanner} accessibilityRole="text"><MaterialCommunityIcons name="flask-outline" size={18} color={colors.warning} /><Text style={styles.demoBannerText}>Modo de demonstração — dados sintéticos locais</Text></View> : null}
+    {loading && !refreshing ? <ActivityIndicator color={colors.primary} style={styles.feedback} /> : null}
+    {errorMessage ? <AppCard style={styles.errorCard}><MaterialCommunityIcons name="alert-circle-outline" size={20} color={colors.error} /><Text accessibilityRole="alert" style={styles.error}>{errorMessage}</Text></AppCard> : null}
+    {!loading && !errorMessage && requests.length === 0 ? <AppCard><Text style={styles.empty}>Nenhuma solicitação pendente ou com falha recuperável.</Text></AppCard> : null}
+    <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void load(true); }} />} contentContainerStyle={[styles.list, width >= 760 && styles.listWide]}>
+      {requests.map((request) => <TouchableOpacity key={request.requestId} accessibilityRole="button" onPress={() => navigation.navigate('AdminCancellationRequestDetail', { requestId: request.requestId })} style={[styles.itemWrap, width >= 760 && styles.itemWide]}><AppCard style={styles.item}><View style={styles.itemTop}><AppBadge label={statusLabel(request.status)} variant={statusVariant(request.status)} /><Text style={styles.role}>{request.requesterRole}</Text></View><Text style={styles.order}>Pedido {request.orderId.slice(0, 8)}</Text><Text style={styles.reason} numberOfLines={2}>{request.motivoSolicitacao}</Text><Text style={styles.date}>{new Date(request.criadoEm).toLocaleString('pt-BR')}</Text></AppCard></TouchableOpacity>)}
+    </ScrollView>
+  </AppScreen>;
 }
 
 const styles = StyleSheet.create({
   screen: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.md },
-  heading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  headingCopy: { flex: 1, gap: spacing.xs },
-  eyebrow: { ...typography.caption, color: colors.textSecondary },
-  title: { ...typography.heading1, color: colors.text },
-  subtitle: { ...typography.bodySmall, color: colors.textSecondary },
   list: { gap: spacing.md, paddingBottom: spacing.xl },
   listWide: { flexDirection: 'row', flexWrap: 'wrap' },
   itemWrap: { width: '100%' },
@@ -104,7 +82,8 @@ const styles = StyleSheet.create({
   date: { ...typography.caption, color: colors.textMuted },
   empty: { ...typography.body, color: colors.textSecondary, textAlign: 'center' },
   feedback: { marginVertical: spacing.xl },
-  error: { ...typography.bodySmall, color: colors.error },
+  errorCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.error },
+  error: { ...typography.bodySmall, color: colors.error, flex: 1 },
   demoBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: '#FBF1DF', borderWidth: 1, borderColor: '#F5D9A0' },
   demoBannerText: { ...typography.caption, color: colors.warning, flex: 1 },
 });

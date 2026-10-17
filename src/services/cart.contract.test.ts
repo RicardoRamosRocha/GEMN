@@ -31,6 +31,38 @@ const changed = __cartValidationTestables.compareKnownListing({
 });
 if (!changed.some((change) => change.code === 'price_changed') || !changed.some((change) => change.code === 'gemn_rules_changed')) throw new Error('cart changes were not detected');
 
+const sellerDisabledListing = __cartValidationTestables.mapCurrentListing({
+  id: first.listingId,
+  seller_id: first.sellerId,
+  nome: 'Produto GEMN indisponivel',
+  preco_real: '30.00',
+  aceita_gemn: true,
+  preco_gemn: '20.00',
+  imagem_principal: null,
+  status: 'ativo',
+  sellers: { id: first.sellerId, nome_negocio: 'Loja A', status: 'ativo', aceita_gemn: false },
+});
+if (sellerDisabledListing.acceptsGemn || sellerDisabledListing.gemnValue !== null || sellerDisabledListing.sellerAcceptsGemn) throw new Error('effective GEMN eligibility was not normalized');
+const representationOnly = __cartValidationTestables.compareKnownListing({
+  listingId: first.listingId,
+  sellerId: first.sellerId,
+  price: 30,
+  acceptsGemn: false,
+  gemnValue: undefined,
+  sellerAcceptsGemn: undefined,
+}, sellerDisabledListing);
+if (representationOnly.length !== 0) throw new Error('null/undefined and numeric/string representations caused a false GEMN change');
+
+const realGemnChange = __cartValidationTestables.compareKnownListing({
+  listingId: first.listingId,
+  sellerId: first.sellerId,
+  price: 30,
+  acceptsGemn: true,
+  gemnValue: 20,
+  sellerAcceptsGemn: true,
+}, { ...sellerDisabledListing, acceptsGemn: true, gemnValue: 25, sellerAcceptsGemn: true });
+if (!realGemnChange.some((change) => change.code === 'gemn_rules_changed')) throw new Error('real GEMN rule change was not detected');
+
 const grouped = __cartValidationTestables.sellerSubtotals([
   { cartItem: first, currentListing: { listingId: first.listingId, sellerId: first.sellerId, sellerName: 'Loja A', name: 'Produto A', price: 10, acceptsGemn: false, gemnValue: null, sellerAcceptsGemn: false, active: true }, valid: true, issues: [], changes: [], estimatedSubtotal: 20 },
 ]);

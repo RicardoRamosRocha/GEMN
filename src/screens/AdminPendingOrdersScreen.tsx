@@ -1,9 +1,9 @@
 import React from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Crypto from 'expo-crypto';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
+import { AdminScreenHeader, AppBadge, AppButton, AppCard, AppScreen } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { confirmAdminOrder, listAdminPendingOrders } from '../services/adminOrders';
 import { AdminOrderServiceError } from '../types/adminOrders';
@@ -11,6 +11,7 @@ import type { AdminPendingOrder } from '../types/adminOrders';
 import { AccessDenied } from './AdminHomeScreen';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 import { supabase } from '../lib/supabase';
+import { orderItemNames, sortOrderItems, totalOrderUnits } from '../services/orderPresentation';
 
 const PAGE_SIZE = 50;
 function formatReal(value: number) { return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
@@ -35,6 +36,11 @@ export default function AdminPendingOrdersScreen({ navigation }: any) {
   const [confirmationError, setConfirmationError] = React.useState<string | null>(null);
   const [processing, setProcessing] = React.useState(false);
   const intentKeys = React.useRef<Record<string, string>>({});
+
+  function goBackToAdmin() {
+    if (navigation?.canGoBack?.()) navigation.goBack();
+    else navigation?.navigate?.('AdminHome');
+  }
 
   const loadOrders = React.useCallback(async (reset = true) => {
     if (reset) setLoading(true); else setLoadingMore(true);
@@ -103,10 +109,10 @@ export default function AdminPendingOrdersScreen({ navigation }: any) {
     } finally { setProcessing(false); }
   }
 
-  if (isAdmin === null) return <AppScreen><View style={styles.loading}><ActivityIndicator color={colors.primary} /><Text style={styles.feedbackText}>Verificando acesso administrativo...</Text></View></AppScreen>;
+  if (isAdmin === null) return <AppScreen contentContainerStyle={styles.content}><AdminScreenHeader title="Pedidos pendentes" subtitle="Confirme pagamentos simulados após revisar os dados do pedido." onBack={goBackToAdmin} onRefresh={() => { void refresh(); }} refreshing={loading || refreshing} refreshLabel="Atualizar pedidos pendentes" /><View style={styles.loading}><ActivityIndicator color={colors.primary} /><Text style={styles.feedbackText}>Verificando acesso administrativo...</Text></View></AppScreen>;
   if (isAdmin === false) return <AccessDenied />;
   return <AppScreen scroll edges={['bottom']} contentContainerStyle={styles.content}>
-    <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Voltar" style={styles.iconButton} onPress={() => navigation?.goBack()}><MaterialCommunityIcons name="arrow-left" size={22} color={colors.text} /></Pressable><View style={styles.headerCopy}><Text style={styles.eyebrow}>Operação administrativa</Text><Text style={styles.title}>Pedidos pendentes</Text><Text style={styles.subtitle}>Confirme pagamentos simulados após revisar os dados do pedido.</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Atualizar pedidos pendentes" style={styles.iconButton} disabled={loading || refreshing} onPress={() => { void refresh(); }}><MaterialCommunityIcons name="refresh" size={22} color={loading || refreshing ? colors.textSecondary : colors.primary} /></Pressable></View>
+    <AdminScreenHeader title="Pedidos pendentes" subtitle="Confirme pagamentos simulados após revisar os dados do pedido." onBack={goBackToAdmin} onRefresh={() => { void refresh(); }} refreshing={loading || refreshing} refreshLabel="Atualizar pedidos pendentes" />
     <View style={styles.simulatedBanner}><MaterialCommunityIcons name="flask-outline" size={20} color={colors.warning} /><Text style={styles.simulatedText}>SIMULAÇÃO — esta ação não comprova recebimento de dinheiro real.</Text></View>
     {notice ? <AppCard style={styles.notice}><MaterialCommunityIcons name="check-circle-outline" size={20} color={colors.success} /><Text style={styles.noticeText}>{notice}</Text></AppCard> : null}
     {loading ? <View style={styles.loading}><ActivityIndicator color={colors.primary} /><Text style={styles.feedbackText}>Carregando pedidos...</Text></View> : errorMessage ? <AppCard style={styles.feedbackCard}><MaterialCommunityIcons name="alert-circle-outline" size={36} color={colors.error} /><Text accessibilityRole="alert" style={styles.feedbackTitle}>Não foi possível carregar a fila</Text><Text style={styles.feedbackText}>{errorMessage}</Text><AppButton title="Tentar novamente" variant="outline" onPress={() => { void loadOrders(true); }} /></AppCard> : orders.length === 0 ? <AppCard style={styles.feedbackCard}><MaterialCommunityIcons name="check-circle-outline" size={42} color={colors.success} /><Text style={styles.feedbackTitle}>Nenhum pedido pendente</Text><Text style={styles.feedbackText}>Novos pedidos aparecerão aqui para análise.</Text></AppCard> : <View style={[styles.list, wide && styles.listWide]}>{orders.map((order) => <OrderCard key={order.orderId} order={order} onConfirm={() => openConfirmation(order)} />)}{hasMore ? <AppButton title={loadingMore ? 'Carregando...' : 'Carregar mais'} variant="outline" onPress={() => { void loadOrders(false); }} loading={loadingMore} disabled={loadingMore} /> : null}</View>}
@@ -115,8 +121,21 @@ export default function AdminPendingOrdersScreen({ navigation }: any) {
 }
 
 function OrderCard({ order, onConfirm }: { order: AdminPendingOrder; onConfirm: () => void }) {
-  return <AppCard style={[styles.orderCard, !order.confirmavel && styles.expiredCard]}><View style={styles.cardHeader}><AppBadge label={order.confirmavel ? 'Aguardando confirmação' : 'Vencido'} variant={order.confirmavel ? 'warning' : 'neutral'} /><Text style={styles.date}>{formatDate(order.criadoEm)}</Text></View><Text style={styles.productName}>{order.nomeItem}</Text><Text style={styles.orderMeta}>Comprador: {order.buyerId}</Text><Text style={styles.orderMeta}>Quantidade: {order.quantidade} · {paymentLabel(order.formaPagamento)}</Text><View style={styles.financials}><Summary label="Valor bruto em reais" value={formatReal(order.totalReal)} /><Summary label="GEMN utilizado" value={formatGemn(order.gemnUtilizado)} /><Summary label="Devido em reais" value={formatReal(order.valorDevidoReal)} /></View><View style={styles.expiration}><MaterialCommunityIcons name={order.confirmavel ? 'clock-outline' : 'timer-off-outline'} size={17} color={order.confirmavel ? colors.warning : colors.error} /><Text style={[styles.expirationText, !order.confirmavel && styles.expiredText]}>{order.confirmavel ? `Prazo até ${formatDate(order.expiraEm)}` : `Prazo encerrado em ${formatDate(order.expiraEm)}`}</Text></View><AppButton title={order.confirmavel ? 'Revisar e confirmar' : 'Pedido vencido'} variant={order.confirmavel ? 'primary' : 'outline'} onPress={onConfirm} disabled={!order.confirmavel} fullWidth /></AppCard>;
+  const [expanded, setExpanded] = React.useState(false);
+  const items = sortOrderItems(order.items);
+  return <AppCard style={[styles.orderCard, !order.confirmavel && styles.expiredCard]}><View style={styles.cardHeader}><AppBadge label={order.confirmavel ? 'Aguardando confirmação' : 'Vencido'} variant={order.confirmavel ? 'warning' : 'neutral'} /><Text style={styles.date}>{formatDate(order.criadoEm)}</Text></View><Text style={styles.productName}>{orderItemNames(items)}</Text><Text style={styles.orderMeta}>Comprador: {order.buyerId}</Text><Text style={styles.orderMeta}>Quantidade total: {totalOrderUnits(items)} unidade{totalOrderUnits(items) === 1 ? '' : 's'} · {paymentLabel(order.formaPagamento)}</Text><View style={styles.financials}><Summary label="Valor bruto em reais" value={formatReal(order.totalReal)} /><Summary label="GEMN utilizado" value={formatGemn(order.gemnUtilizado)} /><Summary label="Devido em reais" value={formatReal(order.valorDevidoReal)} /></View><AppButton title={expanded ? 'Ocultar produtos' : 'Revisar produtos e valores'} variant="outline" size="compact" onPress={() => setExpanded((current) => !current)} />{expanded ? <AdminOrderDetails order={order} items={items} /> : null}<View style={styles.expiration}><MaterialCommunityIcons name={order.confirmavel ? 'clock-outline' : 'timer-off-outline'} size={17} color={order.confirmavel ? colors.warning : colors.error} /><Text style={[styles.expirationText, !order.confirmavel && styles.expiredText]}>{order.confirmavel ? `Prazo até ${formatDate(order.expiraEm)}` : `Prazo encerrado em ${formatDate(order.expiraEm)}`}</Text></View><AppButton title={order.confirmavel ? 'Revisar e confirmar' : 'Pedido vencido'} variant={order.confirmavel ? 'primary' : 'outline'} onPress={onConfirm} disabled={!order.confirmavel} fullWidth /></AppCard>;
 }
+function AdminOrderDetails({ order, items }: { order: AdminPendingOrder; items: AdminPendingOrder['items'] }) {
+  return <View style={orderDetailStyles.details}><Text style={orderDetailStyles.detailsTitle}>Produtos do pedido</Text>{items.map((item) => <View key={item.id} style={orderDetailStyles.detailItem}><Text style={orderDetailStyles.detailItemName}>{item.nomeItem}</Text><Text style={orderDetailStyles.detailText}>Quantidade: {item.quantidade} · Subtotal: {formatReal(item.subtotalReal)}</Text><Text style={orderDetailStyles.detailText}>GEMN utilizado: {formatGemn(item.gemnUtilizadoItem)} · Cashback previsto: {formatReal(item.cashbackPrevisto)}</Text></View>)}<View style={orderDetailStyles.detailTotals}><Text style={orderDetailStyles.detailText}>Status: Pendente de confirmação</Text><Text style={orderDetailStyles.detailText}>Total agregado: {formatReal(order.totalReal)}</Text><Text style={orderDetailStyles.detailText}>Devido em reais: {formatReal(order.valorDevidoReal)}</Text><Text style={orderDetailStyles.detailText}>GEMN utilizado no pedido: {formatGemn(order.gemnUtilizado)}</Text></View></View>;
+}
+const orderDetailStyles = StyleSheet.create({
+  details: { padding: spacing.md, gap: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border },
+  detailsTitle: { ...typography.label, color: colors.text },
+  detailItem: { gap: spacing.xs, paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  detailItemName: { ...typography.label, color: colors.text },
+  detailText: { ...typography.caption, color: colors.textSecondary },
+  detailTotals: { gap: spacing.xs, paddingTop: spacing.xs },
+});
 function Summary({ label, value }: { label: string; value: string }) { return <View style={styles.summaryRow}><Text style={styles.summaryLabel}>{label}</Text><Text style={styles.summaryValue}>{value}</Text></View>; }
 function ConfirmationModal({ order, processing, errorMessage, onCancel, onConfirm }: { order: AdminPendingOrder | null; processing: boolean; errorMessage: string | null; onCancel: () => void; onConfirm: () => void }) {
   return <Modal visible={Boolean(order)} transparent animationType="fade" onRequestClose={onCancel}><View style={styles.modalBackdrop}><View accessibilityViewIsModal style={styles.modal}><Text style={styles.modalTitle}>Confirmar pagamento simulado?</Text><Text style={styles.modalText}>Você está prestes a confirmar o pedido “{order?.nomeItem}”. Esta ação usará a RPC financeira existente, consumirá a reserva GEMN quando aplicável e poderá gerar cashback.</Text><Text style={styles.modalWarning}>Nenhum pagamento real será processado.</Text>{errorMessage ? <Text accessibilityRole="alert" style={styles.modalError}>{errorMessage}</Text> : null}<View style={styles.modalActions}><AppButton title="Voltar" variant="outline" onPress={onCancel} disabled={processing} style={styles.modalButton} /><AppButton title={order?.confirmavel ? 'Confirmar simulação' : 'Pedido não confirmável'} onPress={onConfirm} loading={processing} disabled={processing || !order?.confirmavel} style={styles.modalButton} /></View></View></View></Modal>;
