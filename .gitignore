@@ -47,3 +47,5 @@ yarn-error.*
 
 # Supabase local files
 supabase/.temp/
+
+/backups/
