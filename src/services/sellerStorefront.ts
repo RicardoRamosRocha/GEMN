@@ -3,6 +3,7 @@ import { getSellerBranding } from './sellerBranding';
 import {
   SellerStorefrontServiceError,
   type SellerStorefront,
+  type SellerStorefrontImage,
   type SellerStorefrontListing,
   type SellerStorefrontSeller,
 } from '../types/sellerStorefront';
@@ -10,11 +11,12 @@ import {
 export { SellerStorefrontServiceError } from '../types/sellerStorefront';
 
 export const SELLER_STOREFRONT_SELLER_SELECT = 'id,nome_negocio,descricao,status,aceita_gemn' as const;
-export const SELLER_STOREFRONT_LISTING_SELECT = 'id,seller_id,category_id,tipo,nome,descricao,preco_real,aceita_gemn,preco_gemn,imagem_principal,status,categories(id,nome,ativo)' as const;
+export const SELLER_STOREFRONT_LISTING_SELECT = 'id,seller_id,category_id,tipo,nome,descricao,preco_real,aceita_gemn,preco_gemn,imagem_principal,status,categories(id,nome,ativo),listing_images(id,storage_path,sort_order,is_primary)' as const;
 
 type UnknownRecord = Record<string, unknown>;
 type ListingRow = UnknownRecord & {
   categories?: UnknownRecord | UnknownRecord[] | null;
+  listing_images?: Array<{ id: string; storage_path: string; sort_order: number; is_primary: boolean }> | null;
 };
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -135,6 +137,22 @@ function mapListing(row: ListingRow, sellerId: string): SellerStorefrontListing 
   if (imagePath !== null && imagePath !== undefined && typeof imagePath !== 'string') {
     throw new SellerStorefrontServiceError('unexpected', 'Retorno inválido: imagem_principal.');
   }
+  const relationImages = (row.listing_images ?? [])
+    .slice()
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((image): SellerStorefrontImage => ({
+      id: image.id,
+      storagePath: image.storage_path,
+      url: supabase.storage.from('listing-images').getPublicUrl(image.storage_path).data.publicUrl,
+      sortOrder: image.sort_order,
+      isPrimary: image.is_primary,
+    }));
+  const images = relationImages.length > 0
+    ? relationImages
+    : imagePath
+      ? [{ id: `legacy-${String(row.id)}`, storagePath: imagePath, url: supabase.storage.from('listing-images').getPublicUrl(imagePath).data.publicUrl, sortOrder: 0, isPrimary: true }]
+      : [];
+  const imageUrl = images.find((image) => image.isPrimary)?.url ?? images[0]?.url;
   return {
     id: requiredString(row.id, 'id'),
     sellerId: requiredString(row.seller_id, 'seller_id'),
@@ -146,7 +164,8 @@ function mapListing(row: ListingRow, sellerId: string): SellerStorefrontListing 
     price: finiteNumber(row.preco_real, 'preco_real'),
     acceptsGemn,
     ...(acceptsGemn && precoGEMN !== undefined ? { gemnValue: precoGEMN } : {}),
-    ...(imagePath ? { imageUrl: supabase.storage.from('listing-images').getPublicUrl(imagePath).data.publicUrl } : {}),
+    ...(imageUrl ? { imageUrl } : {}),
+    ...(images.length > 0 ? { images } : {}),
   };
 }
 

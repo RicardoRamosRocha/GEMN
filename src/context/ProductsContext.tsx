@@ -8,19 +8,20 @@ export type ProductType = 'Produto' | 'Serviço';
 export type ProductIcon = keyof typeof MaterialCommunityIcons.glyphMap;
 export type ListingStatus = 'rascunho' | 'ativo' | 'inativo';
 export type ProductCategory = { id: string; name: string };
-export type ListingImage = { uri: string; fileName?: string | null; fileSize?: number; mimeType?: string; file?: Blob };
-export type GemnProduct = { id: string; sellerId: string; type: ProductType; name: string; description: string; category: string; categoryId: string; price: number; acceptsGemn: boolean; sellerAcceptsGemn?: boolean; gemnValue?: number; active: boolean; status: ListingStatus; sellerName?: string; imageUrl?: string; icon: ProductIcon };
+export type ListingImage = { uri: string; fileName?: string | null; fileSize?: number; mimeType?: string; file?: Blob; id?: string; storagePath?: string; sortOrder?: number; isPrimary?: boolean };
+export type ListingImageRecord = { id: string; storagePath: string; url: string; sortOrder: number; isPrimary: boolean };
+export type GemnProduct = { id: string; sellerId: string; type: ProductType; name: string; description: string; category: string; categoryId: string; price: number; acceptsGemn: boolean; sellerAcceptsGemn?: boolean; gemnValue?: number; active: boolean; status: ListingStatus; sellerName?: string; imageUrl?: string; images?: ListingImageRecord[]; icon: ProductIcon };
 export type NewGemnProduct = { type: ProductType; name: string; description: string; categoryId: string; price: number; acceptsGemn: boolean; gemnValue?: number; status?: ListingStatus };
 
 type ListingRelation<T> = T | T[] | null;
-type ListingRow = { id: string; seller_id: string; category_id: string; tipo: 'produto' | 'servico'; nome: string; descricao: string; preco_real: number | string; aceita_gemn: boolean; preco_gemn: number | string | null; imagem_principal: string | null; status: ListingStatus; categories?: ListingRelation<{ id: string; nome: string; ativo: boolean }>; sellers?: ListingRelation<{ id: string; nome_negocio: string; status: string; aceita_gemn: boolean }> };
+type ListingRow = { id: string; seller_id: string; category_id: string; tipo: 'produto' | 'servico'; nome: string; descricao: string; preco_real: number | string; aceita_gemn: boolean; preco_gemn: number | string | null; imagem_principal: string | null; status: ListingStatus; categories?: ListingRelation<{ id: string; nome: string; ativo: boolean }>; sellers?: ListingRelation<{ id: string; nome_negocio: string; status: string; aceita_gemn: boolean }>; listing_images?: Array<{ id: string; storage_path: string; sort_order: number; is_primary: boolean }> | null };
 type SellerRow = { id: string; status: string };
 type ProductMutationResult = { product?: GemnProduct; error?: string };
 export type ProductDeletionAction = 'deleted' | 'archived';
 type ProductDeletionResult = { action?: ProductDeletionAction; error?: string };
-type ProductsContextValue = { products: GemnProduct[]; productsLoading: boolean; productsError: string | null; refreshProducts: () => Promise<void>; marketplaceProducts: GemnProduct[]; marketplaceLoading: boolean; marketplaceError: string | null; refreshMarketplaceProducts: () => Promise<void>; categories: ProductCategory[]; categoriesLoading: boolean; categoriesError: string | null; refreshCategories: () => Promise<void>; addProduct: (product: NewGemnProduct, image?: ListingImage) => Promise<ProductMutationResult>; updateProduct: (id: string, product: NewGemnProduct, image?: ListingImage) => Promise<ProductMutationResult>; updateProductStatus: (id: string, status: ListingStatus) => Promise<ProductMutationResult>; deleteProduct: (id: string) => Promise<ProductDeletionResult> };
+type ProductsContextValue = { products: GemnProduct[]; productsLoading: boolean; productsError: string | null; refreshProducts: () => Promise<void>; marketplaceProducts: GemnProduct[]; marketplaceLoading: boolean; marketplaceError: string | null; refreshMarketplaceProducts: () => Promise<void>; categories: ProductCategory[]; categoriesLoading: boolean; categoriesError: string | null; refreshCategories: () => Promise<void>; addProduct: (product: NewGemnProduct, images?: ListingImage[]) => Promise<ProductMutationResult>; updateProduct: (id: string, product: NewGemnProduct, images?: ListingImage[]) => Promise<ProductMutationResult>; updateProductStatus: (id: string, status: ListingStatus) => Promise<ProductMutationResult>; deleteProduct: (id: string) => Promise<ProductDeletionResult> };
 const ProductsContext = createContext<ProductsContextValue | undefined>(undefined);
-const listingSelect = 'id,seller_id,category_id,tipo,nome,descricao,preco_real,aceita_gemn,preco_gemn,imagem_principal,status,categories(id,nome,ativo),sellers(id,nome_negocio,status,aceita_gemn)';
+const listingSelect = 'id,seller_id,category_id,tipo,nome,descricao,preco_real,aceita_gemn,preco_gemn,imagem_principal,status,categories(id,nome,ativo),sellers(id,nome_negocio,status,aceita_gemn),listing_images(id,storage_path,sort_order,is_primary)';
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
@@ -36,6 +37,13 @@ function imageMimeType(image: ListingImage) {
 
 function imageExtension(mimeType: string) {
   return mimeType === 'image/jpeg' ? 'jpg' : mimeType.slice('image/'.length);
+}
+
+function listingImageUrl(storagePath: string) {
+  const value = storagePath.trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  const normalizedPath = value.replace(/^\/+/, '').replace(/^listing-images\//i, '');
+  return supabase.storage.from('listing-images').getPublicUrl(normalizedPath).data.publicUrl;
 }
 
 async function uploadListingImage(sellerId: string, listingId: string, image: ListingImage) {
@@ -56,6 +64,47 @@ async function uploadListingImage(sellerId: string, listingId: string, image: Li
   return path;
 }
 
+const listingImageQueues = new Map<string, Promise<unknown>>();
+
+async function replaceListingImagesUnsafe(sellerId: string, listingId: string, images: ListingImage[], previousPaths: string[]) {
+  const uploadedPaths: string[] = [];
+  try {
+    const { data: currentImages } = await supabase.from('listing_images').select('storage_path').eq('listing_id', listingId);
+    const pathsBeforeReplace = Array.from(new Set([
+      ...previousPaths,
+      ...((currentImages ?? []) as { storage_path: string }[]).map((image) => image.storage_path),
+    ]));
+    const payload: { storage_path: string; sort_order: number; is_primary: boolean }[] = [];
+    for (let index = 0; index < images.length; index += 1) {
+      const image = images[index];
+      const path = image.storagePath ?? await uploadListingImage(sellerId, listingId, image);
+      if (!image.storagePath) uploadedPaths.push(path);
+      payload.push({ storage_path: path, sort_order: index, is_primary: image.isPrimary ?? index === 0 });
+    }
+    const { error } = await supabase.rpc('replace_listing_images', { p_listing_id: listingId, p_images: payload });
+    if (error) throw error;
+
+    const keepPaths = new Set(payload.map((image) => image.storage_path));
+    const removedPaths = pathsBeforeReplace.filter((path) => !keepPaths.has(path));
+    if (removedPaths.length > 0) await supabase.storage.from('listing-images').remove(removedPaths);
+    return payload;
+  } catch (error) {
+    if (uploadedPaths.length > 0) await supabase.storage.from('listing-images').remove(uploadedPaths);
+    throw error;
+  }
+}
+
+async function replaceListingImages(sellerId: string, listingId: string, images: ListingImage[], previousPaths: string[]) {
+  const previousOperation = listingImageQueues.get(listingId) ?? Promise.resolve();
+  const operation = previousOperation.catch(() => undefined).then(() => replaceListingImagesUnsafe(sellerId, listingId, images, previousPaths));
+  listingImageQueues.set(listingId, operation);
+  try {
+    return await operation;
+  } finally {
+    if (listingImageQueues.get(listingId) === operation) listingImageQueues.delete(listingId);
+  }
+}
+
 function friendlyError(error: unknown) {
   const errorRecord = typeof error === 'object' && error !== null ? error as { message?: string; code?: string } : undefined;
   const code = errorRecord?.code;
@@ -73,9 +122,11 @@ function mapListing(row: ListingRow): GemnProduct {
   const type: ProductType = row.tipo === 'produto' ? 'Produto' : 'Serviço';
   const category = Array.isArray(row.categories) ? row.categories[0] : row.categories;
   const seller = Array.isArray(row.sellers) ? row.sellers[0] : row.sellers;
-  const imageUrl = row.imagem_principal ? supabase.storage.from('listing-images').getPublicUrl(row.imagem_principal).data.publicUrl : undefined;
+  const relationImages = (row.listing_images ?? []).slice().sort((a, b) => a.sort_order - b.sort_order).map((image) => ({ id: image.id, storagePath: image.storage_path, url: listingImageUrl(image.storage_path), sortOrder: image.sort_order, isPrimary: image.is_primary }));
+  const images = relationImages.length > 0 ? relationImages : row.imagem_principal ? [{ id: `legacy-${row.id}`, storagePath: row.imagem_principal, url: listingImageUrl(row.imagem_principal), sortOrder: 0, isPrimary: true }] : [];
+  const imageUrl = images.find((image) => image.isPrimary)?.url ?? images[0]?.url;
   const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: seller?.aceita_gemn, listingAcceptsGemn: row.aceita_gemn, gemnValue: row.preco_gemn });
-  return { id: row.id, sellerId: row.seller_id, type, name: row.nome, description: row.descricao, category: category?.nome ?? 'Categoria', categoryId: row.category_id, price: Number(row.preco_real), acceptsGemn: row.aceita_gemn, ...(seller?.aceita_gemn !== undefined ? { sellerAcceptsGemn: seller.aceita_gemn } : {}), ...(gemnEligibility.enabled ? { gemnValue: gemnEligibility.value } : {}), active: row.status === 'ativo', status: row.status, sellerName: seller?.nome_negocio, imageUrl, icon: type === 'Produto' ? 'package-variant-closed' : 'tools' };
+  return { id: row.id, sellerId: row.seller_id, type, name: row.nome, description: row.descricao, category: category?.nome ?? 'Categoria', categoryId: row.category_id, price: Number(row.preco_real), acceptsGemn: row.aceita_gemn, ...(seller?.aceita_gemn !== undefined ? { sellerAcceptsGemn: seller.aceita_gemn } : {}), ...(gemnEligibility.enabled ? { gemnValue: gemnEligibility.value } : {}), active: row.status === 'ativo', status: row.status, sellerName: seller?.nome_negocio, imageUrl, images, icon: type === 'Produto' ? 'package-variant-closed' : 'tools' };
 }
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
@@ -134,7 +185,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { void refreshProducts(); void refreshMarketplaceProducts(); void refreshCategories(); }, [refreshProducts, refreshMarketplaceProducts, refreshCategories]);
 
-  const addProduct = useCallback(async (product: NewGemnProduct, image?: ListingImage) => {
+  const addProduct = useCallback(async (product: NewGemnProduct, images?: ListingImage[]) => {
     if (!user) return { error: 'É necessário estar autenticado para publicar um anúncio.' };
     // seller_id comes from auth.uid() -> sellers.user_id, never from UI input.
     const { seller, error: sellerError } = await getCurrentSeller();
@@ -142,38 +193,34 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.from('listings').insert({ seller_id: seller.id, category_id: product.categoryId, tipo: product.type === 'Produto' ? 'produto' : 'servico', nome: product.name, descricao: product.description, preco_real: product.price, aceita_gemn: product.acceptsGemn, preco_gemn: product.acceptsGemn ? product.gemnValue : null, status: product.status ?? 'ativo' }).select(listingSelect).single();
     if (error) return { error: friendlyError(error) };
     let mapped = mapListing(data as ListingRow);
-    if (image) {
-      let imagePath: string;
+    if (images) {
       try {
-        imagePath = await uploadListingImage(seller.id, mapped.id, image);
+        await replaceListingImages(seller.id, mapped.id, images, []);
       } catch (error) {
         return { product: mapped, error: friendlyError(error) };
       }
-      const { data: updatedData, error: imageError } = await supabase.from('listings').update({ imagem_principal: imagePath }).eq('id', mapped.id).select(listingSelect).single();
-      if (imageError) return { product: mapped, error: friendlyError(imageError) };
-      mapped = mapListing(updatedData as ListingRow);
+      const { data: updatedData } = await supabase.from('listings').select(listingSelect).eq('id', mapped.id).single();
+      if (updatedData) mapped = mapListing(updatedData as ListingRow);
     }
     setProducts((current) => [mapped, ...current.filter((item) => item.id !== mapped.id)]);
     if (mapped.status === 'ativo') setMarketplaceProducts((current) => [mapped, ...current.filter((item) => item.id !== mapped.id)]);
     return { product: mapped };
   }, [getCurrentSeller, user]);
 
-  const updateProduct = useCallback(async (id: string, product: NewGemnProduct, image?: ListingImage) => {
+  const updateProduct = useCallback(async (id: string, product: NewGemnProduct, images?: ListingImage[]) => {
     if (!user) return { error: 'É necessário estar autenticado para editar um anúncio.' };
     // seller_id is intentionally absent: ownership is enforced by RLS and the database trigger.
     const { data, error } = await supabase.from('listings').update({ category_id: product.categoryId, tipo: product.type === 'Produto' ? 'produto' : 'servico', nome: product.name, descricao: product.description, preco_real: product.price, aceita_gemn: product.acceptsGemn, preco_gemn: product.acceptsGemn ? product.gemnValue : null, status: product.status ?? 'rascunho' }).eq('id', id).select(listingSelect).single();
     if (error) return { error: friendlyError(error) };
     let mapped = mapListing(data as ListingRow);
-    if (image) {
-      let imagePath: string;
+    if (images) {
       try {
-        imagePath = await uploadListingImage(mapped.sellerId, mapped.id, image);
+        await replaceListingImages(mapped.sellerId, mapped.id, images, (mapped.images ?? []).map((image) => image.storagePath));
       } catch (error) {
         return { product: mapped, error: friendlyError(error) };
       }
-      const { data: updatedData, error: imageError } = await supabase.from('listings').update({ imagem_principal: imagePath }).eq('id', mapped.id).select(listingSelect).single();
-      if (imageError) return { product: mapped, error: friendlyError(imageError) };
-      mapped = mapListing(updatedData as ListingRow);
+      const { data: updatedData } = await supabase.from('listings').select(listingSelect).eq('id', mapped.id).single();
+      if (updatedData) mapped = mapListing(updatedData as ListingRow);
     }
     setProducts((current) => current.map((item) => item.id === mapped.id ? mapped : item));
     setMarketplaceProducts((current) => mapped.status === 'ativo' ? [mapped, ...current.filter((item) => item.id !== mapped.id)] : current.filter((item) => item.id !== mapped.id));

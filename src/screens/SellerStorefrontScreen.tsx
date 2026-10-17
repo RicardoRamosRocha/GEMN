@@ -56,6 +56,7 @@ function listingAsProduct(listing: SellerStorefrontListing, sellerName: string, 
     status: 'ativo',
     sellerName,
     imageUrl: listing.imageUrl,
+    images: listing.images,
     icon: listing.type === 'Produto' ? 'package-variant-closed' : 'tools',
   };
 }

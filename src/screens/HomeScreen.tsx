@@ -51,7 +51,10 @@ export default function HomeScreen({ navigation }: any) {
     <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} maxWidth={desktop ? 1180 : layout.contentMaxWidth} contentContainerStyle={styles.content}>
       <View style={[styles.greenHeader, desktop && styles.greenHeaderWide]}>
         <View style={styles.headerTop}>
-          <Text style={styles.logo}>GEMN</Text>
+          <View style={styles.headerCopy}>
+            <Text style={styles.logo}>GEMN</Text>
+            <Text style={styles.headerSubtitle}>Nossa comunidade, nossos negócios.</Text>
+          </View>
           <View style={styles.headerActions}>
             <Pressable accessibilityRole="button" accessibilityLabel="Abrir carrinho" onPress={() => navigation.navigate('Cart')} style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}>
               <MaterialCommunityIcons name="cart-outline" size={23} color={colors.white} />
@@ -62,14 +65,7 @@ export default function HomeScreen({ navigation }: any) {
             </Pressable>
           </View>
         </View>
-        <Pressable accessibilityRole="search" accessibilityLabel="Buscar produtos ou serviços" onPress={() => openMarketplace({ search: '' })} style={({ pressed }) => [styles.searchBar, pressed && styles.pressed]}>
-          <MaterialCommunityIcons name="magnify" size={22} color={colors.brandDark} />
-          <Text style={styles.searchPlaceholder}>Buscar produtos ou serviços...</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.walletOverlap}>
-        <WalletCard compact onPress={() => navigation.navigate('Perfil', { screen: 'Wallet' })} />
+        <WalletCard compact variant="home" onPress={() => navigation.navigate('Perfil', { screen: 'Wallet' })} />
       </View>
 
       <View style={styles.sectionHeaderRow}>
@@ -119,17 +115,16 @@ function HomeProductCard({ product, onPress, onSellerPress }: { product: GemnPro
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.md },
-  greenHeader: { minHeight: 168, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.smMd, borderRadius: radius.xl, backgroundColor: colors.brandDark, gap: spacing.md },
+  greenHeader: { minHeight: 0, paddingHorizontal: spacing.md, paddingTop: spacing.smMd, paddingBottom: spacing.smMd, borderRadius: radius.xl, backgroundColor: colors.brandDark, gap: spacing.sm },
   greenHeaderWide: { paddingHorizontal: spacing.lg },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerCopy: { flex: 1, minWidth: 0 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  logo: { ...typography.heading1, color: colors.white, fontSize: 32, lineHeight: 38, letterSpacing: 1.1 },
+  logo: { ...typography.heading1, color: colors.white, fontSize: 30, lineHeight: 34, letterSpacing: 1.1 },
+  headerSubtitle: { ...typography.caption, color: colors.brandLight, marginTop: 2 },
   profileButton: { width: 42, height: 42, borderRadius: radius.full, backgroundColor: colors.brandOverlay, alignItems: 'center', justifyContent: 'center' },
   cartBadge: { position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, paddingHorizontal: 3, borderRadius: radius.full, backgroundColor: colors.gemn, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.brandDark },
   cartBadgeText: { ...typography.caption, color: colors.brandDark, fontSize: 10, lineHeight: 12, fontWeight: '700' },
-  searchBar: { minHeight: 52, paddingHorizontal: spacing.md, borderRadius: radius.full, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  searchPlaceholder: { ...typography.body, color: colors.textSecondary, flex: 1 },
-  walletOverlap: { marginTop: -spacing.md, paddingHorizontal: spacing.xs, zIndex: 2 },
   sectionHeaderRow: { minHeight: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   sectionTitle: { ...typography.heading3, color: colors.text },
   seeAll: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },

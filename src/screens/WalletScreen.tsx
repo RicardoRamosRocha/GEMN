@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, BackHandler, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppButton, AppCard, AppHeader, AppScreen } from '../components/ui';
@@ -33,12 +33,37 @@ export default function WalletScreen({ navigation }: any) {
   useFocusEffect(React.useCallback(() => { void load(); }, [load]));
   const hasWallet = Boolean(wallet);
   const visibleTransactions = cashbackFilterActive ? transactions.filter((transaction) => transaction.tipo.includes('cashback')) : transactions;
+  const returnFromWallet = React.useCallback(() => {
+    const state = navigation?.getState?.();
+    const hasPreviousStackRoute = typeof state?.index === 'number' && state.index > 0;
+    if (hasPreviousStackRoute && navigation?.canGoBack?.()) {
+      navigation.goBack();
+      return;
+    }
+
+    const parent = navigation?.getParent?.();
+    if (parent) {
+      parent.navigate('Perfil', { screen: 'ProfileHome' });
+      return;
+    }
+
+    if (navigation?.canGoBack?.()) navigation.goBack();
+  }, [navigation]);
+
+  useFocusEffect(React.useCallback(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      returnFromWallet();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [returnFromWallet]));
 
   return <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
     <AppHeader
       title="Minha carteira"
       subtitle="Acompanhe seus saldos e movimentações GEMN."
-      onBack={() => navigation?.goBack()}
+      onBack={returnFromWallet}
       action={<Pressable accessibilityRole="button" accessibilityLabel="Atualizar carteira" accessibilityState={{ busy: refreshing, disabled: loading || refreshing }} style={styles.refreshButton} disabled={loading || refreshing} onPress={() => { void load(true); }}><MaterialCommunityIcons name="refresh" size={21} color={loading || refreshing ? colors.textMuted : colors.brand} /></Pressable>}
     />
     {wallet && !error && !loading ? <View style={styles.balanceCard}>

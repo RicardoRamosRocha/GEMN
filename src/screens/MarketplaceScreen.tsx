@@ -117,12 +117,13 @@ export default function MarketplaceScreen({ navigation, route }: any) {
 
   return (
     <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
-      <View style={styles.marketHeader}><Text style={styles.marketTitle}>Marketplace</Text><Pressable accessibilityRole="button" accessibilityLabel="Abrir carrinho" onPress={() => navigation.navigate('Cart')} style={styles.cartButton}><MaterialCommunityIcons name="cart-outline" size={23} color={colors.brand} />{itemCount > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount > 99 ? '99+' : itemCount}</Text></View> : null}</Pressable></View>
-
-      <View style={styles.modeSwitcher} accessibilityRole="tablist">
-        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'products' }} onPress={() => setMode('products')} style={[styles.modeButton, mode === 'products' && styles.modeButtonActive]}><MaterialCommunityIcons name="view-grid-outline" size={19} color={colors.brand} /><Text style={[styles.modeButtonText, mode === 'products' && styles.modeButtonTextActive]}>Produtos e serviços</Text></Pressable>
-        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'stores' }} onPress={() => setMode('stores')} style={[styles.modeButton, mode === 'stores' && styles.modeButtonActive]}><MaterialCommunityIcons name="storefront-outline" size={19} color={colors.brand} /><Text style={[styles.modeButtonText, mode === 'stores' && styles.modeButtonTextActive]}>Lojas</Text></Pressable>
-      </View>
+      <View style={styles.marketHero}>
+        <View style={styles.marketHeader}>
+          <View style={styles.marketHeaderCopy}>
+            <Text style={styles.marketTitle}>Marketplace</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Abrir carrinho" onPress={() => navigation.navigate('Cart')} style={({ pressed }) => [styles.cartButton, pressed && styles.pressed]}><MaterialCommunityIcons name="cart-outline" size={23} color={colors.white} />{itemCount > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount > 99 ? '99+' : itemCount}</Text></View> : null}</Pressable>
+        </View>
 
       <View style={styles.searchRow}>
         <View style={styles.searchField}>
@@ -140,11 +141,22 @@ export default function MarketplaceScreen({ navigation, route }: any) {
           />
           {searchValue ? <Pressable accessibilityRole="button" accessibilityLabel="Limpar busca" hitSlop={6} onPress={clearSearch} style={styles.clearSearchButton}><MaterialCommunityIcons name="close-circle" size={19} color={colors.textSecondary} /></Pressable> : null}
         </View>
-        {mode === 'products' ? <Pressable accessibilityRole="button" accessibilityLabel={hasActiveFilters ? 'Limpar filtros' : 'Filtros'} accessibilityState={{ disabled: !hasActiveFilters }} disabled={!hasActiveFilters} onPress={clearFilters} style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}><MaterialCommunityIcons name={hasActiveFilters ? 'filter-remove-outline' : 'tune-variant'} size={20} color={hasActiveFilters ? colors.white : colors.primary} />{categoryFilterActive ? <View style={styles.filterIndicator} /> : null}</Pressable> : null}
+      </View>
+      </View>
+
+      <View style={styles.modeSwitcherOutside} accessibilityRole="tablist">
+        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'products' }} onPress={() => setMode('products')} style={[styles.modeButtonOutside, mode === 'products' && styles.modeButtonOutsideActive]}><MaterialCommunityIcons name="view-grid-outline" size={16} color={colors.brand} /><Text style={[styles.modeButtonText, mode === 'products' && styles.modeButtonTextActive]}>Produtos</Text></Pressable>
+        <Pressable accessibilityRole="tab" accessibilityState={{ selected: mode === 'stores' }} onPress={() => setMode('stores')} style={[styles.modeButtonOutside, mode === 'stores' && styles.modeButtonOutsideActive]}><MaterialCommunityIcons name="store-outline" size={16} color={colors.brand} /><Text style={[styles.modeButtonText, mode === 'stores' && styles.modeButtonTextActive]}>Lojas</Text></Pressable>
       </View>
 
       {mode === 'products' ? <View style={styles.filterSection}>
-        <Text style={styles.eyebrow}>Explore por categoria</Text>
+        <View style={styles.categoryHeader}>
+          <Text style={styles.eyebrow}>Explore por categoria</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={hasActiveFilters ? 'Limpar filtros' : 'Filtros'} accessibilityState={{ disabled: !hasActiveFilters }} disabled={!hasActiveFilters} onPress={clearFilters} style={[styles.categoryFilterButton, hasActiveFilters && styles.categoryFilterButtonActive]}>
+            <MaterialCommunityIcons name={hasActiveFilters ? 'filter-remove-outline' : 'tune-variant'} size={18} color={hasActiveFilters ? colors.white : colors.brand} />
+            {categoryFilterActive ? <View style={styles.filterIndicator} /> : null}
+          </Pressable>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>
           {marketplaceCategories.map((category, index) => <CategoryChip key={category.label} compact variant="marketplace" icon={category.icon} label={category.label} tone={index} onPress={() => setSelectedCategory(category.label)} selected={selectedCategory === category.label} />)}
         </ScrollView>
@@ -229,25 +241,28 @@ function ResponsiveGrid<T extends GridItem>({ items, columns, itemWidth, gap, re
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.md },
-  marketHeader: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  marketTitle: { ...typography.heading2, color: colors.text },
-  cartButton: { position: 'absolute', right: 0, width: 44, height: 44, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandLight },
+  marketHero: { padding: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.brandDark, gap: spacing.sm },
+  marketHeader: { minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  marketHeaderCopy: { flex: 1, minWidth: 0 },
+  marketTitle: { ...typography.heading2, color: colors.white },
+  cartButton: { width: 38, height: 38, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandOverlay },
   cartBadge: { position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, paddingHorizontal: 3, borderRadius: radius.full, backgroundColor: colors.gemn, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.surface },
   cartBadgeText: { ...typography.caption, color: colors.brandDark, fontSize: 10, lineHeight: 12, fontWeight: '700' },
-  modeSwitcher: { flexDirection: 'row', backgroundColor: colors.brandLight, borderRadius: radius.full, padding: spacing.xs, gap: spacing.xxs, borderWidth: 1, borderColor: colors.brandLight },
-  modeButton: { flex: 1, minHeight: 40, borderRadius: radius.full, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.md },
-  modeButtonActive: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
-  modeButtonText: { ...typography.caption, color: colors.brandDark, textAlign: 'center' },
-  modeButtonTextActive: { color: colors.brandDark, fontWeight: '700' },
+  modeSwitcherOutside: { flexDirection: 'row', backgroundColor: colors.brandLight, borderRadius: radius.md, padding: spacing.xxs, gap: spacing.xs, marginTop: spacing.xs },
+  modeButtonOutside: { flex: 1, minHeight: 38, borderRadius: radius.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm },
+  modeButtonOutsideActive: { backgroundColor: colors.surface, ...shadows.subtle },
+  modeButtonText: { ...typography.caption, color: colors.brand, textAlign: 'center' },
+  modeButtonTextActive: { color: colors.brand, fontWeight: '700' },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   searchField: { flex: 1, position: 'relative' },
   searchInputContainer: { width: '100%' },
   searchInput: { paddingRight: spacing.xl },
   clearSearchButton: { position: 'absolute', top: 6, right: spacing.xs, width: 40, height: 40, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
-  filterButton: { width: 52, height: 52, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandLight, borderWidth: 1, borderColor: colors.border, position: 'relative' },
-  filterButtonActive: { backgroundColor: colors.brandDark, borderColor: colors.brandDark },
   filterIndicator: { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: radius.full, backgroundColor: colors.gemn, borderWidth: 1, borderColor: colors.white },
   filterSection: { gap: spacing.sm, paddingTop: spacing.xs },
+  categoryHeader: { minHeight: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  categoryFilterButton: { width: 34, height: 34, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceMuted },
+  categoryFilterButtonActive: { backgroundColor: colors.brandDark },
   eyebrow: { ...typography.caption, color: colors.brand, fontWeight: '700', letterSpacing: 0.8 },
   categoryList: { gap: spacing.sm, paddingRight: spacing.md },
   resultsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
@@ -277,4 +292,5 @@ const styles = StyleSheet.create({
   emptyTitle: { ...typography.heading3, color: colors.text, textAlign: 'center' },
   emptyBody: { ...typography.bodySmall, color: colors.textSecondary, textAlign: 'center', maxWidth: 420 },
   loadMore: { alignItems: 'center', paddingTop: spacing.xs },
+  pressed: { opacity: 0.78 },
 });

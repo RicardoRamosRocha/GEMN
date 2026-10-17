@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import type { ImagePickerAsset } from 'expo-image-picker';
@@ -35,6 +35,7 @@ export default function CreateProductScreen({ navigation, route }: any) {
   const [confirmationStatus, setConfirmationStatus] = useState<ListingStatus>('ativo');
   const [isPublishing, setIsPublishing] = useState(false);
   const [publicationError, setPublicationError] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<ListingImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<ImagePickerAsset | null>(null);
   const [savedListingId, setSavedListingId] = useState<string | null>(null);
 
@@ -47,6 +48,7 @@ export default function CreateProductScreen({ navigation, route }: any) {
     setPrice(String(editingProduct.price).replace('.', ','));
     setAcceptsGemn(editingProduct.acceptsGemn);
     setGemnValue(editingProduct.gemnValue === undefined ? '' : String(editingProduct.gemnValue).replace('.', ','));
+    setSelectedImages(editingProduct.images?.map((image) => ({ uri: image.url, id: image.id, storagePath: image.storagePath, sortOrder: image.sortOrder, isPrimary: image.isPrimary })) ?? (editingProduct.imageUrl ? [{ uri: editingProduct.imageUrl, isPrimary: true }] : []));
   }, [editingProduct]);
 
   async function handlePublish(status: ListingStatus = editingProduct?.status ?? 'ativo') {
@@ -80,18 +82,11 @@ export default function CreateProductScreen({ navigation, route }: any) {
       ...(acceptsGemn ? { gemnValue: parseAmount(gemnValue) } : {}),
       status,
     };
-    const image: ListingImage | undefined = selectedImage ? {
-      uri: selectedImage.uri,
-      fileName: selectedImage.fileName,
-      fileSize: selectedImage.fileSize,
-      mimeType: selectedImage.mimeType,
-      file: selectedImage.file,
-    } : undefined;
     const result = isEditing && editingProduct
-      ? await updateProduct(editingProduct.id, payload, image)
+      ? await updateProduct(editingProduct.id, payload, selectedImages)
       : savedListingId
-        ? await updateProduct(savedListingId, payload, image)
-        : await addProduct(payload, image);
+        ? await updateProduct(savedListingId, payload, selectedImages)
+        : await addProduct(payload, selectedImages);
     setIsPublishing(false);
     if (result.error) {
       if (!isEditing && result.product) setSavedListingId(result.product.id);
@@ -110,6 +105,32 @@ export default function CreateProductScreen({ navigation, route }: any) {
   function clearError(field: FormField) {
     setErrors((current) => ({ ...current, [field]: undefined }));
   }
+
+  async function chooseImages() {
+    setPublicationError(null);
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, allowsMultipleSelection: true, selectionLimit: Math.max(1, 8 - selectedImages.length), quality: 0.9 });
+    } catch {
+      setPublicationError('Não foi possível abrir a galeria de imagens. Tente novamente.');
+      return;
+    }
+    if (result.canceled) return;
+    const nextImages: ListingImage[] = [];
+    for (const asset of result.assets) {
+      const mimeType = (asset.mimeType ?? asset.file?.type)?.toLowerCase().split(';')[0] ?? '';
+      const extension = asset.fileName?.toLowerCase().split('.').pop();
+      const inferredMimeType = mimeType || (extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg' : extension ? `image/${extension}` : '');
+      if (!ALLOWED_IMAGE_TYPES.has(inferredMimeType)) { setPublicationError('Escolha imagens JPEG, PNG ou WebP.'); return; }
+      if (asset.fileSize !== undefined && asset.fileSize > MAX_IMAGE_SIZE) { setPublicationError('Cada imagem deve ter no máximo 5 MB.'); return; }
+      nextImages.push({ uri: asset.uri, fileName: asset.fileName, fileSize: asset.fileSize, mimeType: inferredMimeType, file: asset.file });
+    }
+    setSelectedImages((current) => [...current, ...nextImages].slice(0, 8).map((image, index) => ({ ...image, sortOrder: index, isPrimary: image.isPrimary ?? index === 0 })));
+  }
+
+  function removeImage(index: number) { setSelectedImages((current) => { const next = current.filter((_, imageIndex) => imageIndex !== index); if (next.length > 0 && !next.some((image) => image.isPrimary)) next[0] = { ...next[0], isPrimary: true }; return next.map((image, imageIndex) => ({ ...image, sortOrder: imageIndex })); }); }
+  function setPrimaryImage(index: number) { setSelectedImages((current) => current.map((image, imageIndex) => ({ ...image, isPrimary: imageIndex === index }))); }
+  function moveImage(index: number, direction: -1 | 1) { setSelectedImages((current) => { const target = index + direction; if (target < 0 || target >= current.length) return current; const next = [...current]; [next[index], next[target]] = [next[target], next[index]]; return next.map((image, imageIndex) => ({ ...image, sortOrder: imageIndex })); }); }
 
   async function chooseImage() {
     setPublicationError(null);
@@ -280,6 +301,14 @@ export default function CreateProductScreen({ navigation, route }: any) {
         )}
 
         <View style={styles.field}>
+          <View style={styles.imageGalleryHeader}><View><Text style={styles.label}>Imagens do anúncio</Text><Text style={styles.helperText}>Até 8 imagens · toque para definir a principal</Text></View><AppButton title="Adicionar" size="compact" variant="outline" onPress={() => { void chooseImages(); }} disabled={selectedImages.length >= 8} /></View>
+          {selectedImages.length === 0 ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="Adicionar imagens" onPress={() => { void chooseImages(); }} style={styles.imagePlaceholder}><MaterialCommunityIcons name="image-multiple-outline" size={34} color={colors.primary} /><Text style={styles.imagePlaceholderText}>Adicionar imagens</Text></TouchableOpacity> : <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageGalleryList}>
+            {selectedImages.map((image, index) => <View key={`${image.id ?? image.uri}-${index}`} style={styles.imageTile}><Image source={{ uri: image.uri }} style={styles.imageTilePreview} /><View style={styles.imageTileOverlay}><TouchableOpacity accessibilityRole="button" accessibilityLabel={image.isPrimary ? 'Imagem principal' : 'Definir como imagem principal'} onPress={() => setPrimaryImage(index)} style={[styles.imageTileAction, image.isPrimary && styles.imageTileActionActive]}><MaterialCommunityIcons name={image.isPrimary ? 'star' : 'star-outline'} size={16} color={image.isPrimary ? colors.gemn : colors.white} /></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel="Remover imagem" onPress={() => removeImage(index)} style={styles.imageTileAction}><MaterialCommunityIcons name="close" size={16} color={colors.white} /></TouchableOpacity></View><View style={styles.imageTileFooter}><TouchableOpacity accessibilityRole="button" accessibilityLabel="Mover imagem para a esquerda" disabled={index === 0} onPress={() => moveImage(index, -1)}><MaterialCommunityIcons name="chevron-left" size={18} color={index === 0 ? colors.textMuted : colors.white} /></TouchableOpacity><Text style={styles.imageTileIndex}>{index + 1}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Mover imagem para a direita" disabled={index === selectedImages.length - 1} onPress={() => moveImage(index, 1)}><MaterialCommunityIcons name="chevron-right" size={18} color={index === selectedImages.length - 1 ? colors.textMuted : colors.white} /></TouchableOpacity></View></View>)}
+          </ScrollView>}
+          <Text style={styles.helperText}>JPEG, PNG ou WebP · até 5 MB por imagem</Text>
+        </View>
+
+        <View style={[styles.field, styles.legacyImageField]}>
           <Text style={styles.label}>Foto principal (opcional)</Text>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={selectedImage || editingProduct?.imageUrl ? 'Trocar foto principal' : 'Escolher foto principal'} onPress={() => { void chooseImage(); }} style={styles.imagePicker}>
             {selectedImage ? <Image source={{ uri: selectedImage.uri }} style={styles.imagePreview} /> : editingProduct?.imageUrl ? <Image source={{ uri: editingProduct.imageUrl }} style={styles.imagePreview} /> : <View style={styles.imagePlaceholder}><MaterialCommunityIcons name="image-plus" size={34} color={colors.primary} /><Text style={styles.imagePlaceholderText}>Adicionar uma foto</Text></View>}
@@ -359,6 +388,16 @@ const styles = StyleSheet.create({
   errorText: { ...typography.caption, color: colors.error, marginTop: spacing.xs },
   helperText: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
   imagePicker: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surfaceMuted },
+  legacyImageField: { display: 'none' },
+  imageGalleryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  imageGalleryList: { gap: spacing.sm, paddingVertical: spacing.xs },
+  imageTile: { width: 112, height: 132, overflow: 'hidden', borderRadius: radius.md, backgroundColor: colors.brandDark },
+  imageTilePreview: { width: '100%', height: 92, resizeMode: 'cover' },
+  imageTileOverlay: { position: 'absolute', top: spacing.xs, right: spacing.xs, flexDirection: 'row', gap: spacing.xs },
+  imageTileAction: { width: 26, height: 26, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15, 81, 57, 0.78)' },
+  imageTileActionActive: { backgroundColor: colors.gemnLight },
+  imageTileFooter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xs },
+  imageTileIndex: { ...typography.caption, color: colors.white },
   imagePreview: { width: '100%', height: 180, resizeMode: 'cover' },
   imagePlaceholder: { height: 180, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   imagePlaceholderText: { ...typography.bodySmall, color: colors.textSecondary },

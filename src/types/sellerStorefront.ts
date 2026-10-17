@@ -17,6 +17,14 @@ export type SellerStorefrontSeller = {
   bannerUrl?: string;
 };
 
+export type SellerStorefrontImage = {
+  id: string;
+  storagePath: string;
+  url: string;
+  sortOrder: number;
+  isPrimary: boolean;
+};
+
 export type SellerStorefrontListing = {
   id: string;
   sellerId: string;
@@ -29,6 +37,7 @@ export type SellerStorefrontListing = {
   acceptsGemn: boolean;
   gemnValue?: number;
   imageUrl?: string;
+  images?: SellerStorefrontImage[];
 };
 
 export type SellerStorefront = {
