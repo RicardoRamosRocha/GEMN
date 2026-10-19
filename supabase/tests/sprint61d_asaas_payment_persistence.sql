@@ -189,11 +189,22 @@ insert into public.orders (
   ('62000000-0000-0000-0000-000000000004'::uuid,
    '61000000-0000-0000-0000-000000000001'::uuid,
    '63000000-0000-0000-0000-000000000004'::uuid,
-   'cancelado', 'real', 25, 0, now(), now(), 0, 25),
+   'pendente', 'real', 25, 0, now(), now(), 0, 25),
   ('62000000-0000-0000-0000-000000000005'::uuid,
    '61000000-0000-0000-0000-000000000002'::uuid,
    '63000000-0000-0000-0000-000000000005'::uuid,
    'pendente', 'real', 25, 0, now(), now(), 0, 25);
+
+-- O pedido usado nos cenários de cancelamento precisa nascer pendente;
+-- a transição é exercida pela RPC pública do comprador, preservando trigger,
+-- RLS e a regra de idempotência do cancelamento.
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '61000000-0000-0000-0000-000000000001', true);
+select * from public.cancel_pending_order(
+  '62000000-0000-0000-0000-000000000004'::uuid,
+  '63000000-0000-0000-0000-000000000004'::uuid
+);
+reset role;
 
 insert into public.payment_intents (
   id, order_id, buyer_id, provider, method, ambiente, status,
@@ -225,18 +236,28 @@ begin
   select payment_intent_id into v_first
   from public.prepare_asaas_payment_intent(
     '62000000-0000-0000-0000-000000000001'::uuid,
-    '66000000-0000-0000-0000-000000000001'::uuid
+    '65000000-0000-0000-0000-000000000001'::uuid
   );
 
   select payment_intent_id into v_second
   from public.prepare_asaas_payment_intent(
     '62000000-0000-0000-0000-000000000001'::uuid,
-    '66000000-0000-0000-0000-000000000001'::uuid
+    '65000000-0000-0000-0000-000000000001'::uuid
   );
 
   if v_first is null or v_first <> v_second then
     raise exception 'idempotent prepare did not reuse the same payment intent';
   end if;
+
+  begin
+    perform * from public.prepare_asaas_payment_intent(
+      '62000000-0000-0000-0000-000000000001'::uuid,
+      '66000000-0000-0000-0000-000000000001'::uuid
+    );
+    raise exception 'different idempotency key was accepted for existing intent';
+  exception when others then
+    if sqlstate <> '23505' then raise; end if;
+  end;
 
   select count(*) into v_visible from public.payment_intents;
   if v_visible <> 3 then

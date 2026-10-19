@@ -5,7 +5,10 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "typecheck:functions": "deno check --config supabase/functions/deno.json supabase/functions/asaas-health-check/index.ts supabase/functions/asaas-create-payment/index.ts supabase/functions/asaas-client/index.ts supabase/functions/asaas-client/index.test.ts supabase/functions/asaas-orchestrator/index.ts supabase/functions/asaas-orchestrator/index.test.ts supabase/functions/asaas-supabase-adapter/index.ts supabase/functions/asaas-supabase-adapter/index.test.ts",
+    "test:functions": "deno test --config supabase/functions/deno.json supabase/functions/asaas-client/index.test.ts supabase/functions/asaas-orchestrator/index.test.ts supabase/functions/asaas-supabase-adapter/index.test.ts"
   },
   "dependencies": {
     "@expo-google-fonts/geist": "^0.4.2",

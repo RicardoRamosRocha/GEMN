@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["deno.window"]
+  },
+  "include": [
+    "./asaas-health-check/index.ts",
+    "./asaas-create-payment/index.ts",
+    "./asaas-client/index.ts",
+    "./asaas-client/index.test.ts",
+    "./asaas-orchestrator/index.ts",
+    "./asaas-orchestrator/index.test.ts",
+    "./asaas-supabase-adapter/index.ts",
+    "./asaas-supabase-adapter/index.test.ts"
+  ]
+}
