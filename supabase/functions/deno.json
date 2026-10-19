@@ -11,6 +11,22 @@
     "./asaas-orchestrator/index.ts",
     "./asaas-orchestrator/index.test.ts",
     "./asaas-supabase-adapter/index.ts",
-    "./asaas-supabase-adapter/index.test.ts"
+    "./asaas-supabase-adapter/index.test.ts",
+    "./billing-identity-crypto/index.ts",
+    "./billing-identity-crypto/index.test.ts",
+    "./asaas-customer-provisioning/index.ts",
+    "./asaas-customer-provisioning/index.test.ts",
+    "./asaas-customer-provisioning-adapter/index.ts",
+    "./asaas-customer-provisioning-adapter/index.test.ts",
+    "./asaas-provision-customer/handler.ts",
+    "./asaas-provision-customer/handler.test.ts",
+    "./asaas-provision-customer/index.ts",
+    "./billing-identity-registration/index.ts",
+    "./billing-identity-registration/index.test.ts",
+    "./billing-identity-registration-adapter/index.ts",
+    "./billing-identity-registration-adapter/index.test.ts",
+    "./asaas-register-billing-identity/handler.ts",
+    "./asaas-register-billing-identity/handler.test.ts",
+    "./asaas-register-billing-identity/index.ts"
   ]
 }
