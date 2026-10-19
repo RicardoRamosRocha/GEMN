@@ -5,6 +5,8 @@ import {
 } from "../asaas-customer-provisioning/index.ts";
 import {
   createSupabaseCustomerProvisioningAdapter,
+  type CustomerProvisioningTablePort,
+  type SupabaseCustomerProvisioningAdminPort,
 } from "../asaas-customer-provisioning-adapter/index.ts";
 import { handleProvisionCustomerRequest } from "./handler.ts";
 
@@ -48,7 +50,59 @@ function createHandler(env: Pick<Deno.Env, "get"> = Deno.env) {
   const adminClient = createClient(url, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const db = createSupabaseCustomerProvisioningAdapter({ adminClient });
+  const adminPort: SupabaseCustomerProvisioningAdminPort = {
+    async rpc(name, args) {
+      return await adminClient.rpc(name, args);
+    },
+    from(table): CustomerProvisioningTablePort {
+      const tableClient = adminClient.from(table);
+      const queryPort = (
+        columns: string,
+        filters: Array<[string, string]> = [],
+      ) => ({
+        eq(column: string, value: string) {
+          return queryPort(columns, [...filters, [column, value]]);
+        },
+        order(column: string, options: { ascending: boolean }) {
+          void column;
+          void options;
+          return queryPort(columns, filters);
+        },
+        limit(count: number) {
+          void count;
+          return queryPort(columns, filters);
+        },
+        async maybeSingle() {
+          if (filters.length === 2) {
+            return await tableClient.select(columns)
+              .eq(filters[0][0], filters[0][1])
+              .eq(filters[1][0], filters[1][1])
+              .maybeSingle();
+          }
+          if (filters.length === 1) {
+            return await tableClient.select(columns)
+              .eq(filters[0][0], filters[0][1])
+              .maybeSingle();
+          }
+          return await tableClient.select(columns).maybeSingle();
+        },
+        async single() {
+          return await tableClient.select(columns).maybeSingle();
+        },
+      });
+      return { select: (columns) => queryPort(columns) };
+    },
+    auth: {
+      admin: {
+        async getUserById(userId) {
+          return await adminClient.auth.admin.getUserById(userId);
+        },
+      },
+    },
+  };
+  const db = createSupabaseCustomerProvisioningAdapter({
+    adminClient: adminPort,
+  });
   const asaas = createAsaasClientFromEnv(env);
   const provisioner = createAsaasCustomerProvisioner({
     db,

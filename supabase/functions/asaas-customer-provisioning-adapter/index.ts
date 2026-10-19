@@ -4,16 +4,20 @@ import type {
   StoredBillingIdentity,
 } from "../asaas-customer-provisioning/index.ts";
 import type {
-  SupabaseAdminPort,
   SupabaseQueryPort,
   SupabaseResult,
 } from "../asaas-supabase-adapter/index.ts";
 
-export interface SupabaseCustomerProvisioningAdminPort
-  extends SupabaseAdminPort {
+export interface CustomerProvisioningTablePort {
+  select(columns: string): SupabaseQueryPort;
+}
+
+export interface SupabaseCustomerProvisioningAdminPort {
+  rpc(name: string, args: Record<string, unknown>): PromiseLike<SupabaseResult>;
+  from(table: string): CustomerProvisioningTablePort;
   auth: {
     admin: {
-      getUserById(userId: string): Promise<{
+      getUserById(userId: string): PromiseLike<{
         data: { user: { email?: string | null } | null };
         error: unknown;
       }>;
@@ -73,7 +77,12 @@ function integer(value: unknown, field: string, context: string): number {
 }
 
 async function rpc(
-  client: SupabaseAdminPort,
+  client: {
+    rpc(
+      name: string,
+      args: Record<string, unknown>,
+    ): PromiseLike<SupabaseResult>;
+  },
   name: string,
   args: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {

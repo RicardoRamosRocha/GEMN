@@ -4,13 +4,19 @@ import type {
 } from "../billing-identity-registration/index.ts";
 import type { BillingDocumentType } from "../billing-identity-crypto/index.ts";
 import type {
-  SupabaseAdminPort,
   SupabaseQueryPort,
   SupabaseResult,
 } from "../asaas-supabase-adapter/index.ts";
 
-export interface BillingIdentityRegistrationAdminPort
-  extends SupabaseAdminPort {}
+export interface BillingIdentityRegistrationTablePort {
+  select(columns: string): SupabaseQueryPort;
+  insert(values: Record<string, unknown>): PromiseLike<SupabaseResult>;
+}
+
+export interface BillingIdentityRegistrationAdminPort {
+  rpc(name: string, args: Record<string, unknown>): PromiseLike<SupabaseResult>;
+  from(table: string): BillingIdentityRegistrationTablePort;
+}
 
 export class BillingIdentityRegistrationAdapterError extends Error {
   constructor(message: string) {
@@ -18,11 +24,6 @@ export class BillingIdentityRegistrationAdapterError extends Error {
     this.name = "BillingIdentityRegistrationAdapterError";
   }
 }
-
-type OrderedQuery = SupabaseQueryPort & {
-  order(column: string, options: { ascending: boolean }): OrderedQuery;
-  limit(count: number): OrderedQuery;
-};
 
 function object(value: unknown, context: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -143,7 +144,7 @@ export function createBillingIdentityRegistrationAdapter(options: {
       const query = admin
         .from("billing_identities")
         .select("identity_version")
-        .eq("user_id", userId) as OrderedQuery;
+        .eq("user_id", userId);
       const result = await query.order("identity_version", { ascending: false })
         .limit(1).maybeSingle();
       if (result.error) queryError(result, "billing identity version");
@@ -156,24 +157,31 @@ export function createBillingIdentityRegistrationAdapter(options: {
     },
 
     async insertBillingIdentity(input) {
-      const result = await admin
+      const result = await admin.from("billing_identities").insert({
+        user_id: input.userId,
+        identity_version: input.identityVersion,
+        document_type: input.documentType,
+        document_ciphertext: input.documentCiphertext,
+        document_fingerprint: input.documentFingerprint,
+        document_last4: input.documentLast4,
+        key_version: input.keyVersion,
+        status: "active",
+      });
+      if (result.error) queryError(result, "billing identity insert");
+      const persisted = await admin
         .from("billing_identities")
-        .insert({
-          user_id: input.userId,
-          identity_version: input.identityVersion,
-          document_type: input.documentType,
-          document_ciphertext: input.documentCiphertext,
-          document_fingerprint: input.documentFingerprint,
-          document_last4: input.documentLast4,
-          key_version: input.keyVersion,
-          status: "active",
-        })
         .select(
           "id, user_id, identity_version, document_type, document_fingerprint, document_last4, key_version, status",
         )
-        .single();
-      if (result.error) queryError(result, "billing identity insert");
-      return identity(result.data, "billing identity insert");
+        .eq("user_id", input.userId)
+        .eq("status", "active")
+        .maybeSingle();
+      if (persisted.error || persisted.data === null) {
+        throw new BillingIdentityRegistrationAdapterError(
+          "billing identity insert could not be verified",
+        );
+      }
+      return identity(persisted.data, "billing identity insert");
     },
   };
 }

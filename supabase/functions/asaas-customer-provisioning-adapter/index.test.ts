@@ -1,9 +1,11 @@
 import {
   createSupabaseCustomerProvisioningAdapter,
   type CustomerProvisioningQueryPort,
+  type CustomerProvisioningTablePort,
   SupabaseCustomerProvisioningAdapterError,
   type SupabaseCustomerProvisioningAdminPort,
 } from "./index.ts";
+import type { SupabaseInsertPort } from "../asaas-supabase-adapter/index.ts";
 
 function assert(
   condition: unknown,
@@ -24,21 +26,17 @@ function result(data: unknown, error: unknown = null) {
   return { data, error };
 }
 
-function queryMock(
+function tableMock(
   response: { data: unknown; error: unknown },
   calls: unknown[],
-): CustomerProvisioningQueryPort {
-  const query: CustomerProvisioningQueryPort = {
+): CustomerProvisioningTablePort {
+  const query: CustomerProvisioningQueryPort & SupabaseInsertPort = {
     select(columns) {
       calls.push(["select", columns]);
       return query;
     },
     eq(column, value) {
       calls.push(["eq", column, value]);
-      return query;
-    },
-    insert(values) {
-      calls.push(["insert", values]);
       return query;
     },
     async maybeSingle() {
@@ -49,8 +47,21 @@ function queryMock(
       calls.push(["single"]);
       return response;
     },
+    order(column, options) {
+      calls.push(["order", column, options]);
+      return query;
+    },
+    limit(count) {
+      calls.push(["limit", count]);
+      return query;
+    },
   };
-  return query;
+  return {
+    select(columns) {
+      calls.push(["select", columns]);
+      return query;
+    },
+  };
 }
 
 function adminMock(
@@ -67,7 +78,7 @@ function adminMock(
     },
     from(table) {
       calls.push(["from", table]);
-      return queryMock(
+      return tableMock(
         table === "profiles" ? profileResponse : tableResponse,
         calls,
       );

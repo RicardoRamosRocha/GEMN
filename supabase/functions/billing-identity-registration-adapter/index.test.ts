@@ -1,6 +1,7 @@
 import {
   BillingIdentityRegistrationAdapterError,
   type BillingIdentityRegistrationAdminPort,
+  type BillingIdentityRegistrationTablePort,
   createBillingIdentityRegistrationAdapter,
 } from "./index.ts";
 import type { SupabaseQueryPort } from "../asaas-supabase-adapter/index.ts";
@@ -24,17 +25,9 @@ function adminMock(options: {
     async rpc() {
       return result([]);
     },
-    from(table): SupabaseQueryPort {
+    from(table): BillingIdentityRegistrationTablePort {
       let mode = table === "billing_identities" ? "active" : "unknown";
-      const query = {
-        select(columns: string) {
-          options.calls.push(["select", columns]);
-          if (columns === "identity_version") mode = "latest";
-          if (columns.startsWith("id,")) {
-            mode = table === "orders" ? "order" : "active";
-          }
-          return query;
-        },
+      const query: SupabaseQueryPort = {
         eq(column: string, value: string) {
           options.calls.push(["eq", column, value]);
           return query;
@@ -45,11 +38,6 @@ function adminMock(options: {
         },
         limit(count: number) {
           options.calls.push(["limit", count]);
-          return query;
-        },
-        insert(values: Record<string, unknown>) {
-          options.calls.push(["insert", values]);
-          mode = "insert";
           return query;
         },
         async maybeSingle() {
@@ -66,13 +54,26 @@ function adminMock(options: {
             : result(options.active);
         },
         async single() {
-          options.calls.push(["single"]);
+          return result(options.active);
+        },
+      };
+      return {
+        select(columns: string) {
+          options.calls.push(["select", columns]);
+          if (columns === "identity_version") mode = "latest";
+          if (columns.startsWith("id,")) {
+            mode = table === "orders" ? "order" : "active";
+          }
+          return query;
+        },
+        async insert(values: Record<string, unknown>) {
+          options.calls.push(["insert", values]);
+          mode = "insert";
           return options.insertError
             ? result(null, options.insertError)
             : result(options.inserted);
         },
-      } as unknown as SupabaseQueryPort;
-      return query;
+      };
     },
   };
 }
@@ -114,7 +115,7 @@ Deno.test("writes only the protected identity fields and maps database failure",
   const calls: unknown[] = [];
   const adapter = createBillingIdentityRegistrationAdapter({
     adminClient: adminMock({
-      active: null,
+      active,
       latest: null,
       inserted: active,
       calls,

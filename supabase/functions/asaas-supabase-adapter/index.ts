@@ -15,26 +15,36 @@ export interface SupabaseResult {
 }
 
 export interface SupabaseQueryPort {
-  select(columns: string): SupabaseQueryPort;
   eq(column: string, value: string): SupabaseQueryPort;
-  maybeSingle(): Promise<SupabaseResult>;
-  single(): Promise<SupabaseResult>;
-  insert(values: Record<string, unknown>): SupabaseQueryPort;
+  maybeSingle(): PromiseLike<SupabaseResult>;
+  single(): PromiseLike<SupabaseResult>;
+  order(column: string, options: { ascending: boolean }): SupabaseQueryPort;
+  limit(count: number): SupabaseQueryPort;
+}
+
+export interface SupabaseInsertPort {
+  select(columns: string): SupabaseQueryPort;
+  single(): PromiseLike<SupabaseResult>;
+}
+
+export interface SupabaseTablePort {
+  select(columns: string): SupabaseQueryPort;
+  insert(values: Record<string, unknown>): SupabaseInsertPort;
 }
 
 export interface SupabaseBuyerPort {
   auth: {
-    getUser(jwt: string): Promise<{
+    getUser(jwt: string): PromiseLike<{
       data: { user: { id: string } | null };
       error: unknown;
     }>;
   };
-  rpc(name: string, args: Record<string, unknown>): Promise<SupabaseResult>;
+  rpc(name: string, args: Record<string, unknown>): PromiseLike<SupabaseResult>;
 }
 
 export interface SupabaseAdminPort {
-  rpc(name: string, args: Record<string, unknown>): Promise<SupabaseResult>;
-  from(table: string): SupabaseQueryPort;
+  rpc(name: string, args: Record<string, unknown>): PromiseLike<SupabaseResult>;
+  from(table: string): SupabaseTablePort;
 }
 
 export interface SupabasePixAdapterOptions {
@@ -73,7 +83,7 @@ function rpcError(error: unknown, context: string): never {
 }
 
 async function callRpc(
-  client: { rpc(name: string, args: Record<string, unknown>): Promise<SupabaseResult> },
+  client: { rpc(name: string, args: Record<string, unknown>): PromiseLike<SupabaseResult> },
   name: string,
   args: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {

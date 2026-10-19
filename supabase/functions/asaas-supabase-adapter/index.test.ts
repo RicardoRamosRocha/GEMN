@@ -3,7 +3,9 @@ import {
   SupabaseAdapterError,
   type SupabaseAdminPort,
   type SupabaseBuyerPort,
+  type SupabaseInsertPort,
   type SupabaseQueryPort,
+  type SupabaseTablePort,
 } from './index.ts';
 
 function assert(condition: unknown, message = 'assertion failed'): asserts condition {
@@ -65,15 +67,19 @@ function makeRpcClient(
 function tableMock(
   calls: Array<{ operation: string; value?: unknown }>,
   response: { data: unknown; error: unknown },
-): SupabaseQueryPort {
-  const query: SupabaseQueryPort = {
+): SupabaseTablePort {
+  const query: SupabaseQueryPort & SupabaseInsertPort = {
     select(columns) { calls.push({ operation: 'select', value: columns }); return query; },
     eq(column, value) { calls.push({ operation: 'eq', value: { column, value } }); return query; },
-    insert(values) { calls.push({ operation: 'insert', value: values }); return query; },
     async maybeSingle() { calls.push({ operation: 'maybeSingle' }); return response; },
     async single() { calls.push({ operation: 'single' }); return response; },
+    order(column, options) { calls.push({ operation: 'order', value: { column, options } }); return query; },
+    limit(count) { calls.push({ operation: 'limit', value: count }); return query; },
   };
-  return query;
+  return {
+    select(columns) { calls.push({ operation: 'select', value: columns }); return query; },
+    insert(values) { calls.push({ operation: 'insert', value: values }); return query; },
+  };
 }
 
 const preparedRow = [{

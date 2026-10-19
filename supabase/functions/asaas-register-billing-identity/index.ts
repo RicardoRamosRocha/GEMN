@@ -1,5 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { createBillingIdentityRegistrationAdapter } from "../billing-identity-registration-adapter/index.ts";
+import {
+  type BillingIdentityRegistrationAdminPort,
+  createBillingIdentityRegistrationAdapter,
+} from "../billing-identity-registration-adapter/index.ts";
 import { createBillingIdentityRegistrar } from "../billing-identity-registration/index.ts";
 import { handleRegisterBillingIdentityRequest } from "./handler.ts";
 
@@ -40,7 +43,73 @@ function createHandler() {
       auth: { persistSession: false, autoRefreshToken: false },
       global: { headers: { Authorization: `Bearer ${accessToken}` } },
     });
-  const db = createBillingIdentityRegistrationAdapter({ adminClient });
+  const adminPort: BillingIdentityRegistrationAdminPort = {
+    async rpc(name, args) {
+      return await adminClient.rpc(name, args);
+    },
+    from(table) {
+      const tableClient = adminClient.from(table);
+      const queryPort = (
+        columns: string,
+        filters: Array<[string, string]> = [],
+        ordering: { column: string; ascending: boolean } | null = null,
+        limit: number | null = null,
+      ) => ({
+        eq(column: string, value: string) {
+          return queryPort(
+            columns,
+            [...filters, [column, value]],
+            ordering,
+            limit,
+          );
+        },
+        order(column: string, options: { ascending: boolean }) {
+          return queryPort(columns, filters, {
+            column,
+            ascending: options.ascending,
+          }, limit);
+        },
+        limit(count: number) {
+          return queryPort(columns, filters, ordering, count);
+        },
+        async maybeSingle() {
+          if (filters.length === 2 && ordering === null && limit === null) {
+            return await tableClient.select(columns)
+              .eq(filters[0][0], filters[0][1])
+              .eq(filters[1][0], filters[1][1])
+              .maybeSingle();
+          }
+          if (filters.length === 1 && ordering === null && limit === null) {
+            return await tableClient.select(columns)
+              .eq(filters[0][0], filters[0][1])
+              .maybeSingle();
+          }
+          if (ordering !== null && limit !== null) {
+            return await tableClient.select(columns)
+              .eq(filters[0][0], filters[0][1])
+              .order(ordering.column, { ascending: ordering.ascending })
+              .limit(limit)
+              .maybeSingle();
+          }
+          return await tableClient.select(columns).maybeSingle();
+        },
+        async single() {
+          return await tableClient.select(columns).maybeSingle();
+        },
+      });
+      return {
+        select(columns) {
+          return queryPort(columns);
+        },
+        async insert(values) {
+          return await tableClient.insert(values);
+        },
+      };
+    },
+  };
+  const db = createBillingIdentityRegistrationAdapter({
+    adminClient: adminPort,
+  });
   const registrar = createBillingIdentityRegistrar({ db, cryptoEnv: env });
   return (request: Request) =>
     handleRegisterBillingIdentityRequest(request, {
