@@ -4,7 +4,10 @@ import {
   createBillingIdentityRegistrationAdapter,
 } from "../billing-identity-registration-adapter/index.ts";
 import { createBillingIdentityRegistrar } from "../billing-identity-registration/index.ts";
-import { handleRegisterBillingIdentityRequest } from "./handler.ts";
+import {
+  corsHeaders,
+  handleRegisterBillingIdentityRequest,
+} from "./handler.ts";
 
 const REQUIRED_ENV = [
   "SUPABASE_URL",
@@ -134,7 +137,10 @@ Deno.serve(async (request) => {
       JSON.stringify({ ok: false, error: "CONFIGURATION_INVALID" }),
       {
         status: 500,
-        headers: { "content-type": "application/json; charset=utf-8" },
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          ...Object.fromEntries(corsHeaders(request).entries()),
+        },
       },
     );
   }

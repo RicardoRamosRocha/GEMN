@@ -3,6 +3,7 @@ import {
   handleRegisterBillingIdentityRequest,
 } from "./handler.ts";
 import { BillingIdentityRegistrationError } from "../billing-identity-registration/index.ts";
+import { BillingIdentityCryptoError } from "../billing-identity-crypto/index.ts";
 
 function assertEquals<T>(actual: T, expected: T): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -43,6 +44,32 @@ function deps(overrides: Partial<BillingIdentityHandlerDependencies> = {}) {
 async function body(response: Response): Promise<Record<string, unknown>> {
   return await response.json() as Record<string, unknown>;
 }
+
+function assertCors(response: Response, origin = "http://localhost:8081") {
+  assertEquals(response.headers.get("access-control-allow-origin"), origin);
+  assertEquals(
+    response.headers.get("access-control-allow-methods"),
+    "POST, OPTIONS",
+  );
+  assertEquals(
+    response.headers.get("access-control-allow-headers"),
+    "authorization, apikey, x-client-info, content-type",
+  );
+}
+
+Deno.test("answers the authorized preflight with CORS headers", async () => {
+  const { value, calls } = deps();
+  const response = await handleRegisterBillingIdentityRequest(
+    new Request("http://edge.test/", {
+      method: "OPTIONS",
+      headers: { origin: "http://localhost:8081" },
+    }),
+    value,
+  );
+  assertEquals(response.status, 204);
+  assertCors(response);
+  assertEquals(calls, []);
+});
 
 Deno.test("requires verified authentication", async () => {
   const { value, calls } = deps({ authenticate: async () => null });
@@ -89,6 +116,7 @@ Deno.test("passes only the verified user and document to the backend service", a
     new Request("http://edge.test/", {
       method: "POST",
       headers: {
+        origin: "http://localhost:8081",
         authorization: "Bearer token",
         "content-type": "application/json",
       },
@@ -97,6 +125,7 @@ Deno.test("passes only the verified user and document to the backend service", a
     value,
   );
   assertEquals(response.status, 200);
+  assertCors(response);
   assertEquals(await body(response), {
     ok: true,
     outcome: "created",
@@ -124,6 +153,7 @@ Deno.test("maps idempotent reuse and conflict without document details", async (
       new Request("http://edge.test/", {
         method: "POST",
         headers: {
+          origin: "http://localhost:8081",
           authorization: "Bearer token",
           "content-type": "application/json",
         },
@@ -132,6 +162,82 @@ Deno.test("maps idempotent reuse and conflict without document details", async (
       value,
     );
     assertEquals(response.status, status);
+    assertCors(response);
     assertEquals(await body(response), { ok: false, error: code });
   }
+});
+
+Deno.test("maps invalid documents to a sanitized 400 response", async () => {
+  const { value } = deps({
+    async register() {
+      throw new BillingIdentityCryptoError(
+        "INVALID_DOCUMENT",
+        "document details must not escape",
+      );
+    },
+  });
+  const response = await handleRegisterBillingIdentityRequest(
+    new Request("http://edge.test/", {
+      method: "POST",
+      headers: {
+        origin: "http://localhost:8081",
+        authorization: "Bearer token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ orderId: "order-1", document: "invalid" }),
+    }),
+    value,
+  );
+  assertEquals(response.status, 400);
+  assertCors(response);
+  assertEquals(await body(response), { ok: false, error: "INVALID_DOCUMENT" });
+});
+
+Deno.test("maps cryptographic configuration failures to a sanitized 500 response", async () => {
+  const { value } = deps({
+    async register() {
+      throw new BillingIdentityCryptoError(
+        "INVALID_KEY",
+        "key details must not escape",
+      );
+    },
+  });
+  const response = await handleRegisterBillingIdentityRequest(
+    new Request("http://edge.test/", {
+      method: "POST",
+      headers: {
+        origin: "http://localhost:8081",
+        authorization: "Bearer token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ orderId: "order-1", document: "valid-test-document" }),
+    }),
+    value,
+  );
+  assertEquals(response.status, 500);
+  assertCors(response);
+  assertEquals(await body(response), { ok: false, error: "INTERNAL_ERROR" });
+});
+
+Deno.test("keeps CORS headers on unexpected failures", async () => {
+  const { value } = deps({
+    async register() {
+      throw new Error("internal details must not escape");
+    },
+  });
+  const response = await handleRegisterBillingIdentityRequest(
+    new Request("http://edge.test/", {
+      method: "POST",
+      headers: {
+        origin: "http://localhost:8081",
+        authorization: "Bearer token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ orderId: "order-1", document: "valid-test-document" }),
+    }),
+    value,
+  );
+  assertEquals(response.status, 500);
+  assertCors(response);
+  assertEquals(await body(response), { ok: false, error: "INTERNAL_ERROR" });
 });

@@ -46,6 +46,9 @@ export interface CustomerProvisioningDatabase {
   markCustomerProvisioningNeedsReview(
     input: { provisioningId: string; claimToken: string },
   ): Promise<void>;
+  releaseCustomerProvisioningClaim(
+    input: { provisioningId: string; claimToken: string },
+  ): Promise<void>;
 }
 
 export interface ProvisionedAsaasCustomer {
@@ -78,6 +81,32 @@ export class AsaasCustomerProvisioningError extends Error {
     this.code = code;
     this.retryable = retryable;
   }
+}
+
+type ProvisioningStage =
+  | "profile"
+  | "decryption"
+  | "asaas_lookup"
+  | "asaas_create"
+  | "finalization";
+
+const PROVISIONING_STAGE_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(operation: Promise<T>): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error("provisioning operation timed out")),
+      PROVISIONING_STAGE_TIMEOUT_MS,
+    );
+  });
+  return Promise.race([operation, timeout]).finally(() => {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  });
+}
+
+function diagnostic(stage: ProvisioningStage, code: string): void {
+  console.error("asaas provisioning diagnostic", { stage, code });
 }
 
 function mapAsaasFailure(error: unknown): AsaasCustomerProvisioningError {
@@ -118,23 +147,39 @@ async function markNeedsReview(
   db: CustomerProvisioningDatabase,
   claim: CustomerProvisioningClaim,
   error: AsaasCustomerProvisioningError,
+  stage: ProvisioningStage,
 ): Promise<never> {
+  diagnostic(stage, error.code);
   if (claim.claimToken) {
     try {
-      await db.markCustomerProvisioningNeedsReview({
+      await withTimeout(db.markCustomerProvisioningNeedsReview({
         provisioningId: claim.provisioningId,
         claimToken: claim.claimToken,
-      });
+      }));
     } catch {
       // The external outcome remains unknown. Never retry a provider POST.
     }
   }
-  throw error.code === "ASAAS_REJECTED"
-    ? error
-    : new AsaasCustomerProvisioningError(
-      "PROVISIONING_NEEDS_REVIEW",
-      error.message,
-    );
+  throw new AsaasCustomerProvisioningError(
+    "PROVISIONING_NEEDS_REVIEW",
+    error.message,
+  );
+}
+
+async function releaseClaimBeforeExternalCreate(
+  db: CustomerProvisioningDatabase,
+  claim: CustomerProvisioningClaim,
+  stage: ProvisioningStage,
+): Promise<void> {
+  if (!claim.claimToken) return;
+  try {
+    await withTimeout(db.releaseCustomerProvisioningClaim({
+      provisioningId: claim.provisioningId,
+      claimToken: claim.claimToken,
+    }));
+  } catch {
+    diagnostic(stage, "CLAIM_RELEASE_FAILED");
+  }
 }
 
 export function createAsaasCustomerProvisioner(options: {
@@ -144,7 +189,9 @@ export function createAsaasCustomerProvisioner(options: {
 }) {
   return {
     async provision(userId: string): Promise<ProvisionedAsaasCustomer> {
-      const identity = await options.db.getActiveBillingIdentity(userId);
+      const identity = await withTimeout(
+        options.db.getActiveBillingIdentity(userId),
+      );
       if (
         !identity || identity.userId !== userId || identity.status !== "active"
       ) {
@@ -154,10 +201,10 @@ export function createAsaasCustomerProvisioner(options: {
         );
       }
 
-      const claim = await options.db.claimCustomerProvisioning({
+      const claim = await withTimeout(options.db.claimCustomerProvisioning({
         billingIdentityId: identity.id,
         ambiente: "sandbox",
-      });
+      }));
 
       if (!claim.claimGranted) {
         if (
@@ -188,62 +235,84 @@ export function createAsaasCustomerProvisioner(options: {
       const claimToken = requiredClaimToken(claim);
       let profile: { name: string; email?: string };
       try {
-        profile = await options.db.getBuyerProfile(userId);
+        profile = await withTimeout(options.db.getBuyerProfile(userId));
       } catch {
-        return markNeedsReview(
-          options.db,
-          claim,
-          new AsaasCustomerProvisioningError(
-            "INTERNAL_ERROR",
-            "O perfil do comprador não está disponível.",
-          ),
+        const error = new AsaasCustomerProvisioningError(
+          "INTERNAL_ERROR",
+          "O perfil do comprador não está disponível.",
         );
+        diagnostic("profile", error.code);
+        await releaseClaimBeforeExternalCreate(options.db, claim, "profile");
+        throw error;
       }
       let document: string;
       try {
-        document = (await decryptBillingDocument(
+        document = (await withTimeout(decryptBillingDocument(
           userId,
           identity.documentCiphertext,
           options.cryptoEnv,
           identity.documentType,
-        )).normalized;
+        ))).normalized;
       } catch {
-        return markNeedsReview(
-          options.db,
-          claim,
-          new AsaasCustomerProvisioningError(
-            "INTERNAL_ERROR",
-            "Não foi possível abrir a identidade de cobrança.",
-          ),
+        const error = new AsaasCustomerProvisioningError(
+          "INTERNAL_ERROR",
+          "Não foi possível abrir a identidade de cobrança.",
         );
+        diagnostic("decryption", error.code);
+        await releaseClaimBeforeExternalCreate(options.db, claim, "decryption");
+        throw error;
       }
 
       let providerCustomerId: string;
+      let existing: Awaited<ReturnType<AsaasClient["findCustomer"]>>;
       try {
-        const existing = await options.asaas.findCustomer({
+        existing = await withTimeout(options.asaas.findCustomer({
           cpfCnpj: document,
-        });
-        if (existing) {
-          providerCustomerId = existing.id;
-        } else {
-          const created = await options.asaas.createCustomer({
+        }));
+      } catch (error) {
+        const mapped = mapAsaasFailure(error);
+        diagnostic("asaas_lookup", mapped.code);
+        await releaseClaimBeforeExternalCreate(options.db, claim, "asaas_lookup");
+        throw mapped;
+      }
+
+      if (existing) {
+        providerCustomerId = existing.id;
+      } else {
+        try {
+          const created = await withTimeout(options.asaas.createCustomer({
             name: profile.name,
             cpfCnpj: document,
             email: profile.email,
             externalReference: `gemn-billing-identity-${identity.id}`,
-          });
+          }));
           providerCustomerId = created.id;
+        } catch (error) {
+          const mapped = mapAsaasFailure(error);
+          if (mapped.code === "ASAAS_REJECTED") {
+            diagnostic("asaas_create", mapped.code);
+            throw mapped;
+          }
+          return markNeedsReview(options.db, claim, mapped, "asaas_create");
         }
-      } catch (error) {
-        return markNeedsReview(options.db, claim, mapAsaasFailure(error));
+      }
+
+      if (!providerCustomerId) {
+        const error = new AsaasCustomerProvisioningError(
+          "INTERNAL_ERROR",
+          "O Asaas não retornou um identificador de customer.",
+        );
+        diagnostic("asaas_create", error.code);
+        await releaseClaimBeforeExternalCreate(options.db, claim, "asaas_create");
+        throw error;
       }
 
       try {
-        const finalized = await options.db.finalizeCustomerProvisioning({
+        const finalized = await withTimeout(options.db.finalizeCustomerProvisioning({
           provisioningId: claim.provisioningId,
           claimToken,
           providerCustomerId,
-        });
+        }));
         return {
           outcome: "created",
           billingIdentityId: identity.id,
@@ -260,6 +329,7 @@ export function createAsaasCustomerProvisioner(options: {
             "INTERNAL_ERROR",
             "O vínculo do customer precisa ser reconciliado.",
           ),
+          "finalization",
         );
       }
     },

@@ -18,7 +18,8 @@ begin
      or to_regprocedure('public.associate_asaas_customer_payment_intent(uuid,uuid)') is null
      or to_regprocedure('public.claim_asaas_customer_provisioning(uuid,text,integer)') is null
      or to_regprocedure('public.finalize_asaas_customer_provisioning(uuid,uuid,text)') is null
-     or to_regprocedure('public.mark_asaas_customer_provisioning_needs_review(uuid,uuid)') is null then
+     or to_regprocedure('public.mark_asaas_customer_provisioning_needs_review(uuid,uuid)') is null
+     or to_regprocedure('public.release_asaas_customer_provisioning_claim(uuid,uuid)') is null then
     raise exception 'E6-B backend functions are missing';
   end if;
 end;
@@ -90,7 +91,8 @@ begin
     'public.associate_asaas_customer_payment_intent(uuid,uuid)',
     'public.claim_asaas_customer_provisioning(uuid,text,integer)',
     'public.finalize_asaas_customer_provisioning(uuid,uuid,text)',
-    'public.mark_asaas_customer_provisioning_needs_review(uuid,uuid)'
+    'public.mark_asaas_customer_provisioning_needs_review(uuid,uuid)',
+    'public.release_asaas_customer_provisioning_claim(uuid,uuid)'
   ] loop
     if has_function_privilege('anon', v_function, 'EXECUTE')
        or has_function_privilege('authenticated', v_function, 'EXECUTE') then
@@ -134,7 +136,8 @@ begin
     'public.associate_asaas_customer_payment_intent(uuid,uuid)',
     'public.claim_asaas_customer_provisioning(uuid,text,integer)',
     'public.finalize_asaas_customer_provisioning(uuid,uuid,text)',
-    'public.mark_asaas_customer_provisioning_needs_review(uuid,uuid)'
+    'public.mark_asaas_customer_provisioning_needs_review(uuid,uuid)',
+    'public.release_asaas_customer_provisioning_claim(uuid,uuid)'
   ] loop
     select r.rolname into v_owner
     from pg_proc p join pg_roles r on r.oid = p.proowner
@@ -325,6 +328,7 @@ $$;
 do $$
 declare
   v_claim record;
+  v_released record;
   v_second record;
   v_third record;
 begin
@@ -334,6 +338,22 @@ begin
   );
   if not v_claim.claim_granted or v_claim.status <> 'creating' then
     raise exception 'initial customer provisioning claim was not granted';
+  end if;
+
+  select * into v_released
+  from public.release_asaas_customer_provisioning_claim(
+    v_claim.provisioning_id, v_claim.claim_token
+  );
+  if not v_released.changed or v_released.status <> 'pending' then
+    raise exception 'pre-external provisioning claim was not released';
+  end if;
+
+  select * into v_claim
+  from public.claim_asaas_customer_provisioning(
+    'e6100000-0000-0000-0000-000000000003'::uuid, 'sandbox', 120
+  );
+  if not v_claim.claim_granted or v_claim.status <> 'creating' then
+    raise exception 'released provisioning claim was not retryable';
   end if;
 
   select * into v_second

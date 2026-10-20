@@ -12,18 +12,28 @@ export interface ProvisionCustomerHandlerDependencies {
   provision(userId: string): Promise<ProvisionedAsaasCustomer>;
 }
 
-function json(body: unknown, status: number, request?: Request): Response {
+const DEV_ALLOWED_ORIGINS = new Set([
+  "http://localhost:8081",
+  "http://localhost:19006",
+]);
+
+export function corsHeaders(request?: Request): Headers {
   const headers = new Headers({
-    "content-type": "application/json; charset=utf-8",
+    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-headers":
+      "authorization, apikey, x-client-info, content-type",
   });
   const origin = request?.headers.get("origin");
-  if (
-    origin &&
-    (origin === "http://localhost:8081" || origin === "http://localhost:19006")
-  ) {
+  if (origin && DEV_ALLOWED_ORIGINS.has(origin)) {
     headers.set("access-control-allow-origin", origin);
     headers.set("vary", "Origin");
   }
+  return headers;
+}
+
+function json(body: unknown, status: number, request?: Request): Response {
+  const headers = corsHeaders(request);
+  headers.set("content-type", "application/json; charset=utf-8");
   return new Response(JSON.stringify(body), { status, headers });
 }
 
@@ -89,7 +99,7 @@ export async function handleProvisionCustomerRequest(
   dependencies: ProvisionCustomerHandlerDependencies,
 ): Promise<Response> {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204 });
+    return new Response(null, { status: 204, headers: corsHeaders(request) });
   }
   if (request.method !== "POST") {
     return json({ ok: false, error: "METHOD_NOT_ALLOWED" }, 405, request);

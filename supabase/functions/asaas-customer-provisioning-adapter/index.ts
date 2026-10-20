@@ -18,7 +18,12 @@ export interface SupabaseCustomerProvisioningAdminPort {
   auth: {
     admin: {
       getUserById(userId: string): PromiseLike<{
-        data: { user: { email?: string | null } | null };
+      data: {
+        user: {
+          email?: string | null;
+          user_metadata?: Record<string, unknown>;
+        } | null;
+      };
         error: unknown;
       }>;
     };
@@ -57,6 +62,12 @@ function text(value: unknown, field: string, context: string): string {
     );
   }
   return value.trim();
+}
+
+function optionalText(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized || undefined;
 }
 
 function nullableText(
@@ -104,27 +115,23 @@ export function createSupabaseCustomerProvisioningAdapter(options: {
         .select("id, nome_completo")
         .eq("id", userId)
         .maybeSingle();
-      if (profileResult.error || profileResult.data === null) {
+      if (profileResult.error) {
         throw new SupabaseCustomerProvisioningAdapterError(
           "buyer profile lookup failed",
         );
       }
-      const profile = object(profileResult.data, "buyer profile");
-      const name = text(
-        profile.nome_completo,
-        "nome_completo",
-        "buyer profile",
-      );
+      const profile = profileResult.data === null
+        ? {}
+        : object(profileResult.data, "buyer profile");
+      const profileName = optionalText(profile.nome_completo);
       const authResult = await admin.auth.admin.getUserById(userId);
-      if (authResult.error || !authResult.data.user) {
-        throw new SupabaseCustomerProvisioningAdapterError(
-          "buyer auth profile lookup failed",
-        );
-      }
+      const authUser = authResult.error ? null : authResult.data.user;
+      const authName = optionalText(authUser?.user_metadata?.nome_completo);
+      const name = profileName ?? authName ?? "Cliente GEMN";
       return {
         name,
-        ...(authResult.data.user.email
-          ? { email: authResult.data.user.email }
+        ...(authUser?.email
+          ? { email: authUser.email }
           : {}),
       };
     },
@@ -277,6 +284,27 @@ export function createSupabaseCustomerProvisioningAdapter(options: {
       ) {
         throw new SupabaseCustomerProvisioningAdapterError(
           "Provisioning review transition returned an unexpected status",
+        );
+      }
+    },
+    async releaseCustomerProvisioningClaim(input) {
+      const value = await rpc(
+        admin,
+        "release_asaas_customer_provisioning_claim",
+        {
+          p_provisioning_id: input.provisioningId,
+          p_claim_token: input.claimToken,
+        },
+      );
+      if (
+        text(
+          value.status,
+          "status",
+          "release_asaas_customer_provisioning_claim",
+        ) !== "pending"
+      ) {
+        throw new SupabaseCustomerProvisioningAdapterError(
+          "Provisioning claim release returned an unexpected status",
         );
       }
     },

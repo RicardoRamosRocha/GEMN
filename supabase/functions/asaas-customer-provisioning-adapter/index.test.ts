@@ -69,6 +69,9 @@ function adminMock(
   tableResponse: { data: unknown; error: unknown },
   calls: unknown[],
   profileResponse: { data: unknown; error: unknown } = tableResponse,
+  authUser: { email?: string | null; user_metadata?: Record<string, unknown> } = {
+    email: "buyer@example.test",
+  },
 ): SupabaseCustomerProvisioningAdminPort {
   let index = 0;
   return {
@@ -88,7 +91,7 @@ function adminMock(
         async getUserById(userId) {
           calls.push(["auth.getUserById", userId]);
           return {
-            data: { user: { email: "buyer@example.test" } },
+            data: { user: authUser },
             error: null,
           };
         },
@@ -119,6 +122,7 @@ Deno.test("reads only active identity fields and maps backend RPC contracts", as
           provider_customer_id: "cus1",
         },
         { provisioning_id: "p1", status: "needs_review" },
+        { provisioning_id: "p1", status: "pending", changed: true },
       ],
       {
         data: {
@@ -169,6 +173,10 @@ Deno.test("reads only active identity fields and maps backend RPC contracts", as
     provisioningId: "p1",
     claimToken: "t1",
   });
+  await adapter.releaseCustomerProvisioningClaim({
+    provisioningId: "p1",
+    claimToken: "t1",
+  });
   assert(
     calls.some((entry) =>
       JSON.stringify(entry).includes("document_ciphertext")
@@ -183,6 +191,26 @@ Deno.test("reads only active identity fields and maps backend RPC contracts", as
       JSON.stringify(entry).includes("claim_asaas_customer_provisioning")
     ),
   );
+});
+
+Deno.test("uses a safe Auth fallback when profile name is nullable", async () => {
+  const calls: unknown[] = [];
+  const adapter = createSupabaseCustomerProvisioningAdapter({
+    adminClient: adminMock([], {
+      data: { id: "u1", nome_completo: null },
+      error: null,
+    }, calls, {
+      data: { id: "u1", nome_completo: null },
+      error: null,
+    }, {
+      email: "buyer@example.test",
+      user_metadata: { nome_completo: "Auth Buyer" },
+    }),
+  });
+  assertEquals(await adapter.getBuyerProfile("u1"), {
+    name: "Auth Buyer",
+    email: "buyer@example.test",
+  });
 });
 
 Deno.test("rejects malformed identity responses without exposing values", async () => {

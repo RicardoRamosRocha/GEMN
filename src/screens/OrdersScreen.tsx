@@ -1,17 +1,22 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Clipboard, Image, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
 
 import { AppBadge, AppButton, AppCard, AppHeader, AppInput, AppScreen } from '../components/ui';
 import { listMyOrders, OrderServiceError } from '../services/orders';
+import { isBillingIdentityTestAvailable, registerBillingIdentity } from '../services/billingIdentity';
+import { provisionAsaasSandboxCustomer } from '../services/asaasCustomerProvisioning';
+import { createPixPayment } from '../services/asaasPayments';
 import { cancelPendingOrder, PendingOrderCancellationServiceError } from '../services/pendingOrderCancellation';
 import { requestOrderCancellation } from '../services/cancellationRequests';
 import { listMyCancellationRequests } from '../services/cancellationRequestQueries';
 import { CancellationRequestServiceError } from '../types/cancellationRequests';
 import type { CancellationRequestQuery } from '../types/cancellationRequestQueries';
 import type { Order, OrderStatus } from '../types/orders';
+import { AsaasPaymentError } from '../types/asaasPayments';
+import type { CreatePixPaymentResponse } from '../types/asaasPayments';
 import { orderItemNames, sortOrderItems, totalOrderUnits } from '../services/orderPresentation';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 import { cancellationUiFixtures, createFixtureCancellationRequest, fixtureRequestsByOrder, isGemnUiFixturesEnabled, ordersUiFixtures } from '../dev/ordersUiFixtures';
@@ -70,6 +75,24 @@ function friendlyPendingCancellationError(error: unknown) {
   return 'Não foi possível cancelar o pedido. Tente novamente.';
 }
 
+function friendlyPixError(error: unknown) {
+  if (error instanceof AsaasPaymentError) {
+    if (error.code === 'PAYMENT_ALREADY_IN_PROGRESS') return 'Já existe uma tentativa de pagamento em andamento para este pedido.';
+    if (error.code === 'PAYMENT_NEEDS_RECONCILIATION') return 'Este pagamento precisa ser reconciliado antes de uma nova tentativa.';
+    if (error.code === 'PAYMENT_ALREADY_CREATED') return 'Já existe uma cobrança Pix para este pedido.';
+    if (error.code === 'ORDER_NOT_ELIGIBLE') return 'Este pedido não está elegível para pagamento Pix.';
+    if (error.code === 'ASAAS_REJECTED') return 'O Asaas recusou a criação da cobrança Pix.';
+    if (error.code === 'ASAAS_UNAVAILABLE') return 'O serviço de pagamentos está temporariamente indisponível.';
+    if (error.code === 'ASAAS_TIMEOUT') return 'Não foi possível confirmar a cobrança Pix. Não tente novamente automaticamente.';
+    return error.message;
+  }
+  return 'Não foi possível gerar a cobrança Pix. Tente novamente.';
+}
+
+function isPixEligible(order: Order) {
+  return order.status === 'pendente' && Number.isFinite(order.valorDevidoReal) && order.valorDevidoReal > 0;
+}
+
 function OrderProductThumbnail({ imageUrl, name }: { imageUrl?: string; name: string }) {
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -124,9 +147,26 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
   const [pendingSelectedOrder, setPendingSelectedOrder] = useState<Order | null>(null);
   const [pendingCancellationProcessing, setPendingCancellationProcessing] = useState(false);
   const [pendingCancellationError, setPendingCancellationError] = useState<string | null>(null);
+  const [billingTestOrders, setBillingTestOrders] = useState<Order[]>([]);
+  const [billingTestOrder, setBillingTestOrder] = useState<Order | null>(null);
+  const [billingTestModalOpen, setBillingTestModalOpen] = useState(false);
+  const [billingTestDocument, setBillingTestDocument] = useState('');
+  const [billingTestProcessing, setBillingTestProcessing] = useState(false);
+  const [billingTestError, setBillingTestError] = useState<string | null>(null);
+  const [billingTestResult, setBillingTestResult] = useState<string | null>(null);
+  const [provisioningTestModalOpen, setProvisioningTestModalOpen] = useState(false);
+  const [provisioningTestProcessing, setProvisioningTestProcessing] = useState(false);
+  const [provisioningTestError, setProvisioningTestError] = useState<string | null>(null);
+  const [provisioningTestResult, setProvisioningTestResult] = useState<string | null>(null);
+  const [pixOrder, setPixOrder] = useState<Order | null>(null);
+  const [pixPayment, setPixPayment] = useState<CreatePixPaymentResponse | null>(null);
+  const [pixProcessing, setPixProcessing] = useState(false);
+  const [pixError, setPixError] = useState<string | null>(null);
+  const [pixCopied, setPixCopied] = useState(false);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Record<string, boolean>>({});
   const intentKeysRef = useRef<Record<string, string>>({});
   const pendingIntentKeysRef = useRef<Record<string, string>>({});
+  const pixIntentKeysRef = useRef<Record<string, string>>({});
   const fixturesEnabled = isGemnUiFixturesEnabled();
 
   function toggleOrderDetails(orderId: string) {
@@ -154,8 +194,14 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
     if (refresh) setRefreshing(true); else setLoading(true);
     setErrorMessage(null);
     setInconclusiveMessage(null);
+    setBillingTestError(null);
+    setBillingTestResult(null);
+    setProvisioningTestError(null);
+    setProvisioningTestResult(null);
+    if (isBillingIdentityTestAvailable()) setBillingTestOrders([]);
     if (fixturesEnabled) {
       setOrders(ordersUiFixtures);
+      setBillingTestOrders([]);
       await loadCancellationRequests();
       if (refresh) setRefreshing(false); else setLoading(false);
       return ordersUiFixtures;
@@ -164,6 +210,9 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
     try {
       const result = await listMyOrders();
       setOrders(result);
+      if (isBillingIdentityTestAvailable()) {
+        setBillingTestOrders(result.filter((order) => order.status === 'pendente' && order.valorDevidoReal > 0));
+      }
       loadedOrders = result;
     } catch (error) {
       setErrorMessage(friendlyOrdersError(error));
@@ -187,6 +236,106 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
     setReason('');
     setRequestError(null);
     setInconclusiveMessage(null);
+  }
+
+  function openBillingTestModal() {
+    if (!billingTestOrder) return;
+    setBillingTestModalOpen(true);
+    setBillingTestDocument('');
+    setBillingTestError(null);
+    setBillingTestResult(null);
+  }
+
+  async function submitBillingIdentityTest() {
+    if (!billingTestOrder || billingTestProcessing) return;
+    const document = billingTestDocument.trim();
+    if (!document) {
+      setBillingTestError('Informe um CPF/CNPJ exclusivamente de homologação.');
+      return;
+    }
+    setBillingTestProcessing(true);
+    setBillingTestError(null);
+    setBillingTestResult(null);
+    try {
+      const result = await registerBillingIdentity(billingTestOrder.id, document);
+      setBillingTestResult(result.outcome === 'created' ? 'Cadastro de homologação concluído.' : 'Identidade de homologação já cadastrada.');
+      setBillingTestModalOpen(false);
+      setBillingTestOrder(null);
+    } catch (error) {
+      setBillingTestError(error instanceof Error ? error.message : 'Não foi possível concluir o cadastro de homologação.');
+    } finally {
+      setBillingTestDocument('');
+      setBillingTestProcessing(false);
+    }
+  }
+
+  function openProvisioningTestModal() {
+    if (!billingTestOrder || provisioningTestProcessing) return;
+    setProvisioningTestModalOpen(true);
+    setProvisioningTestError(null);
+    setProvisioningTestResult(null);
+  }
+
+  async function submitProvisioningTest() {
+    if (!billingTestOrder || provisioningTestProcessing) return;
+    if (billingTestOrder.status !== 'pendente' || billingTestOrder.valorDevidoReal <= 0) {
+      setProvisioningTestError('Selecione um pedido pendente elegível para a homologação.');
+      return;
+    }
+    setProvisioningTestProcessing(true);
+    setProvisioningTestError(null);
+    setProvisioningTestResult(null);
+    try {
+      const result = await provisionAsaasSandboxCustomer();
+      setProvisioningTestResult(result.outcome === 'created' ? 'Cliente de teste criado no Asaas Sandbox.' : 'Cliente de teste já existente reutilizado.');
+      setProvisioningTestModalOpen(false);
+    } catch (error) {
+      setProvisioningTestError(error instanceof Error ? error.message : 'Não foi possível concluir o provisionamento do cliente de teste.');
+    } finally {
+      setProvisioningTestProcessing(false);
+    }
+  }
+
+  async function submitPixPayment(order: Order) {
+    if (!isPixEligible(order) || pixProcessing) return;
+    const idempotencyKey = pixIntentKeysRef.current[order.id] ?? Crypto.randomUUID();
+    pixIntentKeysRef.current[order.id] = idempotencyKey;
+    setPixOrder(order);
+    setPixPayment(null);
+    setPixError(null);
+    setPixCopied(false);
+    setPixProcessing(true);
+    try {
+      const result = await createPixPayment({ orderId: order.id, idempotencyKey });
+      setPixPayment(result);
+    } catch (error) {
+      setPixError(friendlyPixError(error));
+    } finally {
+      setPixProcessing(false);
+    }
+  }
+
+  function closePixModal() {
+    if (pixProcessing) return;
+    setPixOrder(null);
+    setPixPayment(null);
+    setPixError(null);
+    setPixCopied(false);
+  }
+
+  async function copyPixCode() {
+    const payload = pixPayment?.qrCode.payload;
+    if (!payload) return;
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(payload);
+      } else {
+        Clipboard.setString(payload);
+      }
+      setPixCopied(true);
+    } catch {
+      setPixCopied(false);
+    }
   }
 
   function closeCancellationModal() {
@@ -386,6 +535,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                   <AppButton title={expanded ? 'Ocultar detalhes' : 'Ver detalhes do pedido'} variant="outline" size="compact" onPress={() => toggleOrderDetails(order.id)} />
                   {expanded ? <OrderDetails order={order} items={orderedItems} /> : null}
                   {order.status === 'pendente' ? <Text style={styles.pendingNote}>Pedido pendente não significa pagamento realizado.</Text> : null}
+                  {isPixEligible(order) ? <AppButton title="Pagar com Pix" variant="primary" fullWidth onPress={() => { void submitPixPayment(order); }} disabled={pixProcessing} loading={pixProcessing && pixOrder?.id === order.id} style={styles.pixButton} /> : null}
                   {requestStatusPresentation(cancellationRequests[order.id]) ? (() => {
                     const requestStatus = requestStatusPresentation(cancellationRequests[order.id])!;
                     const request = cancellationRequests[order.id];
@@ -421,8 +571,46 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
         <MaterialCommunityIcons name="cloud-question" size={20} color={colors.warning} />
         <Text style={styles.warningBoxText}>{inconclusiveMessage}</Text>
       </AppCard> : null}
+      {!loading && !errorMessage && isBillingIdentityTestAvailable() ? <BillingIdentityTestCard
+        orders={billingTestOrders}
+        selectedOrder={billingTestOrder}
+        resultMessage={billingTestResult}
+        errorMessage={billingTestError}
+        onSelect={setBillingTestOrder}
+        onOpen={openBillingTestModal}
+        provisioningProcessing={provisioningTestProcessing}
+        provisioningResultMessage={provisioningTestResult}
+        provisioningErrorMessage={provisioningTestError}
+        onProvisioningOpen={openProvisioningTestModal}
+      /> : null}
       <PendingCancellationModal order={pendingSelectedOrder} processing={pendingCancellationProcessing} errorMessage={pendingCancellationError} onCancel={closePendingCancellationModal} onConfirm={() => { void submitPendingCancellation(); }} />
       <CancellationModal order={selectedOrder} reason={reason} processing={requestProcessing} errorMessage={requestError} onReasonChange={setReason} onCancel={closeCancellationModal} onConfirm={() => { void submitCancellationRequest(); }} />
+      <BillingIdentityTestModal
+        order={billingTestOrder}
+        open={billingTestModalOpen}
+        document={billingTestDocument}
+        processing={billingTestProcessing}
+        errorMessage={billingTestError}
+        onDocumentChange={setBillingTestDocument}
+        onCancel={() => { if (!billingTestProcessing) { setBillingTestModalOpen(false); setBillingTestOrder(null); setBillingTestDocument(''); setBillingTestError(null); } }}
+        onConfirm={() => { void submitBillingIdentityTest(); }}
+      />
+      <ProvisioningTestModal
+        open={provisioningTestModalOpen}
+        processing={provisioningTestProcessing}
+        errorMessage={provisioningTestError}
+        onCancel={() => { if (!provisioningTestProcessing) { setProvisioningTestModalOpen(false); setProvisioningTestError(null); } }}
+        onConfirm={() => { void submitProvisioningTest(); }}
+      />
+      <PixPaymentModal
+        order={pixOrder}
+        payment={pixPayment}
+        processing={pixProcessing}
+        errorMessage={pixError}
+        copied={pixCopied}
+        onCopy={() => { void copyPixCode(); }}
+        onClose={closePixModal}
+      />
     </AppScreen>
   );
 }
@@ -494,6 +682,141 @@ function CancellationModal({ order, reason, processing, errorMessage, onReasonCh
   </Modal>;
 }
 
+function BillingIdentityTestCard({ orders, selectedOrder, resultMessage, errorMessage, onSelect, onOpen, provisioningProcessing, provisioningResultMessage, provisioningErrorMessage, onProvisioningOpen }: {
+  orders: Order[];
+  selectedOrder: Order | null;
+  resultMessage: string | null;
+  errorMessage: string | null;
+  onSelect: (order: Order) => void;
+  onOpen: () => void;
+  provisioningProcessing: boolean;
+  provisioningResultMessage: string | null;
+  provisioningErrorMessage: string | null;
+  onProvisioningOpen: () => void;
+}) {
+  return <AppCard style={styles.billingTestCard}>
+    <View style={styles.billingTestHeader}>
+      <MaterialCommunityIcons name="flask-outline" size={22} color={colors.warning} />
+      <View style={styles.billingTestCopy}>
+        <Text style={styles.infoTitle}>Homologação de identidade de cobrança</Text>
+        <Text style={styles.infoText}>Ações temporárias DEV. Não criam cobrança ou pagamento; o provisionamento pode criar ou reutilizar um cliente de teste no Asaas Sandbox.</Text>
+      </View>
+    </View>
+    {orders.length === 0 ? <Text style={styles.infoText}>Nenhum pedido pendente elegível encontrado.</Text> : <>
+      <Text style={styles.billingTestLabel}>Selecione explicitamente um pedido:</Text>
+      <View style={styles.billingTestOrderList}>
+        {orders.map((order, index) => <AppButton
+          key={order.id}
+          title={selectedOrder?.id === order.id ? `Pedido ${index + 1} selecionado` : `Selecionar pedido ${index + 1}`}
+          variant={selectedOrder?.id === order.id ? 'secondary' : 'outline'}
+          onPress={() => onSelect(order)}
+          size="compact"
+        />)}
+      </View>
+      <AppButton title="Cadastrar identidade de homologação" onPress={onOpen} disabled={!selectedOrder} />
+      <AppButton title="Provisionar cliente no Asaas Sandbox" onPress={onProvisioningOpen} disabled={!selectedOrder || provisioningProcessing} loading={provisioningProcessing} />
+    </>}
+    {resultMessage ? <Text style={styles.billingTestSuccess}>{resultMessage}</Text> : null}
+    {errorMessage ? <Text accessibilityRole="alert" style={styles.modalError}>{errorMessage}</Text> : null}
+    {provisioningResultMessage ? <Text style={styles.billingTestSuccess}>{provisioningResultMessage}</Text> : null}
+    {provisioningErrorMessage ? <Text accessibilityRole="alert" style={styles.modalError}>{provisioningErrorMessage}</Text> : null}
+  </AppCard>;
+}
+
+function ProvisioningTestModal({ open, processing, errorMessage, onCancel, onConfirm }: {
+  open: boolean;
+  processing: boolean;
+  errorMessage: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return <Modal visible={open} transparent animationType="fade" onRequestClose={onCancel}>
+    <View accessibilityViewIsModal style={styles.modalBackdrop}>
+      <View style={styles.modalCard}>
+        <Text style={styles.modalTitle}>Confirmar provisionamento?</Text>
+        <Text style={styles.modalDescription}>Esta ação poderá criar ou reutilizar um cliente de teste no Asaas Sandbox. Nenhuma cobrança ou pagamento será criado.</Text>
+        {errorMessage ? <Text accessibilityRole="alert" style={styles.modalError}>{errorMessage}</Text> : null}
+        <View style={styles.modalActions}>
+          <AppButton title="Cancelar" variant="outline" onPress={onCancel} disabled={processing} style={styles.modalButton} />
+          <AppButton title="Confirmar provisionamento" onPress={onConfirm} loading={processing} disabled={processing} style={styles.modalButton} />
+        </View>
+      </View>
+    </View>
+  </Modal>;
+}
+
+function BillingIdentityTestModal({ order, open, document, processing, errorMessage, onDocumentChange, onCancel, onConfirm }: {
+  order: Order | null;
+  open: boolean;
+  document: string;
+  processing: boolean;
+  errorMessage: string | null;
+  onDocumentChange: (value: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return <Modal visible={Boolean(order && open)} transparent animationType="fade" onRequestClose={onCancel}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBackdrop}>
+      <View accessibilityViewIsModal style={styles.modalCard}>
+        <Text style={styles.modalTitle}>Confirmar teste de homologação?</Text>
+        <Text style={styles.modalDescription}>O documento será usado somente nesta chamada e não será persistido pelo aplicativo.</Text>
+        <AppInput
+          label="CPF/CNPJ fictício de homologação"
+          value={document}
+          onChangeText={onDocumentChange}
+          placeholder="Somente dado de teste"
+          keyboardType="numeric"
+          autoCapitalize="none"
+          autoCorrect={false}
+          maxLength={18}
+          error={errorMessage ?? undefined}
+          autoFocus
+        />
+        <View style={styles.modalActions}>
+          <AppButton title="Cancelar" variant="outline" onPress={onCancel} disabled={processing} style={styles.modalButton} />
+          <AppButton title="Confirmar envio" onPress={onConfirm} loading={processing} disabled={processing} style={styles.modalButton} />
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>;
+}
+
+function PixPaymentModal({ order, payment, processing, errorMessage, copied, onCopy, onClose }: {
+  order: Order | null;
+  payment: CreatePixPaymentResponse | null;
+  processing: boolean;
+  errorMessage: string | null;
+  copied: boolean;
+  onCopy: () => void;
+  onClose: () => void;
+}) {
+  const encodedImage = payment?.qrCode.encodedImage;
+  const qrSource = encodedImage ? { uri: encodedImage.startsWith('data:') ? encodedImage : `data:image/png;base64,${encodedImage}` } : null;
+  return <Modal visible={Boolean(order)} transparent animationType="fade" onRequestClose={onClose}>
+    <View accessibilityViewIsModal style={styles.modalBackdrop}>
+      <View style={styles.modalCard}>
+        <Text style={styles.modalTitle}>Pagamento Pix</Text>
+        <Text style={styles.modalDescription}>{order ? `Pedido ${order.id}` : ''}</Text>
+        {processing ? <View style={styles.pixLoading}><ActivityIndicator color={colors.brand} /><Text style={styles.feedbackText}>Gerando cobrança Pix...</Text></View> : null}
+        {errorMessage ? <Text accessibilityRole="alert" style={styles.modalError}>{errorMessage}</Text> : null}
+        {payment ? <>
+          <Text style={styles.pixReadyTitle}>Cobrança Pix pronta</Text>
+          {qrSource ? <Image accessibilityLabel="QR Code para pagamento Pix" source={qrSource} style={styles.pixQrCode} /> : <Text style={styles.feedbackText}>O QR Code visual não está disponível, mas o código Pix pode ser copiado abaixo.</Text>}
+          {payment.qrCode.payload ? <>
+            <Text style={styles.pixCodeLabel}>Código Pix copia e cola</Text>
+            <Text selectable style={styles.pixPayload}>{payment.qrCode.payload}</Text>
+            <AppButton title={copied ? 'Código copiado' : 'Copiar código Pix'} variant="secondary" fullWidth onPress={onCopy} disabled={copied} />
+          </> : <Text accessibilityRole="alert" style={styles.modalError}>O código Pix não foi disponibilizado. Não realize o pagamento por esta tela.</Text>}
+          <Text style={styles.pixSecurityNote}>Esta etapa não confirma o pedido nem credita cashback.</Text>
+        </> : null}
+        <View style={styles.modalActions}>
+          <AppButton title="Fechar" variant="outline" onPress={onClose} disabled={processing} style={styles.modalButton} />
+        </View>
+      </View>
+    </View>
+  </Modal>;
+}
+
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.xs, paddingBottom: spacing.xxl, gap: spacing.md },
   refreshButton: { width: 44, height: 44, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
@@ -506,6 +829,7 @@ const styles = StyleSheet.create({
   orderWrapper: { width: '100%' },
   orderWrapperWide: { flex: 1, minWidth: 320, maxWidth: '50%' },
   orderCard: { flex: 1, borderWidth: 1, borderColor: colors.border },
+  pixButton: { marginTop: spacing.sm },
   orderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.sm },
   orderHeaderCopy: { flex: 1, minWidth: 0 },
   orderLabel: { ...typography.caption, color: colors.textSecondary },
@@ -556,8 +880,20 @@ const styles = StyleSheet.create({
   modalTitle: { ...typography.heading3, color: colors.text },
   modalDescription: { ...typography.bodySmall, color: colors.textSecondary },
   modalError: { ...typography.bodySmall, color: colors.error },
+  pixLoading: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
+  pixReadyTitle: { ...typography.label, color: colors.success, textAlign: 'center' },
+  pixQrCode: { alignSelf: 'center', width: 220, height: 220, backgroundColor: colors.white },
+  pixCodeLabel: { ...typography.label, color: colors.text },
+  pixPayload: { ...typography.caption, color: colors.textSecondary, maxHeight: 96, padding: spacing.sm, backgroundColor: colors.surfaceMuted, borderRadius: radius.md },
+  pixSecurityNote: { ...typography.caption, color: colors.textMuted, textAlign: 'center' },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.sm },
   modalButton: { flex: 1 },
   demoBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.gemnLight, borderWidth: 1, borderColor: colors.gemnLight },
   demoBannerText: { ...typography.caption, color: colors.warning, flex: 1 },
+  billingTestCard: { gap: spacing.md, borderWidth: 1, borderColor: colors.gemnLight, backgroundColor: colors.surface },
+  billingTestHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  billingTestCopy: { flex: 1, gap: spacing.xs },
+  billingTestLabel: { ...typography.bodySmall, color: colors.textSecondary },
+  billingTestOrderList: { gap: spacing.sm },
+  billingTestSuccess: { ...typography.bodySmall, color: colors.success },
 });

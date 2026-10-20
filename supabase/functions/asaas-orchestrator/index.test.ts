@@ -54,10 +54,11 @@ function makeDependencies(overrides: Partial<{
   const finalize = overrides.db?.finalizePaymentCreation ?? defaultFinalize;
   const fail = overrides.db?.failPaymentCreation ?? defaultFail;
   const reconcile = overrides.db?.markNeedsReconciliation ?? defaultReconcile;
+  const getCustomer = overrides.db?.getCustomer ?? (async () => ({ id: 'local-customer-1', providerCustomerId: 'provider-customer-1', status: 'active' as const, ambiente: 'sandbox' as const }));
   const db: PaymentDatabase = {
     preparePaymentIntent: async (input) => { calls.push('prepare'); return prepare(input); },
     claimPaymentCreation: async (input) => { calls.push('claim'); return claim(input); },
-    getCustomer: async () => { calls.push('getCustomer'); return null; },
+    getCustomer: async (input) => { calls.push('getCustomer'); return getCustomer(input); },
     getBuyerProfile: async () => { calls.push('profile'); return { name: 'Buyer', cpfCnpj: '00000000000' }; },
     saveCustomer: async ({ providerCustomerId }) => { calls.push('saveCustomer'); return { id: 'local-customer-1', providerCustomerId, status: 'active', ambiente: 'sandbox' }; },
     finalizePaymentCreation: async (input) => { calls.push('finalize'); return finalize(input); },
@@ -85,8 +86,8 @@ function makeDependencies(overrides: Partial<{
 Deno.test('executes auth -> prepare -> claim -> customer -> POST -> finalize', async () => {
   const { dependencies, calls } = makeDependencies();
   const result = await createPixOrchestrator(dependencies).create({ context: 'request', orderId: 'order-1', idempotencyKey: 'key-1' });
-  assertEquals(result, { outcome: 'created', paymentIntentId: 'intent-1', asaasPaymentId: 'payment-1', amountDueReal: 25, externalReference: baseIntent.externalReference, providerStatus: 'PENDING' });
-  assertEquals(calls, ['auth', 'prepare', 'claim', 'getCustomer', 'profile', 'findAsaasCustomer', 'createAsaasCustomer', 'saveCustomer', 'postPix', 'finalize']);
+  assertEquals(result, { outcome: 'created', paymentIntent: { ...baseIntent, status: 'created' }, customer: { id: 'local-customer-1', providerCustomerId: 'provider-customer-1', status: 'active', ambiente: 'sandbox' }, paymentIntentId: 'intent-1', asaasPaymentId: 'payment-1', amountDueReal: 25, externalReference: baseIntent.externalReference, providerStatus: 'PENDING' });
+  assertEquals(calls, ['auth', 'prepare', 'claim', 'getCustomer', 'postPix', 'finalize']);
 });
 
 Deno.test('reuses an existing payment and does not resolve customer or POST', async () => {
@@ -95,8 +96,8 @@ Deno.test('reuses an existing payment and does not resolve customer or POST', as
     claimPaymentCreation: async () => ({ paymentIntentId: 'intent-1', status: 'created', claimGranted: false, claimToken: null, asaasPaymentId: 'payment-existing' }),
   } });
   const result = await createPixOrchestrator(dependencies).create({ context: null, orderId: 'order-1', idempotencyKey: 'key-1' });
-  assertEquals(result, { outcome: 'reused', paymentIntentId: 'intent-1', asaasPaymentId: 'payment-existing', status: 'created' });
-  assertEquals(calls, ['auth', 'prepare', 'claim']);
+  assertEquals(result, { outcome: 'reused', paymentIntent: { ...baseIntent, status: 'created' }, customer: { id: 'local-customer-1', providerCustomerId: 'provider-customer-1', status: 'active', ambiente: 'sandbox' }, paymentIntentId: 'intent-1', asaasPaymentId: 'payment-existing', status: 'created' });
+  assertEquals(calls, ['auth', 'prepare', 'claim', 'getCustomer']);
   assertEquals(calls.filter((call) => call === 'postPix').length, 0);
 });
 
@@ -107,6 +108,17 @@ Deno.test('maps logical concurrency to in-progress without POST', async () => {
   await assertRejects(() => createPixOrchestrator(dependencies).create({ context: null, orderId: 'order-1', idempotencyKey: 'key-1' }), PixOrchestrationError, 'PAYMENT_ALREADY_IN_PROGRESS');
   assertEquals(calls, ['auth', 'prepare', 'claim']);
   assertEquals(calls.filter((call) => call === 'postPix').length, 0);
+});
+
+Deno.test('does not create a customer when the local Asaas customer is missing', async () => {
+  const { dependencies, calls } = makeDependencies({ db: {
+    getCustomer: async () => null,
+  }, asaas: {
+    createCustomer: async () => { throw new Error('must not create customer'); },
+  } });
+  await assertRejects(() => createPixOrchestrator(dependencies).create({ context: null, orderId: 'order-1', idempotencyKey: 'key-1' }), PixOrchestrationError, 'CUSTOMER_UNAVAILABLE');
+  assert(!calls.includes('postPix'));
+  assert(!calls.includes('createAsaasCustomer'));
 });
 
 Deno.test('rejects zero, canceled/expired/not-eligible responses before claim', async () => {

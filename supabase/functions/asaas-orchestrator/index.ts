@@ -1,7 +1,6 @@
 import {
   AsaasClientError,
   type AsaasClient,
-  type AsaasCustomer,
   type AsaasPayment,
 } from '../asaas-client/index.ts';
 
@@ -121,6 +120,8 @@ export interface CreatePixInput<TContext = unknown> {
 
 export interface CreatedPixPayment {
   outcome: 'created';
+  paymentIntent: PreparedPaymentIntent;
+  customer: StoredCustomer;
   paymentIntentId: string;
   asaasPaymentId: string;
   amountDueReal: number;
@@ -130,6 +131,8 @@ export interface CreatedPixPayment {
 
 export interface ReusedPixPayment {
   outcome: 'reused';
+  paymentIntent: PreparedPaymentIntent;
+  customer: StoredCustomer;
   paymentIntentId: string;
   asaasPaymentId: string;
   status: 'created' | 'qr_ready';
@@ -175,7 +178,6 @@ function dueDate(dueAt: string): string {
 async function resolveCustomer(
   userId: string,
   db: PaymentDatabase,
-  asaas: AsaasClient,
 ): Promise<StoredCustomer> {
   const stored = await db.getCustomer({ userId, ambiente: 'sandbox' });
   if (stored) {
@@ -184,22 +186,10 @@ async function resolveCustomer(
     }
     return stored;
   }
-
-  const profile = await db.getBuyerProfile(userId);
-  let providerCustomer: AsaasCustomer | null;
-  try {
-    providerCustomer = await asaas.findCustomer({ cpfCnpj: profile.cpfCnpj });
-    if (!providerCustomer) {
-      providerCustomer = await asaas.createCustomer({
-        name: profile.name,
-        cpfCnpj: profile.cpfCnpj,
-        email: profile.email,
-      });
-    }
-  } catch (error) {
-    throw mapAsaasError(error);
-  }
-  return db.saveCustomer({ userId, ambiente: 'sandbox', providerCustomerId: providerCustomer.id });
+  throw new PixOrchestrationError(
+    'CUSTOMER_UNAVAILABLE',
+    'O customer do comprador ainda não está provisionado.',
+  );
 }
 
 async function requestReconciliation(
@@ -264,6 +254,8 @@ export function createPixOrchestrator<TContext>(
         if ((claim.status === 'created' || claim.status === 'qr_ready') && claim.asaasPaymentId) {
           return {
             outcome: 'reused',
+            paymentIntent: intent,
+            customer: await resolveCustomer(buyer.userId, dependencies.db),
             paymentIntentId: intent.paymentIntentId,
             asaasPaymentId: claim.asaasPaymentId,
             status: claim.status,
@@ -278,7 +270,7 @@ export function createPixOrchestrator<TContext>(
 
       let customer: StoredCustomer;
       try {
-        customer = await resolveCustomer(buyer.userId, dependencies.db, dependencies.asaas);
+        customer = await resolveCustomer(buyer.userId, dependencies.db);
       } catch (error) {
         if (error instanceof PixOrchestrationError) {
           await dependencies.db.failPaymentCreation({
@@ -334,6 +326,8 @@ export function createPixOrchestrator<TContext>(
         });
         return {
           outcome: 'created',
+          paymentIntent: { ...intent, status: 'created' },
+          customer,
           paymentIntentId: intent.paymentIntentId,
           asaasPaymentId: finalized.asaasPaymentId,
           amountDueReal: intent.amountDueReal,

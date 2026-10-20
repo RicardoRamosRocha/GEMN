@@ -8,7 +8,10 @@ import {
   type CustomerProvisioningTablePort,
   type SupabaseCustomerProvisioningAdminPort,
 } from "../asaas-customer-provisioning-adapter/index.ts";
-import { handleProvisionCustomerRequest } from "./handler.ts";
+import {
+  corsHeaders,
+  handleProvisionCustomerRequest,
+} from "./handler.ts";
 
 const REQUIRED_ENV = [
   "SUPABASE_URL",
@@ -144,7 +147,10 @@ Deno.serve(async (request) => {
       JSON.stringify({ ok: false, error: "CONFIGURATION_INVALID" }),
       {
         status: 500,
-        headers: { "content-type": "application/json; charset=utf-8" },
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          ...Object.fromEntries(corsHeaders(request).entries()),
+        },
       },
     );
   }

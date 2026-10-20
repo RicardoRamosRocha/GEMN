@@ -102,9 +102,12 @@ function database(
   selectedClaim: CustomerProvisioningClaim,
   events: string[],
   finalizeError = false,
+  profileError = false,
+  releaseError = false,
 ): CustomerProvisioningDatabase {
   return {
     async getBuyerProfile() {
+      if (profileError) throw new Error("profile lookup failed");
       return { name: "Sandbox Buyer", email: "buyer@example.test" };
     },
     async getActiveBillingIdentity(inputUserId) {
@@ -127,6 +130,10 @@ function database(
     },
     async markCustomerProvisioningNeedsReview(input) {
       events.push(`needs-review:${input.provisioningId}`);
+    },
+    async releaseCustomerProvisioningClaim(input) {
+      events.push(`release:${input.provisioningId}`);
+      if (releaseError) throw new Error("release failed");
     },
   };
 }
@@ -234,7 +241,44 @@ Deno.test("maps an active concurrent claim to in-progress without calling Asaas"
     }).provision(userId), "PROVISIONING_IN_PROGRESS");
 });
 
-Deno.test("marks lookup and create uncertainty for review without retrying", async () => {
+Deno.test("keeps profile and decryption failures recoverable before any Asaas call", async () => {
+  const profileEvents: string[] = [];
+  const stored = await identity();
+  await assertRejects(() =>
+    createAsaasCustomerProvisioner({
+      db: database(stored, claim(), profileEvents, false, true),
+      cryptoEnv,
+      asaas: {
+        async findCustomer() {
+          throw new Error("Asaas must not be called");
+        },
+        async createCustomer() {
+          throw new Error("Asaas must not be called");
+        },
+      },
+    }).provision(userId), "INTERNAL_ERROR");
+  assert(!profileEvents.some((event) => event.startsWith("needs-review:")));
+  assert(profileEvents.includes("release:provisioning-1"));
+
+  const decryptEvents: string[] = [];
+  await assertRejects(() =>
+    createAsaasCustomerProvisioner({
+      db: database(stored, claim(), decryptEvents),
+      cryptoEnv: { get: () => undefined },
+      asaas: {
+        async findCustomer() {
+          throw new Error("Asaas must not be called");
+        },
+        async createCustomer() {
+          throw new Error("Asaas must not be called");
+        },
+      },
+    }).provision(userId), "INTERNAL_ERROR");
+  assert(!decryptEvents.some((event) => event.startsWith("needs-review:")));
+  assert(decryptEvents.includes("release:provisioning-1"));
+});
+
+Deno.test("does not mark a failed Asaas lookup as a possible creation", async () => {
   const stored = await identity();
   const lookupEvents: string[] = [];
   await assertRejects(() =>
@@ -249,8 +293,9 @@ Deno.test("marks lookup and create uncertainty for review without retrying", asy
           throw new Error("must not create after lookup timeout");
         },
       },
-    }).provision(userId), "PROVISIONING_NEEDS_REVIEW");
-  assert(lookupEvents.includes("needs-review:provisioning-1"));
+    }).provision(userId), "ASAAS_TIMEOUT");
+  assert(!lookupEvents.includes("needs-review:provisioning-1"));
+  assert(lookupEvents.includes("release:provisioning-1"));
 
   const createEvents: string[] = [];
   await assertRejects(() =>
@@ -269,7 +314,7 @@ Deno.test("marks lookup and create uncertainty for review without retrying", asy
   assert(createEvents.includes("needs-review:provisioning-1"));
 });
 
-Deno.test("keeps provider rejection distinct and still moves the claim to review", async () => {
+Deno.test("keeps a known provider rejection distinct without marking ambiguity", async () => {
   const events: string[] = [];
   const stored = await identity();
   await assertRejects(() =>
@@ -285,7 +330,7 @@ Deno.test("keeps provider rejection distinct and still moves the claim to review
         },
       },
     }).provision(userId), "ASAAS_REJECTED");
-  assert(events.includes("needs-review:provisioning-1"));
+  assert(!events.includes("needs-review:provisioning-1"));
 });
 
 Deno.test("moves an ambiguous finalization result to review without retrying the provider", async () => {

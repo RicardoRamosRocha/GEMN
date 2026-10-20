@@ -18,6 +18,26 @@ async function responseBody(
   return await response.json() as Record<string, unknown>;
 }
 
+function assertCors(response: Response, origin = "http://localhost:8081") {
+  assertEquals(response.headers.get("access-control-allow-origin"), origin);
+  assertEquals(response.headers.get("access-control-allow-methods"), "POST, OPTIONS");
+  assertEquals(response.headers.get("access-control-allow-headers"), "authorization, apikey, x-client-info, content-type");
+}
+
+Deno.test("returns CORS headers for the authorized preflight", async () => {
+  const { deps, calls } = dependencies();
+  const response = await handleProvisionCustomerRequest(
+    new Request("http://edge.test/", {
+      method: "OPTIONS",
+      headers: { origin: "http://localhost:8081" },
+    }),
+    deps,
+  );
+  assertEquals(response.status, 204);
+  assertCors(response);
+  assertEquals(calls, []);
+});
+
 function dependencies(
   overrides: Partial<ProvisionCustomerHandlerDependencies> = {},
 ) {
@@ -81,11 +101,15 @@ Deno.test("provisions only the verified user and does not return identity data",
   const response = await handleProvisionCustomerRequest(
     new Request("http://edge.test/", {
       method: "POST",
-      headers: { authorization: "Bearer token" },
+      headers: {
+        origin: "http://localhost:8081",
+        authorization: "Bearer token",
+      },
     }),
     deps,
   );
   assertEquals(response.status, 200);
+  assertCors(response);
   assertEquals(await responseBody(response), {
     ok: true,
     outcome: "created",
@@ -113,11 +137,15 @@ Deno.test("maps idempotency and ambiguous external outcomes without retrying", a
     const response = await handleProvisionCustomerRequest(
       new Request("http://edge.test/", {
         method: "POST",
-        headers: { authorization: "Bearer token" },
+        headers: {
+          origin: "http://localhost:8081",
+          authorization: "Bearer token",
+        },
       }),
       deps,
     );
     assertEquals(response.status, status);
+    assertCors(response);
     assertEquals(await responseBody(response), { ok: false, error: code });
   }
 });
