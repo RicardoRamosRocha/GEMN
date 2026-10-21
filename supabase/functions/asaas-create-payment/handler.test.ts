@@ -16,6 +16,22 @@ const responseBody = {
   qrCode: { payload: "pix" },
 };
 
+const reusedResponseBody = {
+  paymentIntent: { status: "qr_ready" },
+  customer: { id: "customer-1", ambiente: "sandbox", status: "active" },
+  payment: {
+    status: "qr_ready",
+    asaasPaymentId: "pay-reused-1",
+    amountDueReal: 42.5,
+    externalReference: "gemn-order-order-1",
+  },
+  qrCode: {
+    encodedImage: "data:image/png;base64,encoded",
+    payload: "000201pix-reused",
+    expiresAt: "2026-10-22T12:00:00.000Z",
+  },
+};
+
 Deno.test("answers OPTIONS with DEV CORS and does not create payment", async () => {
   let calls = 0;
   const response = await handleCreatePaymentRequest(
@@ -68,4 +84,24 @@ Deno.test("maps orchestration errors without exposing details", async () => {
   const body = await json(response);
   assert(body.error === "PAYMENT_NEEDS_RECONCILIATION");
   assert(!JSON.stringify(body).includes("sensitive detail"));
+});
+
+Deno.test("returns the complete reused payment response", async () => {
+  const response = await handleCreatePaymentRequest(
+    new Request("http://localhost/functions/v1/asaas-create-payment", {
+      method: "POST",
+      headers: { authorization: "Bearer user-token", "content-type": "application/json" },
+      body: JSON.stringify({ orderId: "order-1", idempotencyKey: "retry-key-1" }),
+    }),
+    { create: async () => reusedResponseBody },
+  );
+
+  assert(response.status === 200);
+  const body = await json(response);
+  assert(body.ok === true);
+  assert(JSON.stringify(body).includes('"status":"qr_ready"'));
+  assert(JSON.stringify(body).includes('"asaasPaymentId":"pay-reused-1"'));
+  assert(JSON.stringify(body).includes('"amountDueReal":42.5'));
+  assert(JSON.stringify(body).includes('"externalReference":"gemn-order-order-1"'));
+  assert(JSON.stringify(body).includes('"payload":"000201pix-reused"'));
 });

@@ -83,8 +83,8 @@ function createHandler(env: Pick<Deno.Env, "get"> = Deno.env) {
         payment: {
           status: result.paymentIntent.status === "qr_ready" ? "qr_ready" : "created",
           asaasPaymentId: result.asaasPaymentId,
-          amountDueReal: result.amountDueReal,
-          externalReference: result.externalReference,
+          amountDueReal: result.paymentIntent.amountDueReal,
+          externalReference: result.paymentIntent.externalReference,
         },
         qrCode: {
           encodedImage: qr.encodedImage,
