@@ -27,6 +27,9 @@
     "./billing-identity-registration-adapter/index.test.ts",
     "./asaas-register-billing-identity/handler.ts",
     "./asaas-register-billing-identity/handler.test.ts",
-    "./asaas-register-billing-identity/index.ts"
+    "./asaas-register-billing-identity/index.ts",
+    "./asaas-webhook/index.ts",
+    "./asaas-webhook/index.test.ts",
+    "./asaas-webhook/integration.test.ts"
   ]
 }
