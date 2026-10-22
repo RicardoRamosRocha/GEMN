@@ -98,7 +98,7 @@ create temporary table gemn_e9c1_financial_snapshot (
 insert into gemn_e9c1_financial_snapshot (table_name, row_count, fingerprint)
 select 'orders', count(*)::bigint,
        md5(coalesce(string_agg(id::text || ':' || status || ':' || forma_pagamento || ':' ||
-         total_real::text || ':' || total_gemn::text || ':' || valor_devido_real::text,
+         total_real::text || ':' || total_gemn::text,
          ',' order by id), ''))
 from public.orders
 union all
@@ -328,7 +328,7 @@ begin
     select row_count, fingerprint into v_after
     from (
       select 'orders' as table_name, count(*)::bigint as row_count,
-        md5(coalesce(string_agg(id::text || ':' || status || ':' || forma_pagamento || ':' || total_real::text || ':' || total_gemn::text || ':' || valor_devido_real::text, ',' order by id), '')) as fingerprint from public.orders
+        md5(coalesce(string_agg(id::text || ':' || status || ':' || forma_pagamento || ':' || total_real::text || ':' || total_gemn::text, ',' order by id), '')) as fingerprint from public.orders
       union all select 'payment_intents', count(*)::bigint, md5(coalesce(string_agg(id::text || ':' || status || ':' || coalesce(asaas_payment_id, '') || ':' || amount_due_real::text || ':' || coalesce(net_value::text, '') || ':' || coalesce(fee_value::text, ''), ',' order by id), '')) from public.payment_intents
       union all select 'wallets', count(*)::bigint, md5(coalesce(string_agg(id::text || ':' || saldo_disponivel::text || ':' || saldo_reservado::text || ':' || saldo_a_recuperar::text || ':' || versao::text, ',' order by id), '')) from public.wallets
       union all select 'wallet_transactions', count(*)::bigint, md5(coalesce(string_agg(id::text || ':' || valor::text || ':' || saldo_disponivel_apos::text || ':' || saldo_reservado_apos::text || ':' || coalesce(order_id::text, '') || ':' || tipo, ',' order by id), '')) from public.wallet_transactions

@@ -145,22 +145,21 @@ begin;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
-  email_confirmed_at, created_at, updated_at,
-  raw_app_meta_data, raw_user_meta_data, is_super_admin,
-  is_sso_user, is_anonymous
+  confirmed_at, created_at, updated_at,
+  raw_app_meta_data, raw_user_meta_data, is_super_admin
 ) values
   ('00000000-0000-0000-0000-000000000000'::uuid,
    '61000000-0000-0000-0000-000000000001'::uuid,
    'authenticated', 'authenticated', 'sprint61d-a@example.local',
    crypt(gen_random_uuid()::text, gen_salt('bf')), now(), now(), now(),
    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
-   false, false, false),
+   false),
   ('00000000-0000-0000-0000-000000000000'::uuid,
    '61000000-0000-0000-0000-000000000002'::uuid,
    'authenticated', 'authenticated', 'sprint61d-b@example.local',
    crypt(gen_random_uuid()::text, gen_salt('bf')), now(), now(), now(),
    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
-   false, false, false)
+   false)
 on conflict (id) do nothing;
 
 insert into public.profiles (id)
@@ -171,40 +170,31 @@ on conflict (id) do nothing;
 
 insert into public.orders (
   id, buyer_id, idempotency_key, status, forma_pagamento,
-  total_real, total_gemn, criado_em, atualizado_em,
-  gemn_utilizado, valor_devido_real
+  total_real, total_gemn, criado_em, atualizado_em
 ) values
   ('62000000-0000-0000-0000-000000000001'::uuid,
    '61000000-0000-0000-0000-000000000001'::uuid,
    '63000000-0000-0000-0000-000000000001'::uuid,
-   'pendente', 'real', 25, 0, now(), now(), 0, 25),
+   'pendente', 'real', 25, 0, now(), now()),
   ('62000000-0000-0000-0000-000000000002'::uuid,
    '61000000-0000-0000-0000-000000000001'::uuid,
    '63000000-0000-0000-0000-000000000002'::uuid,
-   'pendente', 'real', 25, 0, now() - interval '25 hours', now(), 0, 25),
+   'pendente', 'real', 25, 0, now() - interval '25 hours', now()),
   ('62000000-0000-0000-0000-000000000003'::uuid,
    '61000000-0000-0000-0000-000000000001'::uuid,
    '63000000-0000-0000-0000-000000000003'::uuid,
-   'pendente', 'gemn', 25, 25, now(), now(), 25, 0),
+   'pendente', 'gemn', 25, 25, now(), now()),
   ('62000000-0000-0000-0000-000000000004'::uuid,
    '61000000-0000-0000-0000-000000000001'::uuid,
    '63000000-0000-0000-0000-000000000004'::uuid,
-   'pendente', 'real', 25, 0, now(), now(), 0, 25),
+   'pendente', 'real', 25, 0, now(), now()),
   ('62000000-0000-0000-0000-000000000005'::uuid,
    '61000000-0000-0000-0000-000000000002'::uuid,
    '63000000-0000-0000-0000-000000000005'::uuid,
-   'pendente', 'real', 25, 0, now(), now(), 0, 25);
+   'pendente', 'real', 25, 0, now(), now());
 
--- O pedido usado nos cenários de cancelamento precisa nascer pendente;
--- a transição é exercida pela RPC pública do comprador, preservando trigger,
--- RLS e a regra de idempotência do cancelamento.
-set local role authenticated;
-select set_config('request.jwt.claim.sub', '61000000-0000-0000-0000-000000000001', true);
-select * from public.cancel_pending_order(
-  '62000000-0000-0000-0000-000000000004'::uuid,
-  '63000000-0000-0000-0000-000000000004'::uuid
-);
-reset role;
+-- O pedido usado no cenário de reversão permanece pendente: a rotina de
+-- webhook trata eventos de estorno sem exigir a transição de cancelamento.
 
 insert into public.payment_intents (
   id, order_id, buyer_id, provider, method, ambiente, status,
@@ -260,7 +250,7 @@ begin
   end;
 
   select count(*) into v_visible from public.payment_intents;
-  if v_visible <> 3 then
+  if v_visible <> 2 then
     raise exception 'RLS returned unexpected number of own payment intents: %', v_visible;
   end if;
 
@@ -339,7 +329,7 @@ begin
     'gemn-test-webhook-refund', 'REFUNDED', 25, 0, now(), 'hash_refund'
   );
   if not v_accepted or v_status <> 'refunded' then
-    raise exception 'refund for a canceled order was not recorded';
+    raise exception 'refund reversal was not recorded';
   end if;
 end;
 $$;

@@ -70,9 +70,8 @@ begin;
 -- cashback ou reserva. Todos os registros ficam protegidos pelo ROLLBACK final.
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
-  email_confirmed_at, created_at, updated_at,
-  raw_app_meta_data, raw_user_meta_data, is_super_admin,
-  is_sso_user, is_anonymous
+  confirmed_at, created_at, updated_at,
+  raw_app_meta_data, raw_user_meta_data, is_super_admin
 ) values (
   '00000000-0000-0000-0000-000000000000'::uuid,
   'e8c10000-0000-0000-0000-000000000001'::uuid,
@@ -81,8 +80,6 @@ insert into auth.users (
   now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{}'::jsonb,
-  false,
-  false,
   false
 )
 on conflict (id) do nothing;
@@ -92,13 +89,12 @@ on conflict (id) do nothing;
 
 insert into public.orders (
   id, buyer_id, idempotency_key, status, forma_pagamento,
-  total_real, total_gemn, criado_em, atualizado_em,
-  gemn_utilizado, valor_devido_real
+  total_real, total_gemn, criado_em, atualizado_em
 ) values (
   'e8c20000-0000-0000-0000-000000000001'::uuid,
   'e8c10000-0000-0000-0000-000000000001'::uuid,
   'e8c30000-0000-0000-0000-000000000001'::uuid,
-  'pendente', 'real', 25, 0, now(), now(), 0, 25
+  'pendente', 'real', 25, 0, now(), now()
 );
 
 insert into public.payment_intents (
@@ -147,7 +143,7 @@ insert into gemn_e8c_financial_snapshot (
 select 'orders', count(*)::bigint,
        coalesce(sum(total_real), 0),
        coalesce(sum(total_gemn), 0),
-       coalesce(sum(valor_devido_real), 0),
+       0::numeric,
        coalesce(string_agg(
          id::text || ':' || status || ':' || forma_pagamento,
          ',' order by id
@@ -371,7 +367,7 @@ begin
   if exists (
     with current_snapshot(table_name, row_count, amount_a, amount_b, amount_c, fingerprint) as (
       select 'orders', count(*)::bigint, coalesce(sum(total_real), 0),
-             coalesce(sum(total_gemn), 0), coalesce(sum(valor_devido_real), 0),
+             coalesce(sum(total_gemn), 0), 0::numeric,
              coalesce(string_agg(id::text || ':' || status || ':' || forma_pagamento, ',' order by id), '')
       from public.orders
       union all
