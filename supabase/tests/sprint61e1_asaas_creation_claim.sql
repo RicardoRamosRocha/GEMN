@@ -84,20 +84,18 @@ $$;
 begin;
 
 -- Fixtures ficam dentro desta transação e não sobrevivem ao ROLLBACK final.
-set local role service_role;
 select set_config('request.jwt.claim.role', 'service_role', true);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
-  email_confirmed_at, created_at, updated_at,
-  raw_app_meta_data, raw_user_meta_data, is_super_admin,
-  is_sso_user, is_anonymous
+  confirmed_at, created_at, updated_at,
+  raw_app_meta_data, raw_user_meta_data, is_super_admin
 ) values (
   '00000000-0000-0000-0000-000000000000'::uuid,
   'e1000000-0000-0000-0000-000000000001'::uuid,
   'authenticated', 'authenticated', 'sprint61e1@example.local',
   crypt(gen_random_uuid()::text, gen_salt('bf')), now(), now(), now(),
-  '{"provider":"email","providers":["email"]}'::jsonb, '{}', false, false, false
+  '{"provider":"email","providers":["email"]}'::jsonb, '{}', false
 )
 on conflict (id) do nothing;
 
@@ -114,11 +112,14 @@ insert into public.orders (
   ('e2000000-0000-0000-0000-000000000002'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, gen_random_uuid(), 'pendente', 'real', 30, 0, now(), now(), 0, 30),
   ('e2000000-0000-0000-0000-000000000003'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, gen_random_uuid(), 'pendente', 'real', 35, 0, now(), now(), 0, 35),
   ('e2000000-0000-0000-0000-000000000004'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, gen_random_uuid(), 'pendente', 'real', 40, 0, now(), now(), 0, 40),
-  ('e2000000-0000-0000-0000-000000000005'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, gen_random_uuid(), 'cancelado', 'real', 45, 0, now(), now(), 0, 45),
+  ('e2000000-0000-0000-0000-000000000005'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, gen_random_uuid(), 'pendente', 'real', 45, 0, now(), now(), 0, 45),
   ('e2000000-0000-0000-0000-000000000006'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, gen_random_uuid(), 'pendente', 'real', 50, 0, now() - interval '25 hours', now(), 0, 50),
   ('e2000000-0000-0000-0000-000000000007'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, gen_random_uuid(), 'pendente', 'gemn', 10, 10, now(), now(), 10, 0),
   ('e2000000-0000-0000-0000-000000000008'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, gen_random_uuid(), 'pendente', 'real', 55, 0, now(), now(), 0, 55),
   ('e2000000-0000-0000-0000-000000000009'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, gen_random_uuid(), 'pendente', 'real', 60, 0, now(), now(), 0, 60);
+
+update public.orders set status = 'cancelado'
+ where id = 'e2000000-0000-0000-0000-000000000005'::uuid;
 
 insert into public.asaas_customers (
   id, user_id, ambiente, asaas_customer_id, status
@@ -141,6 +142,8 @@ insert into public.payment_intents (
   ('e4000000-0000-0000-0000-000000000006'::uuid, 'e2000000-0000-0000-0000-000000000006'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, 'asaas', 'pix', 'sandbox', 'pending_creation', gen_random_uuid(), 'gemn-order-e2000000-0000-0000-0000-000000000006', 'e3000000-0000-0000-0000-000000000001'::uuid, 50, now() - interval '1 hour'),
   ('e4000000-0000-0000-0000-000000000008'::uuid, 'e2000000-0000-0000-0000-000000000008'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, 'asaas', 'pix', 'sandbox', 'pending_creation', gen_random_uuid(), 'gemn-order-e2000000-0000-0000-0000-000000000008', 'e3000000-0000-0000-0000-000000000001'::uuid, 55, now() + interval '24 hours'),
   ('e4000000-0000-0000-0000-000000000009'::uuid, 'e2000000-0000-0000-0000-000000000009'::uuid, 'e1000000-0000-0000-0000-000000000001'::uuid, 'asaas', 'pix', 'sandbox', 'pending_creation', gen_random_uuid(), 'gemn-order-e2000000-0000-0000-0000-000000000009', 'e3000000-0000-0000-0000-000000000001'::uuid, 60, now() + interval '24 hours');
+
+set local role service_role;
 
 do $$
 declare

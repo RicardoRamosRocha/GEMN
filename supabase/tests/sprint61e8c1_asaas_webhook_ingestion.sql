@@ -89,12 +89,13 @@ on conflict (id) do nothing;
 
 insert into public.orders (
   id, buyer_id, idempotency_key, status, forma_pagamento,
-  total_real, total_gemn, criado_em, atualizado_em
+  total_real, total_gemn, criado_em, atualizado_em,
+  gemn_utilizado, valor_devido_real
 ) values (
   'e8c20000-0000-0000-0000-000000000001'::uuid,
   'e8c10000-0000-0000-0000-000000000001'::uuid,
   'e8c30000-0000-0000-0000-000000000001'::uuid,
-  'pendente', 'real', 25, 0, now(), now()
+  'pendente', 'real', 25, 0, now(), now(), 0, 25
 );
 
 insert into public.payment_intents (
