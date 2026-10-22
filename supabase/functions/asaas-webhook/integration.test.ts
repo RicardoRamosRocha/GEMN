@@ -119,6 +119,29 @@ Deno.test("duplicate and hash-conflict results are acknowledged only when persis
   assert(response.status === 503, "unconfirmed persistence returned HTTP 200");
 });
 
+Deno.test("dispatches persisted intent with the webhook event id as idempotency key", async () => {
+  let dispatched: { paymentIntentId: string; idempotencyKey: string } | undefined;
+  const handler = createAsaasWebhookHandler({
+    env: { get: (name: string) => name === "ASAAS_WEBHOOK_AUTH_TOKEN" ? TOKEN : undefined },
+    persist: async () => ({ ...rpcResult({ payment_intent_id: "33333333-3333-4333-8333-333333333333" })[0] }),
+    dispatchFinalization: async (input) => { dispatched = input; },
+  });
+  const response = await handler(request(payload()));
+  assert(response.status === 200, "persisted webhook was not acknowledged");
+  assert(dispatched?.paymentIntentId === "33333333-3333-4333-8333-333333333333", "intent was not dispatched");
+  assert(dispatched?.idempotencyKey === "00000000-0000-4000-8000-000000000010", "event id was not used for idempotency");
+});
+
+Deno.test("dispatch failure does not replay a persisted provider event", async () => {
+  const handler = createAsaasWebhookHandler({
+    env: { get: (name: string) => name === "ASAAS_WEBHOOK_AUTH_TOKEN" ? TOKEN : undefined },
+    persist: async () => ({ ...rpcResult({ payment_intent_id: "33333333-3333-4333-8333-333333333333" })[0] }),
+    dispatchFinalization: async () => { throw new Error("synthetic finalizer unavailable"); },
+  });
+  const response = await handler(request(payload()));
+  assert(response.status === 200, "dispatch failure changed persisted webhook response");
+});
+
 Deno.test("RPC failure and timeout return 503, including a late response", async () => {
   const failed = httpHandler(createAsaasWebhookPersistence({
     async rpc() {

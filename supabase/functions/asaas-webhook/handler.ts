@@ -36,6 +36,7 @@ export interface AsaasWebhookPersistenceResult {
 
 export interface AsaasWebhookHandlerDependencies {
   persist(input: AsaasWebhookPersistenceInput): Promise<AsaasWebhookPersistenceResult>;
+  dispatchFinalization?(input: { paymentIntentId: string; idempotencyKey: string }): Promise<void>;
   env?: Pick<Deno.Env, "get">;
   maxBodyBytes?: number;
 }
@@ -333,6 +334,19 @@ export function createAsaasWebhookHandler(
 
       if (!result.persisted) {
         return jsonResponse({ ok: false, error: "PERSISTENCE_NOT_CONFIRMED" }, 503);
+      }
+
+      if (result.payment_intent_id && dependencies.dispatchFinalization) {
+        // Dispatch failure must not turn a persisted webhook into a provider retry storm.
+        // The dispatcher itself retries transient failures and the event id is idempotent.
+        try {
+          await dependencies.dispatchFinalization({
+            paymentIntentId: result.payment_intent_id,
+            idempotencyKey: result.webhook_event_id,
+          });
+        } catch {
+          // A later duplicate/replay can safely dispatch the same idempotency key again.
+        }
       }
 
       // Deliberately return no payment or personal data to the public sender.

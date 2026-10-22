@@ -5,6 +5,7 @@ import {
   type AsaasWebhookPersistenceInput,
   type AsaasWebhookPersistenceResult,
 } from "./handler.ts";
+import { createFinalizationDispatcher } from "../asaas-payment-finalizer/dispatch.ts";
 
 const RPC_NAME = "ingest_asaas_webhook_event_v2";
 const RPC_TIMEOUT_MS = 10_000;
@@ -121,7 +122,16 @@ export function createRuntimeHandler(env: Pick<Deno.Env, "get"> = Deno.env): (re
       return { data: response.data, error: response.error ? { message: response.error.message } : null };
     },
   };
-  const dependencies: AsaasWebhookHandlerDependencies = { persist: createAsaasWebhookPersistence(rpc), env };
+  const finalizerUrl = env.get("ASAAS_FINALIZER_URL")?.trim();
+  const finalizerToken = env.get("ASAAS_FINALIZER_INTERNAL_TOKEN")?.trim();
+  const dispatchFinalization = finalizerUrl && finalizerToken
+    ? createFinalizationDispatcher({ url: finalizerUrl, internalToken: finalizerToken }).dispatch
+    : undefined;
+  const dependencies: AsaasWebhookHandlerDependencies = {
+    persist: createAsaasWebhookPersistence(rpc),
+    dispatchFinalization,
+    env,
+  };
   return createAsaasWebhookHandler(dependencies);
 }
 

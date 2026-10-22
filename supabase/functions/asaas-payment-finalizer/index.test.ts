@@ -39,13 +39,29 @@ Deno.test("uses the Asaas verification endpoint and never trusts request amount"
   let request: Request | undefined;
   const verifier = createAsaasPaymentVerifier({
     apiKey: "synthetic-key",
-    baseUrl: "https://sandbox.example.test/v3",
+    baseUrl: "https://api-sandbox.asaas.com/v3",
     fetchImpl: async (input, init) => {
       request = new Request(input, init);
       return Response.json({ id: "pay-1", status: "RECEIVED", value: 10, currency: "BRL", externalReference: "ref", customer: "cus", billingType: "PIX" });
     },
   });
   await verifier.verify("pay-1");
-  assertEquals(request?.url, "https://sandbox.example.test/v3/payments/pay-1");
+  assertEquals(request?.url, "https://api-sandbox.asaas.com/v3/payments/pay-1");
   assertEquals(request?.headers.get("access_token"), "synthetic-key");
+});
+
+Deno.test("rejects non-Sandbox endpoints and aborts slow provider requests", async () => {
+  await assertRejects(
+    async () => createAsaasPaymentVerifier({ apiKey: "synthetic-key", baseUrl: "https://api.asaas.com/v3" }),
+    AsaasPaymentFinalizerError,
+  );
+  const verifier = createAsaasPaymentVerifier({
+    apiKey: "synthetic-key",
+    baseUrl: "https://api-sandbox.asaas.com/v3",
+    timeoutMs: 1,
+    fetchImpl: (_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+    }),
+  });
+  await assertRejects(() => verifier.verify("pay-1"), AsaasPaymentFinalizerError);
 });

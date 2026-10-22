@@ -30,6 +30,8 @@
     "./asaas-register-billing-identity/index.ts",
     "./asaas-webhook/index.ts",
     "./asaas-webhook/index.test.ts",
-    "./asaas-webhook/integration.test.ts"
+    "./asaas-webhook/integration.test.ts",
+    "./asaas-payment-finalizer/dispatch.ts",
+    "./asaas-payment-finalizer/dispatch.test.ts"
   ]
 }

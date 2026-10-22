@@ -2,6 +2,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const ASAAS_STATUS_CONFIRMED = new Set(["RECEIVED", "CONFIRMED"]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ASAAS_SANDBOX_HOST = "api-sandbox.asaas.com";
+const DEFAULT_TIMEOUT_MS = 8_000;
 
 export interface VerifiedAsaasPayment {
   id: string;
@@ -26,6 +28,21 @@ export class AsaasPaymentFinalizerError extends Error {
     super(message);
     this.name = "AsaasPaymentFinalizerError";
   }
+}
+
+function validateSandboxBaseUrl(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new AsaasPaymentFinalizerError("invalid Asaas base URL");
+  }
+  if (url.protocol !== "https:" || url.hostname !== ASAAS_SANDBOX_HOST || url.search || url.hash) {
+    throw new AsaasPaymentFinalizerError("Asaas Sandbox URL is required");
+  }
+  const path = url.pathname.replace(/\/+$/u, "");
+  if (path !== "/v3") throw new AsaasPaymentFinalizerError("Asaas Sandbox /v3 URL is required");
+  return `${url.toString().replace(/\/+$/u, "")}/`;
 }
 
 function text(value: unknown, field: string): string {
@@ -75,17 +92,39 @@ export function createAsaasPaymentVerifier(options: {
   apiKey: string;
   baseUrl: string;
   fetchImpl?: typeof fetch;
+  timeoutMs?: number;
 }): AsaasPaymentVerifier {
   const fetchImpl = options.fetchImpl ?? fetch;
+  const baseUrl = validateSandboxBaseUrl(options.baseUrl);
+  if (!options.apiKey.trim()) throw new AsaasPaymentFinalizerError("Asaas API key is missing");
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new AsaasPaymentFinalizerError("Asaas timeout is invalid");
+  }
   return {
     async verify(paymentId: string): Promise<VerifiedAsaasPayment> {
       const normalized = text(paymentId, "payment id");
-      const response = await fetchImpl(
-        `${options.baseUrl.replace(/\/$/u, "")}/payments/${encodeURIComponent(normalized)}`,
-        { headers: { access_token: options.apiKey, accept: "application/json" } },
-      );
-      if (!response.ok) throw new AsaasPaymentFinalizerError("Asaas verification failed");
-      return mapVerifiedPayment(await response.json());
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetchImpl(
+          `${baseUrl}payments/${encodeURIComponent(normalized)}`,
+          {
+            headers: { access_token: options.apiKey, accept: "application/json", "user-agent": "GEMN/asaas-sandbox-finalizer" },
+            signal: controller.signal,
+          },
+        );
+        if (!response.ok) throw new AsaasPaymentFinalizerError("Asaas verification failed");
+        return mapVerifiedPayment(await response.json());
+      } catch (error) {
+        if (error instanceof AsaasPaymentFinalizerError) throw error;
+        if (error instanceof DOMException && error.name === "AbortError") {
+          throw new AsaasPaymentFinalizerError("Asaas verification timed out");
+        }
+        throw new AsaasPaymentFinalizerError("Asaas verification unavailable");
+      } finally {
+        clearTimeout(timeoutId);
+      }
     },
   };
 }
@@ -163,7 +202,7 @@ export function createFinalizerHandler(options: {
 if (import.meta.main) {
   const url = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const apiKey = Deno.env.get("ASAAS_API_KEY");
+  const apiKey = Deno.env.get("ASAAS_ACCESS_TOKEN") ?? Deno.env.get("ASAAS_API_KEY");
   const internalToken = Deno.env.get("ASAAS_FINALIZER_INTERNAL_TOKEN");
   const baseUrl = Deno.env.get("ASAAS_BASE_URL") ?? "https://api-sandbox.asaas.com/v3";
   if (!url || !serviceRoleKey || !apiKey || !internalToken) {
