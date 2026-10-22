@@ -1,9 +1,13 @@
 {
   "version": "5",
   "specifiers": {
-    "npm:@supabase/supabase-js@2": "2.118.0"
+    "npm:@opentelemetry/api@1.9.0": "1.9.0",
+    "npm:@supabase/supabase-js@2": "2.118.0_@opentelemetry+api@1.9.0"
   },
   "npm": {
+    "@opentelemetry/api@1.9.0": {
+      "integrity": "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="
+    },
     "@supabase/auth-js@2.118.0": {
       "integrity": "sha512-xWfPXyhS2KDSfAneMtI6p/tBnbdiz/5vaRKXEqUfzfC9WCniKr2Ds5o5G7RIGig0bom4z6wUY9zaV07WDVTfnQ==",
       "dependencies": [
@@ -39,14 +43,18 @@
         "tslib"
       ]
     },
-    "@supabase/supabase-js@2.118.0": {
+    "@supabase/supabase-js@2.118.0_@opentelemetry+api@1.9.0": {
       "integrity": "sha512-FxI8UXMVC2UG7IkeiI8fuQZqq2oI3JeSuN8MPIC2RLVaoEAxKS0nqE6kii9Ewpq8f9gNPM6git1Y8f0vN/QLFw==",
       "dependencies": [
+        "@opentelemetry/api",
         "@supabase/auth-js",
         "@supabase/functions-js",
         "@supabase/postgrest-js",
         "@supabase/realtime-js",
         "@supabase/storage-js"
+      ],
+      "optionalPeers": [
+        "@opentelemetry/api"
       ]
     },
     "iceberg-js@0.8.1": {
