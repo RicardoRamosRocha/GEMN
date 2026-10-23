@@ -45,6 +45,28 @@ yarn-error.*
 .env.*
 !.env.example
 
+# GEMN E13 Linux local secrets and generated state
+infra/e13-linux/*.local
+infra/e13-linux/*.secret
+infra/e13-linux/*.env
+infra/e13-linux/*.env.*
+infra/e13-linux/secrets/
+
+# E13 generated source mirror; canonical files remain under /supabase
+infra/e13-linux/supabase/migrations/
+infra/e13-linux/supabase/functions/
+
+# E13 fixture runtime state; scripts remain versionable.
+infra/e13-linux/fixtures/.local/
+infra/e13-linux/fixtures/*.env
+infra/e13-linux/fixtures/*.token
+infra/e13-linux/fixtures/*.log
+infra/e13-linux/fixtures/*.json
+
+# Supabase CLI local state for the isolated E13 project.
+infra/e13-linux/supabase/.temp/
+infra/e13-linux/supabase/.branches/
+
 # Supabase local files
 supabase/.temp/
 

@@ -1,0 +1,82 @@
+# GEMN E13 Linux - configuration-only Supabase project.
+# Independent from the repository's existing /supabase/config.toml.
+# No credentials belong here.
+
+project_id = "gemn-e13-linux"
+
+[api]
+enabled = true
+port = 64321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[api.tls]
+enabled = false
+
+[db]
+port = 64322
+shadow_port = 64320
+health_timeout = "2m"
+major_version = 17
+
+[db.pooler]
+enabled = false
+port = 64329
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = false
+sql_paths = []
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 64323
+api_url = "http://127.0.0.1"
+openai_api_key = "env(E13_OPENAI_API_KEY)"
+
+[local_smtp]
+enabled = true
+port = 64324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[storage.s3_protocol]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:19000"
+additional_redirect_urls = ["http://127.0.0.1:19000", "http://localhost:19000"]
+enable_refresh_token_rotation = true
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+inspector_port = 68083
+deno_version = 2
+
+[functions.asaas-health-check]
+verify_jwt = false
+
+[functions.asaas-webhook]
+verify_jwt = false
+
+[analytics]
+enabled = true
+port = 64327
+backend = "postgres"

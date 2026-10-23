@@ -145,7 +145,7 @@ begin;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
-  confirmed_at, created_at, updated_at,
+  email_confirmed_at, created_at, updated_at,
   raw_app_meta_data, raw_user_meta_data, is_super_admin
 ) values
   ('00000000-0000-0000-0000-000000000000'::uuid,
@@ -170,28 +170,29 @@ on conflict (id) do nothing;
 
 insert into public.orders (
   id, buyer_id, idempotency_key, status, forma_pagamento,
-  total_real, total_gemn, criado_em, atualizado_em
+  total_real, total_gemn, criado_em, atualizado_em,
+  gemn_utilizado, valor_devido_real
 ) values
   ('62000000-0000-0000-0000-000000000001'::uuid,
    '61000000-0000-0000-0000-000000000001'::uuid,
    '63000000-0000-0000-0000-000000000001'::uuid,
-   'pendente', 'real', 25, 0, now(), now()),
+   'pendente', 'real', 25, 0, now(), now(), 0, 25),
   ('62000000-0000-0000-0000-000000000002'::uuid,
    '61000000-0000-0000-0000-000000000001'::uuid,
    '63000000-0000-0000-0000-000000000002'::uuid,
-   'pendente', 'real', 25, 0, now() - interval '25 hours', now()),
+   'pendente', 'real', 25, 0, now() - interval '25 hours', now(), 0, 25),
   ('62000000-0000-0000-0000-000000000003'::uuid,
    '61000000-0000-0000-0000-000000000001'::uuid,
    '63000000-0000-0000-0000-000000000003'::uuid,
-   'pendente', 'gemn', 25, 25, now(), now()),
+   'pendente', 'gemn', 25, 25, now(), now(), 25, 0),
   ('62000000-0000-0000-0000-000000000004'::uuid,
    '61000000-0000-0000-0000-000000000001'::uuid,
    '63000000-0000-0000-0000-000000000004'::uuid,
-   'pendente', 'real', 25, 0, now(), now()),
+   'pendente', 'real', 25, 0, now(), now(), 0, 25),
   ('62000000-0000-0000-0000-000000000005'::uuid,
    '61000000-0000-0000-0000-000000000002'::uuid,
    '63000000-0000-0000-0000-000000000005'::uuid,
-   'pendente', 'real', 25, 0, now(), now());
+   'pendente', 'real', 25, 0, now(), now(), 0, 25);
 
 -- O pedido usado no cenário de reversão permanece pendente: a rotina de
 -- webhook trata eventos de estorno sem exigir a transição de cancelamento.
