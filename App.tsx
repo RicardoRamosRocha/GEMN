@@ -30,6 +30,7 @@ import AdminSellerApplicationDetailScreen from './src/screens/AdminSellerApplica
 import AdminCancellationRequestsScreen from './src/screens/AdminCancellationRequestsScreen';
 import AdminCancellationRequestDetailScreen from './src/screens/AdminCancellationRequestDetailScreen';
 import CartScreen from './src/screens/CartScreen';
+import PixCheckoutScreen from './src/screens/PixCheckoutScreen';
 import { ProductsProvider } from './src/context/ProductsContext';
 import { CartProvider } from './src/context/CartContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -90,6 +91,7 @@ function HomeStack() {
         }}
       />
       <Stack.Screen name="Cart" component={CartScreen} options={{ title: 'Carrinho', headerShown: false }} />
+      <Stack.Screen name="PixCheckout" component={PixCheckoutScreen} options={{ title: 'Checkout Pix', headerShown: false }} />
       <Stack.Screen
         name="SellerStorefront"
         component={SellerStorefrontScreen}
@@ -122,6 +124,7 @@ function MarketplaceStack() {
         }}
       />
       <Stack.Screen name="Cart" component={CartScreen} options={{ title: 'Carrinho', headerShown: false }} />
+      <Stack.Screen name="PixCheckout" component={PixCheckoutScreen} options={{ title: 'Checkout Pix', headerShown: false }} />
       <Stack.Screen
         name="SellerStorefront"
         component={SellerStorefrontScreen}
@@ -145,6 +148,7 @@ function ProfileStack() {
         component={OrdersScreen}
         options={{ title: 'Meus pedidos', headerShown: false }}
       />
+      <Stack.Screen name="PixCheckout" component={PixCheckoutScreen} options={{ title: 'Checkout Pix', headerShown: false }} />
       <Stack.Screen
         name="Wallet"
         component={WalletScreen}

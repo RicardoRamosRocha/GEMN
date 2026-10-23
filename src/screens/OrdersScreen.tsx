@@ -17,12 +17,13 @@ import type { CancellationRequestQuery } from '../types/cancellationRequestQueri
 import type { Order, OrderStatus } from '../types/orders';
 import { AsaasPaymentError } from '../types/asaasPayments';
 import type { CreatePixPaymentResponse } from '../types/asaasPayments';
+import type { PixCheckoutParams } from './PixCheckoutScreen';
 import { orderItemNames, sortOrderItems, totalOrderUnits } from '../services/orderPresentation';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 import { cancellationUiFixtures, createFixtureCancellationRequest, fixtureRequestsByOrder, isGemnUiFixturesEnabled, ordersUiFixtures } from '../dev/ordersUiFixtures';
 
 type OrdersScreenProps = {
-  navigation?: { goBack: () => void };
+  navigation?: { goBack: () => void; navigate?: (screen: 'PixCheckout', params: PixCheckoutParams) => void };
 };
 
 const statusLabels: Record<OrderStatus, string> = {
@@ -535,7 +536,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                   <AppButton title={expanded ? 'Ocultar detalhes' : 'Ver detalhes do pedido'} variant="outline" size="compact" onPress={() => toggleOrderDetails(order.id)} />
                   {expanded ? <OrderDetails order={order} items={orderedItems} /> : null}
                   {order.status === 'pendente' ? <Text style={styles.pendingNote}>Pedido pendente não significa pagamento realizado.</Text> : null}
-                  {isPixEligible(order) ? <AppButton title="Pagar com Pix" variant="primary" fullWidth onPress={() => { void submitPixPayment(order); }} disabled={pixProcessing} loading={pixProcessing && pixOrder?.id === order.id} style={styles.pixButton} /> : null}
+                  {isPixEligible(order) ? <AppButton title="Pagar com Pix" variant="primary" fullWidth onPress={() => navigation?.navigate ? navigation.navigate('PixCheckout', { orderId: order.id, itemName: orderItemNames(order.items), quantidade: totalOrderUnits(order.items), totalReal: order.totalReal, gemnUtilizado: order.gemnUtilizado, valorDevidoReal: order.valorDevidoReal }) : void submitPixPayment(order)} disabled={pixProcessing} loading={pixProcessing && pixOrder?.id === order.id} style={styles.pixButton} /> : null}
                   {requestStatusPresentation(cancellationRequests[order.id]) ? (() => {
                     const requestStatus = requestStatusPresentation(cancellationRequests[order.id])!;
                     const request = cancellationRequests[order.id];

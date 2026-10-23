@@ -6,18 +6,19 @@ import type { RouteProp } from '@react-navigation/native';
 
 import { AppBadge, AppButton, AppCard, AppHeader, AppScreen } from '../components/ui';
 import type { OrderConfirmationParams } from './ProductScreen';
+import type { PixCheckoutParams } from './PixCheckoutScreen';
 import type { OrderStatus } from '../types/orders';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
 
 type OrderConfirmationStackParamList = {
   OrderConfirmation: OrderConfirmationParams;
+  PixCheckout: PixCheckoutParams;
+  Marketplace: { screen: 'MarketplaceHome' };
 };
 
 type OrderConfirmationScreenProps = {
   route?: RouteProp<OrderConfirmationStackParamList, 'OrderConfirmation'>;
-  navigation?: NativeStackNavigationProp<OrderConfirmationStackParamList, 'OrderConfirmation'> & {
-    navigate: (screen: 'Marketplace', params: { screen: 'MarketplaceHome' }) => void;
-  };
+  navigation?: NativeStackNavigationProp<OrderConfirmationStackParamList, 'OrderConfirmation'>;
 };
 
 function formatReal(value: number) {
@@ -118,6 +119,7 @@ export default function OrderConfirmationScreen({ route, navigation }: OrderConf
         </View>
 
         <View style={[styles.actions, wide && styles.actionsWide]}>
+          {status === 'pendente' && valorDevidoReal > 0 ? <AppButton title="Ir para checkout Pix" variant="accent" fullWidth={!wide} onPress={() => navigation?.navigate('PixCheckout', { orderId, itemName, quantidade, totalReal, gemnUtilizado, valorDevidoReal })} style={[styles.primaryButton, wide && styles.actionButtonWide]} /> : null}
           <AppButton title="Continuar comprando" fullWidth={!wide} onPress={() => navigation?.navigate('Marketplace', { screen: 'MarketplaceHome' })} style={[styles.primaryButton, wide && styles.actionButtonWide]} />
           <AppButton title="Voltar" variant="outline" fullWidth={!wide} onPress={() => navigation?.goBack()} style={[styles.secondaryButton, wide && styles.actionButtonWide]} />
         </View>

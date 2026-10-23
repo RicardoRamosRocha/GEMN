@@ -204,6 +204,21 @@ export async function listMyOrders(): Promise<Order[]> {
   return data.map(normalizeOrder);
 }
 
+export async function getMyOrder(orderId: string): Promise<Order> {
+  await requireAuthenticatedUser();
+
+  if (!orderId.trim()) throw new OrderServiceError('unexpected', 'Identificador de pedido invÃ¡lido.');
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select(ORDER_SELECT)
+    .eq('id', orderId)
+    .single();
+
+  if (error) throw normalizeSupabaseError(error);
+  return normalizeOrder(data);
+}
+
 // Exposto somente para os testes de contrato compiláveis do serviço.
 export const __ordersTestables = {
   normalizeOrder,
