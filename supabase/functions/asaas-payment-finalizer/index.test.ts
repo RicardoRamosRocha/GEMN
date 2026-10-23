@@ -17,6 +17,13 @@ Deno.test("rejects pending, non-BRL and non-Pix provider responses", async () =>
   );
 });
 
+Deno.test("accepts the Asaas payment response when currency is omitted", () => {
+  assertEquals(
+    mapVerifiedPayment({ id: "pay", status: "RECEIVED", value: 5, externalReference: "ref", customer: "cus", billingType: "PIX" }).currency,
+    "BRL",
+  );
+});
+
 Deno.test("verifies the provider before calling the financial RPC", async () => {
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
   const handler = createFinalizerHandler({
@@ -33,6 +40,7 @@ Deno.test("verifies the provider before calling the financial RPC", async () => 
   assertEquals(response.status, 200);
   assertEquals(calls[0].name, "finalize_asaas_payment");
   assertEquals(calls[0].args.p_amount_due_real, 42.5);
+  assertEquals(calls[1].name, "complete_asaas_webhook_event_after_finalization");
 });
 
 Deno.test("uses the Asaas verification endpoint and never trusts request amount", async () => {

@@ -72,8 +72,13 @@ Deno.test('creates Pix from the trusted backend amount and gets payment and QR c
 });
 
 Deno.test('maps HTTP failures, invalid responses and zero value without retrying', async () => {
-  const http = clientWith([response({ errors: [{ description: 'rejected' }] }, 400)]).client;
-  await assertRejects(() => http.getPayment('pay_1'), AsaasClientError, 'Asaas request failed');
+  const http = clientWith([response({ errors: [{ code: 'invalid_due_date', description: 'due date is invalid' }] }, 400)]);
+  const error = await assertRejects(() => http.client.getPayment('pay_1'), AsaasClientError, 'Asaas request failed');
+  assertEquals(error.status, 400);
+  assertEquals(error.providerCode, 'invalid_due_date');
+  assertEquals(error.providerMessage, 'due date is invalid');
+  assert(error.correlationId.length > 20);
+  assertEquals(http.requests[0].headers.get('x-correlation-id'), error.correlationId);
 
   const invalid = clientWith([response({ data: 'not-an-array' })]).client;
   await assertRejects(() => invalid.findCustomer({ cpfCnpj: '00000000000' }), AsaasClientError, 'lookup is invalid');

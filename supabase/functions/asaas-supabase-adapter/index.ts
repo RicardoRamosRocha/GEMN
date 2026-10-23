@@ -269,7 +269,7 @@ export function createSupabasePixAdapter(options: SupabasePixAdapterOptions): {
         p_payment_intent_id: input.paymentIntentId,
         p_claim_token: input.claimToken,
         p_error_code: input.errorCode,
-        p_error_message: input.errorCode,
+        p_error_message: input.errorMessage ?? input.errorCode,
       });
       if (statusField(row, 'fail_asaas_payment_creation') !== 'failed') {
         throw new SupabaseAdapterError('Payment failure transition returned an unexpected status');

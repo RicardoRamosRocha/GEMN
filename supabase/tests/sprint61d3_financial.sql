@@ -44,9 +44,12 @@ insert into public.order_items(id,order_id,listing_id,seller_id,nome_item,tipo,q
 values ('51000000-0000-0000-0000-000000000001'::uuid,'41000000-0000-0000-0000-000000000001'::uuid,:'listing_gemn_id'::uuid,:'seller_a_id'::uuid,concat('GEMN_S22_',:'run_id','_ACTIVE_GEMN'),'produto',1,20,7.5,20,7.5,10,2,0),
        ('51000000-0000-0000-0000-000000000002'::uuid,'41000000-0000-0000-0000-000000000002'::uuid,:'listing_fifo_a_id'::uuid,:'seller_a_id'::uuid,:'fifo_a_nome',:'fifo_a_tipo',1,:'fifo_a_preco_real',:'fifo_a_preco_gemn',:'fifo_a_preco_real',:'fifo_a_preco_gemn',10,10,0),
        ('51000000-0000-0000-0000-000000000003'::uuid,'41000000-0000-0000-0000-000000000003'::uuid,:'listing_fifo_b_id'::uuid,:'seller_a_id'::uuid,:'fifo_b_nome',:'fifo_b_tipo',1,:'fifo_b_preco_real',:'fifo_b_preco_gemn',:'fifo_b_preco_real',:'fifo_b_preco_gemn',10,40,0);
-insert into public.cashback_lots(wallet_id,order_id,order_item_id,seller_origem_id,valor_original,valor_disponivel,valor_reservado,valor_consumido,valor_a_recuperar,status)
-select w.id,x.order_id,x.order_item_id,:'seller_a_id'::uuid,x.valor,x.valor,0,0,0,'disponivel'
-from public.wallets w cross join (values ('41000000-0000-0000-0000-000000000001'::uuid,'51000000-0000-0000-0000-000000000001'::uuid,30),('41000000-0000-0000-0000-000000000002'::uuid,'51000000-0000-0000-0000-000000000002'::uuid,10),('41000000-0000-0000-0000-000000000003'::uuid,'51000000-0000-0000-0000-000000000003'::uuid,40)) x(order_id,order_item_id,valor)
+insert into public.cashback_lots(wallet_id,order_id,order_item_id,seller_origem_id,valor_original,valor_disponivel,valor_reservado,valor_consumido,valor_a_recuperar,status,criado_em)
+select w.id,x.order_id,x.order_item_id,:'seller_a_id'::uuid,x.valor,x.valor,0,0,0,'disponivel',x.criado_em
+from public.wallets w cross join (values
+  ('41000000-0000-0000-0000-000000000001'::uuid,'51000000-0000-0000-0000-000000000001'::uuid,30,clock_timestamp()-interval '3 minutes'),
+  ('41000000-0000-0000-0000-000000000002'::uuid,'51000000-0000-0000-0000-000000000002'::uuid,10,clock_timestamp()-interval '2 minutes'),
+  ('41000000-0000-0000-0000-000000000003'::uuid,'51000000-0000-0000-0000-000000000003'::uuid,40,clock_timestamp()-interval '1 minute')) x(order_id,order_item_id,valor,criado_em)
 where w.user_id=case when x.order_id='41000000-0000-0000-0000-000000000001'::uuid then :'buyer_a_id'::uuid else :'buyer_b_id'::uuid end;
 commit;
 

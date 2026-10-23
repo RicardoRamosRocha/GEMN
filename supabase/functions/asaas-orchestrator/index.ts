@@ -100,6 +100,7 @@ export interface PaymentDatabase {
     paymentIntentId: string;
     claimToken: string;
     errorCode: string;
+    errorMessage?: string;
   }): Promise<void>;
   markNeedsReconciliation(input: {
     paymentIntentId: string;
@@ -161,6 +162,15 @@ function mapAsaasError(error: unknown): PixOrchestrationError {
     return new PixOrchestrationError('ASAAS_REJECTED', 'O provedor rejeitou a cobrança Pix.');
   }
   return new PixOrchestrationError('ASAAS_UNAVAILABLE', 'Não foi possível comunicar com o provedor.');
+}
+
+function safeAsaasFailureMessage(error: unknown): string {
+  if (!(error instanceof AsaasClientError)) return 'ASAAS_UNAVAILABLE';
+  const parts = [`HTTP_STATUS=${error.status ?? 'unknown'}`];
+  if (error.providerCode) parts.push(`PROVIDER_CODE=${error.providerCode}`);
+  if (error.providerMessage) parts.push(`PROVIDER_MESSAGE=${error.providerMessage}`);
+  parts.push(`CORRELATION_ID=${error.correlationId}`);
+  return parts.join(';').slice(0, 900);
 }
 
 function isUncertainAsaasFailure(error: unknown): boolean {
@@ -310,6 +320,7 @@ export function createPixOrchestrator<TContext>(
           paymentIntentId: intent.paymentIntentId,
           claimToken: claim.claimToken,
           errorCode: mapped.code,
+          errorMessage: safeAsaasFailureMessage(error),
         });
         throw mapped;
       }

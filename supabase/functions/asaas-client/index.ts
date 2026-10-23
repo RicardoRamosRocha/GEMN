@@ -21,17 +21,29 @@ export class AsaasClientError extends Error {
   readonly code: AsaasClientErrorCode;
   readonly status: number | null;
   readonly uncertain: boolean;
+  readonly providerCode: string | null;
+  readonly providerMessage: string | null;
+  readonly correlationId: string;
 
   constructor(
     code: AsaasClientErrorCode,
     message: string,
-    options: { status?: number; uncertain?: boolean } = {},
+    options: {
+      status?: number;
+      uncertain?: boolean;
+      providerCode?: string | null;
+      providerMessage?: string | null;
+      correlationId?: string;
+    } = {},
   ) {
     super(message);
     this.name = 'AsaasClientError';
     this.code = code;
     this.status = options.status ?? null;
     this.uncertain = options.uncertain ?? false;
+    this.providerCode = options.providerCode ?? null;
+    this.providerMessage = options.providerMessage ?? null;
+    this.correlationId = options.correlationId ?? crypto.randomUUID();
   }
 }
 
@@ -148,6 +160,31 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
+function safeProviderText(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const sanitized = value
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '<email>')
+    .replace(/\b\d{11,14}\b/g, '<document>')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return sanitized ? sanitized.slice(0, 240) : null;
+}
+
+function safeProviderError(body: unknown): { code: string | null; message: string | null } {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return { code: null, message: null };
+  }
+  const record = body as Record<string, unknown>;
+  const errors = Array.isArray(record.errors) ? record.errors : [];
+  const first = errors.length > 0 && typeof errors[0] === 'object' && errors[0] !== null
+    ? errors[0] as Record<string, unknown>
+    : record;
+  const code = safeProviderText(first.code ?? record.code);
+  const message = safeProviderText(first.description ?? first.message ?? record.message);
+  return { code, message };
+}
+
 function parseCustomer(value: unknown): AsaasCustomer {
   const body = record(value);
   return {
@@ -198,14 +235,26 @@ export function createAsaasClient(config: AsaasClientConfig): AsaasClient {
   async function request(path: string, init: RequestInit, operation: 'GET' | 'POST'): Promise<unknown> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const correlationId = crypto.randomUUID();
     try {
       const response = await fetchImpl(new URL(path.replace(/^\//, ''), baseUrl), {
         ...init,
-        headers: { ...jsonHeaders(config.accessToken), ...init.headers },
+        headers: {
+          ...jsonHeaders(config.accessToken),
+          'x-correlation-id': correlationId,
+          ...init.headers,
+        },
         signal: controller.signal,
       });
       if (!response.ok) {
-        throw new AsaasClientError('HTTP_ERROR', 'Asaas request failed', { status: response.status });
+        const body = await response.clone().json().catch(() => null);
+        const provider = safeProviderError(body);
+        throw new AsaasClientError('HTTP_ERROR', 'Asaas request failed', {
+          status: response.status,
+          providerCode: provider.code,
+          providerMessage: provider.message,
+          correlationId,
+        });
       }
       return await readJson(response);
     } catch (error) {

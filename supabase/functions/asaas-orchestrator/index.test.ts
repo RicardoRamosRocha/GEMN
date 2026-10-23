@@ -151,6 +151,38 @@ Deno.test('maps authentication and known Asaas rejection without reconciliation'
   assertEquals(rejected.calls.filter((call) => call === 'postPix').length, 1);
 });
 
+Deno.test('preserves sanitized synchronous Asaas rejection metadata without retrying', async () => {
+  const state: { failure: { errorCode: string; errorMessage?: string } | null } = { failure: null };
+  const { dependencies, calls } = makeDependencies({
+    db: {
+      failPaymentCreation: async (input) => {
+        state.failure = input;
+      },
+    },
+    asaas: {
+      createPixPayment: async () => {
+        throw new AsaasClientError('HTTP_ERROR', 'Asaas request failed', {
+          status: 422,
+          providerCode: 'invalid_due_date',
+          providerMessage: 'due date is invalid',
+          correlationId: 'corr-1',
+        });
+      },
+    },
+  });
+
+  await assertRejects(
+    () => createPixOrchestrator(dependencies).create({ context: null, orderId: 'order-1', idempotencyKey: 'key-1' }),
+    PixOrchestrationError,
+    'ASAAS_REJECTED',
+  );
+  const capturedFailure = state.failure;
+  assert(capturedFailure);
+  assertEquals(capturedFailure.errorCode, 'ASAAS_REJECTED');
+  assertEquals(capturedFailure.errorMessage, 'HTTP_STATUS=422;PROVIDER_CODE=invalid_due_date;PROVIDER_MESSAGE=due date is invalid;CORRELATION_ID=corr-1');
+  assertEquals(calls.filter((call) => call === 'postPix' || call === 'fail'), ['postPix', 'fail']);
+});
+
 Deno.test('routes timeout to needs_reconciliation and never retries POST', async () => {
   const { dependencies, calls } = makeDependencies({ asaas: {
     createPixPayment: async () => { throw new AsaasClientError('TIMEOUT', 'timeout', { uncertain: true }); },

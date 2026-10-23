@@ -69,7 +69,10 @@ function paymentRow(value: unknown): Record<string, unknown> {
 export function mapVerifiedPayment(value: unknown): VerifiedAsaasPayment {
   const row = paymentRow(value);
   const status = text(row.status, "status").toUpperCase();
-  const currency = text(row.currency, "currency").toUpperCase();
+  // Asaas payment responses currently omit currency because the account
+  // currency is BRL. Keep the local contract strict when the field is
+  // present, while treating omission as the documented account default.
+  const currency = text(row.currency ?? "BRL", "currency").toUpperCase();
   const billingType = text(row.billingType, "billingType").toUpperCase();
   if (!ASAAS_STATUS_CONFIRMED.has(status)) {
     throw new AsaasPaymentFinalizerError("payment is not confirmed by Asaas");
@@ -155,6 +158,11 @@ async function finalizeVerifiedPayment(
     p_verified_at: new Date().toISOString(),
   });
   if (result.error) throw new AsaasPaymentFinalizerError("financial finalization failed");
+  const completed = await rpc.rpc("complete_asaas_webhook_event_after_finalization", {
+    p_webhook_event_id: idempotencyKey,
+    p_payment_intent_id: paymentIntentId,
+  });
+  if (completed.error) throw new AsaasPaymentFinalizerError("webhook completion failed");
   return rpcRow(result.data);
 }
 
