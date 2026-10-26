@@ -6,6 +6,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "web:e13": "bash scripts/start-e13-web.sh",
+    "test:auth-recovery": "node --experimental-strip-types --test scripts/test-auth-recovery.mjs",
     "typecheck": "tsc --noEmit",
     "typecheck:functions": "deno check --config supabase/functions/deno.json $(find supabase/functions -type f -name '*.ts' -print | sort)",
     "test:functions": "deno test --config supabase/functions/deno.json $(find supabase/functions -type f -name '*.test.ts' -print | sort)"

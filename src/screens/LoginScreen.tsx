@@ -65,6 +65,9 @@ export default function LoginScreen({ navigation }: any) {
         />
         {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
         <AppButton title="Entrar" variant="accent" fullWidth={!wide} onPress={handleSubmit} loading={submitting} style={[styles.button, wide && styles.buttonWide]} />
+        <Pressable accessibilityRole="button" onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8} style={styles.forgotLink}>
+          <Text style={styles.forgotText}>Esqueci minha senha</Text>
+        </Pressable>
       </AppCard>
 
       <View style={styles.registerRow}>
@@ -89,6 +92,8 @@ const styles = StyleSheet.create({
   error: { ...typography.bodySmall, color: colors.error, marginBottom: spacing.md },
   button: { marginTop: spacing.xs },
   buttonWide: { width: 320, maxWidth: 320 },
+  forgotLink: { alignSelf: 'center', marginTop: spacing.md },
+  forgotText: { ...typography.label, color: colors.primary },
   registerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg },
   registerText: { ...typography.bodySmall, color: colors.textSecondary },
   registerLink: { ...typography.label, color: colors.primary },

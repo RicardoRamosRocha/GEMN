@@ -55,7 +55,7 @@ enabled = true
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:19000"
-additional_redirect_urls = ["http://127.0.0.1:19000", "http://localhost:19000"]
+additional_redirect_urls = ["http://127.0.0.1:19000", "http://localhost:19000", "gemn://reset-password"]
 enable_refresh_token_rotation = true
 enable_signup = true
 enable_anonymous_sign_ins = false

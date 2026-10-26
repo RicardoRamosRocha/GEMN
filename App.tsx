@@ -36,6 +36,8 @@ import { CartProvider } from './src/context/CartContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import { colors, layout, radius, shadows, spacing, typography } from './src/theme/tokens';
 
 const Stack = createNativeStackNavigator();
@@ -57,12 +59,14 @@ const stackScreenOptions = {
   contentStyle: { backgroundColor: colors.background },
 };
 
-function AuthNavigator() {
+function AuthNavigator({ initialRouteName = 'Login' }: { initialRouteName?: 'Login' | 'Register' | 'ForgotPassword' | 'ResetPassword' }) {
   return (
     <NavigationContainer>
-      <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
         <AuthStack.Screen name="Login" component={LoginScreen} />
         <AuthStack.Screen name="Register" component={RegisterScreen} />
+        <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       </AuthStack.Navigator>
     </NavigationContainer>
   );
@@ -311,9 +315,10 @@ function AuthLoadingScreen() {
 }
 
 function AppContent() {
-  const { session, loading } = useAuth();
+  const { session, loading, passwordRecoveryState } = useAuth();
 
   if (loading) return <AuthLoadingScreen />;
+  if (passwordRecoveryState !== 'idle') return <AuthNavigator initialRouteName="ResetPassword" />;
   return session ? <AuthenticatedApp /> : <AuthNavigator />;
 }
 
