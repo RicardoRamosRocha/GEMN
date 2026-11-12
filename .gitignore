@@ -71,3 +71,7 @@ infra/e13-linux/supabase/.branches/
 supabase/.temp/
 
 /backups/
+
+# Playwright E2E artifacts
+/playwright-report/
+/test-results/
