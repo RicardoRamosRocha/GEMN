@@ -1,9 +1,8 @@
 import React from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AppCard, AppScreen } from '../components/ui';
-import { CategoryChip } from '../components/CategoryChip';
 import { HorizontalProductCarousel } from '../components/HorizontalProductCarousel';
 import { ProductCard } from '../components/ProductCard';
 import { WalletCard } from '../components/WalletCard';
@@ -12,20 +11,7 @@ import type { GemnProduct } from '../context/ProductsContext';
 import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
-type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
-
-const categoryIcons = ['food-apple-outline', 'tools', 'tshirt-crew-outline', 'home-outline', 'heart-outline'] as const;
 const promotionalBanner = require('../../assets/images/gemn-banner-home.png');
-
-function categoryIcon(name: string, index: number): IconName {
-  const normalized = name.toLocaleLowerCase();
-  if (normalized.includes('aliment') || normalized.includes('comida') || normalized.includes('food')) return 'food-apple-outline';
-  if (normalized.includes('serv') || normalized.includes('prof')) return 'tools';
-  if (normalized.includes('roup') || normalized.includes('moda')) return 'tshirt-crew-outline';
-  if (normalized.includes('casa') || normalized.includes('lar')) return 'home-outline';
-  if (normalized.includes('saú') || normalized.includes('saud')) return 'heart-outline';
-  return categoryIcons[index % categoryIcons.length];
-}
 
 function formatPrice(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -34,9 +20,8 @@ function formatPrice(value: number) {
 export default function HomeScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
   const desktop = width >= layout.breakpoints.desktop;
-  const { marketplaceProducts, marketplaceLoading, marketplaceError, categories, categoriesLoading, categoriesError } = useProducts();
+  const { marketplaceProducts, marketplaceLoading, marketplaceError } = useProducts();
   const spotlightProducts = marketplaceProducts.slice(0, 6);
-  const visibleCategories = categories.slice(0, 5);
   const bannerHeight = desktop ? 320 : Math.min(250, Math.max(210, width * 0.58));
 
   function openMarketplace(params?: { category?: string; search?: string }) {
@@ -59,26 +44,6 @@ export default function HomeScreen({ navigation }: any) {
       </View>
 
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>Categorias</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Ver todas as categorias" onPress={() => openMarketplace()} style={styles.seeAll}>
-          <Text style={styles.seeAllText}>Ver todas</Text>
-          <MaterialCommunityIcons name="chevron-right" size={17} color={colors.textSecondary} />
-        </Pressable>
-      </View>
-
-      {categoriesLoading ? (
-        <View style={styles.inlineFeedback}><ActivityIndicator color={colors.brand} /><Text style={styles.helperText}>Carregando categorias...</Text></View>
-      ) : categoriesError ? (
-        <AppCard style={styles.feedbackCard}><Text style={styles.errorText}>{categoriesError}</Text></AppCard>
-      ) : visibleCategories.length === 0 ? (
-        <AppCard style={styles.emptyCard}><Text style={styles.helperText}>As categorias da comunidade aparecerão aqui.</Text></AppCard>
-      ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
-          {visibleCategories.map((category, index) => <CategoryChip key={category.id} variant="home" icon={categoryIcon(category.name, index)} label={category.name} onPress={() => openMarketplace({ category: category.name })} />)}
-        </ScrollView>
-      )}
-
-      <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Destaques</Text>
         <Pressable accessibilityRole="button" accessibilityLabel="Ver mais destaques" onPress={() => openMarketplace()} style={styles.seeAll}>
           <Text style={styles.seeAllText}>Ver todas</Text>
@@ -89,7 +54,7 @@ export default function HomeScreen({ navigation }: any) {
       {marketplaceLoading ? <View style={styles.inlineFeedback}><ActivityIndicator color={colors.brand} /><Text style={styles.helperText}>Carregando destaques...</Text></View> : marketplaceError ? <AppCard style={styles.feedbackCard}><Text style={styles.errorText}>{marketplaceError}</Text></AppCard> : spotlightProducts.length === 0 ? <AppCard style={styles.emptyCard}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.brand} /><Text style={styles.emptyTitle}>Ainda não há destaques</Text><Text style={styles.helperText}>Novos produtos e serviços aparecerão aqui.</Text></AppCard> : (
         <HorizontalProductCarousel
           products={spotlightProducts}
-          variant="home"
+          variant="homeCompact"
           renderItem={(product, index) => <HomeProductCard product={product} onPress={() => navigation.navigate('Product', { listing: product, listingSequence: spotlightProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} />}
         />
       )}
@@ -100,11 +65,11 @@ export default function HomeScreen({ navigation }: any) {
 
 function HomeProductCard({ product, onPress, onSellerPress }: { product: GemnProduct; onPress: () => void; onSellerPress: (sellerId: string) => void }) {
   const eligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
-  return <ProductCard layout="home" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={formatPrice(product.price)} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} coinPrice={eligibility.enabled && eligibility.value !== undefined ? `${eligibility.value} GEMN` : undefined} acceptanceGemn={eligibility.enabled} onPress={onPress} />;
+  return <ProductCard layout="marketplaceShowcase" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={formatPrice(product.price)} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} coinPrice={eligibility.enabled && eligibility.value !== undefined ? `${eligibility.value} GEMN` : undefined} acceptanceGemn={eligibility.enabled} onPress={onPress} />;
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.smMd },
+  content: { paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.sm },
   promoBannerFrame: { width: '100%', maxWidth: 820, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.brandDark, borderWidth: 1, borderColor: colors.brandDivider },
   promoBanner: { width: '100%', height: '100%' },
   walletSection: { width: '100%', maxWidth: 820, alignSelf: 'center' },
@@ -112,7 +77,6 @@ const styles = StyleSheet.create({
   sectionTitle: { ...typography.heading3, color: colors.text },
   seeAll: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   seeAllText: { ...typography.bodySmall, color: colors.textSecondary },
-  categoriesRow: { flexDirection: 'row', gap: spacing.sm, paddingRight: spacing.md },
   inlineFeedback: { minHeight: 64, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   feedbackCard: { minHeight: 72, justifyContent: 'center' },
   emptyCard: { minHeight: 104, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },

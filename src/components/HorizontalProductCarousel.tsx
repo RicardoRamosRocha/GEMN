@@ -8,7 +8,7 @@ import type { GemnProduct } from '../context/ProductsContext';
 type HorizontalProductCarouselProps = {
   products: GemnProduct[];
   renderItem: (product: GemnProduct, index: number) => React.ReactNode;
-  variant?: 'default' | 'home';
+  variant?: 'default' | 'home' | 'homeCompact';
 };
 
 export function HorizontalProductCarousel({ products, renderItem, variant = 'default' }: HorizontalProductCarouselProps) {
@@ -16,8 +16,13 @@ export function HorizontalProductCarousel({ products, renderItem, variant = 'def
   const scrollRef = React.useRef<ScrollView>(null);
   const [offset, setOffset] = React.useState(0);
   const desktop = width >= layout.breakpoints.desktop;
-  const gap = variant === 'home' ? spacing.smMd : desktop ? spacing.md : spacing.smMd;
-  const cardWidth = desktop ? variant === 'home' ? 240 : 300 : variant === 'home' ? Math.min(320, Math.max(252, width * 0.78)) : Math.min(286, Math.max(220, width * 0.74));
+  const compactHome = variant === 'homeCompact';
+  const gap = variant === 'home' || compactHome ? spacing.smMd : desktop ? spacing.md : spacing.smMd;
+  const contentWidth = width - (desktop ? 64 : 32);
+  const compactVisibleCards = desktop ? 4.1 : width <= 375 ? 2.55 : 2.8;
+  const cardWidth = compactHome
+    ? products.length === 1 ? Math.min(180, contentWidth) : products.length === 2 ? Math.min(240, Math.floor((contentWidth - gap) / 2)) : Math.floor((contentWidth - gap * (compactVisibleCards - 1)) / compactVisibleCards)
+    : desktop ? variant === 'home' ? 240 : 300 : variant === 'home' ? Math.min(320, Math.max(252, width * 0.78)) : Math.min(286, Math.max(220, width * 0.74));
   const step = cardWidth + gap;
 
   function scrollBy(direction: -1 | 1) {
@@ -26,7 +31,7 @@ export function HorizontalProductCarousel({ products, renderItem, variant = 'def
 
   return (
     <View style={styles.wrapper}>
-      {desktop ? (
+      {desktop && (!compactHome || products.length >= 3) ? (
         <View style={styles.controls}>
           <Pressable
             accessibilityRole="button"
