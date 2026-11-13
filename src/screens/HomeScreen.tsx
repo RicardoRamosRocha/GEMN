@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { AppCard, AppScreen } from '../components/ui';
@@ -16,6 +16,7 @@ import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
 const categoryIcons = ['food-apple-outline', 'tools', 'tshirt-crew-outline', 'home-outline', 'heart-outline'] as const;
+const promotionalBanner = require('../../docs/design/gemn-home-referencia.png');
 
 function categoryIcon(name: string, index: number): IconName {
   const normalized = name.toLocaleLowerCase();
@@ -68,6 +69,15 @@ export default function HomeScreen({ navigation }: any) {
         <WalletCard compact variant="home" onPress={() => navigation.navigate('Perfil', { screen: 'Wallet' })} />
       </View>
 
+      <View style={styles.promoBannerFrame}>
+        <Image
+          accessibilityLabel="Banner promocional do GEMN"
+          source={promotionalBanner}
+          resizeMode="contain"
+          style={styles.promoBanner}
+        />
+      </View>
+
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Categorias</Text>
         <Pressable accessibilityRole="button" accessibilityLabel="Ver todas as categorias" onPress={() => openMarketplace()} style={styles.seeAll}>
@@ -117,6 +127,8 @@ const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.md },
   greenHeader: { minHeight: 0, paddingHorizontal: spacing.md, paddingTop: spacing.smMd, paddingBottom: spacing.smMd, borderRadius: radius.xl, backgroundColor: colors.brandDark, gap: spacing.sm },
   greenHeaderWide: { paddingHorizontal: spacing.lg },
+  promoBannerFrame: { width: '100%', maxWidth: 720, aspectRatio: 2, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  promoBanner: { width: '100%', height: '100%' },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerCopy: { flex: 1, minWidth: 0 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
