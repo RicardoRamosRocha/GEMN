@@ -1,7 +1,8 @@
 import React from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, AppState, Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { useIsFocused } from '@react-navigation/native';
 
 import { AppCard, AppScreen } from '../components/ui';
 import { HorizontalProductCarousel } from '../components/HorizontalProductCarousel';
@@ -72,17 +73,72 @@ export default function HomeScreen({ navigation }: any) {
 }
 
 function PresentationVideo() {
+  const { height: viewportHeight } = useWindowDimensions();
   const [mounted, setMounted] = React.useState(false);
   const [firstFrameReady, setFirstFrameReady] = React.useState(false);
+  const [visible, setVisible] = React.useState(false);
+  const [appActive, setAppActive] = React.useState(AppState.currentState === 'active');
+  const frameRef = React.useRef<View>(null);
+  const manualPauseRef = React.useRef(false);
+  const commandRef = React.useRef<'play' | 'pause' | null>(null);
+  const isFocused = useIsFocused();
   const player = useVideoPlayer(mounted ? presentationVideo : null, (videoPlayer) => {
-    videoPlayer.loop = false;
-    videoPlayer.muted = false;
+    videoPlayer.loop = true;
+    videoPlayer.muted = true;
     videoPlayer.pause();
   });
 
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => setAppActive(nextState === 'active'));
+    return () => subscription.remove();
+  }, []);
+
+  React.useEffect(() => {
+    if (!mounted) return undefined;
+    const element = frameRef.current as unknown as Element | null;
+    if (typeof IntersectionObserver === 'undefined' || !element) {
+      const checkNativeVisibility = () => {
+        frameRef.current?.measureInWindow((_x, y, _width, height) => setVisible(y < viewportHeight && y + height > 0));
+      };
+      checkNativeVisibility();
+      const timer = setInterval(checkNativeVisibility, 250);
+      return () => clearInterval(timer);
+    }
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting && entry.intersectionRatio >= 0.1), { threshold: [0, 0.1] });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [mounted, viewportHeight]);
+
+  React.useEffect(() => {
+    const subscription = player.addListener('playingChange', ({ isPlaying }) => {
+      if (commandRef.current) {
+        commandRef.current = null;
+        return;
+      }
+      manualPauseRef.current = !isPlaying;
+    });
+    return () => subscription.remove();
+  }, [player]);
+
+  React.useEffect(() => {
+    if (!firstFrameReady) return;
+    const canPlay = visible && isFocused && appActive && !manualPauseRef.current;
+    if (canPlay && !player.playing) {
+      commandRef.current = 'play';
+      player.play();
+    } else if (!canPlay && player.playing) {
+      commandRef.current = 'pause';
+      player.pause();
+    }
+  }, [appActive, firstFrameReady, isFocused, player, visible]);
+
+  function handleFirstFrameRender() {
+    setFirstFrameReady(true);
+  }
+
   return (
-    <View style={styles.videoFrame} onLayout={() => setMounted(true)}>
-      {mounted ? <VideoView accessibilityLabel="Vídeo de apresentação do GEMN" player={player} nativeControls contentFit="contain" onFirstFrameRender={() => setFirstFrameReady(true)} style={styles.video} /> : null}
+    <View ref={frameRef} style={styles.videoFrame} onLayout={() => setMounted(true)}>
+      {mounted ? <VideoView accessibilityLabel="Vídeo de apresentação do GEMN" player={player} nativeControls contentFit="contain" onFirstFrameRender={handleFirstFrameRender} style={styles.video} /> : null}
       {!firstFrameReady ? <View pointerEvents="none" style={styles.videoLoading}><ActivityIndicator color={colors.white} /></View> : null}
     </View>
   );
