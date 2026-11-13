@@ -9,13 +9,14 @@ export type AppScreenProps = {
   contentContainerStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
   maxWidth?: number;
+  fullBleed?: boolean;
   edges?: ('top' | 'right' | 'bottom' | 'left')[];
 };
 
-export function AppScreen({ children, scroll = false, contentContainerStyle, style, maxWidth = layout.contentMaxWidth, edges, }: AppScreenProps) {
+export function AppScreen({ children, scroll = false, contentContainerStyle, style, maxWidth = layout.contentMaxWidth, fullBleed = false, edges, }: AppScreenProps) {
   const { width } = useWindowDimensions();
   const horizontalPadding = width >= layout.breakpoints.tablet ? layout.desktopHorizontalPadding : layout.mobileHorizontalPadding;
-  const contentStyle = [styles.content, { maxWidth, paddingHorizontal: horizontalPadding }, contentContainerStyle];
+  const contentStyle = [styles.content, { maxWidth, paddingHorizontal: fullBleed ? 0 : horizontalPadding }, contentContainerStyle];
 
   return (
     <SafeAreaView edges={edges} style={[styles.safeArea, style]}>

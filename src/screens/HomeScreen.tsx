@@ -3,7 +3,6 @@ import { ActivityIndicator, AppState, Image, Pressable, StyleSheet, Text, View, 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useIsFocused } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppCard, AppScreen } from '../components/ui';
 import { HorizontalProductCarousel } from '../components/HorizontalProductCarousel';
@@ -22,7 +21,6 @@ function formatPrice(value: number) {
 
 export default function HomeScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const desktop = width >= layout.breakpoints.desktop;
   const mobile = width < layout.breakpoints.tablet;
   const { marketplaceProducts, marketplaceLoading, marketplaceError } = useProducts();
@@ -33,8 +31,8 @@ export default function HomeScreen({ navigation }: any) {
   }
 
   return (
-    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} style={mobile ? styles.mobileSafeArea : undefined} maxWidth={desktop ? 1180 : layout.contentMaxWidth} contentContainerStyle={styles.content}>
-      <View accessibilityLabel="Apresentação do GEMN" style={[styles.presentationSection, mobile && { width: width - insets.left - insets.right, marginLeft: -layout.mobileHorizontalPadding }]}>
+    <AppScreen scroll fullBleed edges={['top', 'right', 'bottom', 'left']} style={mobile ? styles.mobileSafeArea : undefined} maxWidth={desktop ? 1180 : layout.contentMaxWidth} contentContainerStyle={styles.content}>
+      <View accessibilityLabel="Apresentação do GEMN" style={styles.presentationSection}>
         <View style={styles.presentationFrame}>
           <View style={styles.presentationFrameInner}>
             <View style={styles.promoBannerFrame}>
@@ -50,21 +48,23 @@ export default function HomeScreen({ navigation }: any) {
         </View>
       </View>
 
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>Destaques</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Ver mais destaques" onPress={() => openMarketplace()} style={styles.seeAll}>
-          <Text style={styles.seeAllText}>Ver todas</Text>
-          <MaterialCommunityIcons name="chevron-right" size={17} color={colors.textSecondary} />
-        </Pressable>
-      </View>
+      <View style={[styles.paddedContent, !mobile && styles.paddedContentWide]}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Destaques</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Ver mais destaques" onPress={() => openMarketplace()} style={styles.seeAll}>
+            <Text style={styles.seeAllText}>Ver todas</Text>
+            <MaterialCommunityIcons name="chevron-right" size={17} color={colors.textSecondary} />
+          </Pressable>
+        </View>
 
-      {marketplaceLoading ? <View style={styles.inlineFeedback}><ActivityIndicator color={colors.brand} /><Text style={styles.helperText}>Carregando destaques...</Text></View> : marketplaceError ? <AppCard style={styles.feedbackCard}><Text style={styles.errorText}>{marketplaceError}</Text></AppCard> : spotlightProducts.length === 0 ? <AppCard style={styles.emptyCard}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.brand} /><Text style={styles.emptyTitle}>Ainda não há destaques</Text><Text style={styles.helperText}>Novos produtos e serviços aparecerão aqui.</Text></AppCard> : (
-        <HorizontalProductCarousel
-          products={spotlightProducts}
-          variant="homeCompact"
-          renderItem={(product, index) => <HomeProductCard product={product} onPress={() => navigation.navigate('Product', { listing: product, listingSequence: spotlightProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} />}
-        />
-      )}
+        {marketplaceLoading ? <View style={styles.inlineFeedback}><ActivityIndicator color={colors.brand} /><Text style={styles.helperText}>Carregando destaques...</Text></View> : marketplaceError ? <AppCard style={styles.feedbackCard}><Text style={styles.errorText}>{marketplaceError}</Text></AppCard> : spotlightProducts.length === 0 ? <AppCard style={styles.emptyCard}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.brand} /><Text style={styles.emptyTitle}>Ainda não há destaques</Text><Text style={styles.helperText}>Novos produtos e serviços aparecerão aqui.</Text></AppCard> : (
+          <HorizontalProductCarousel
+            products={spotlightProducts}
+            variant="homeCompact"
+            renderItem={(product, index) => <HomeProductCard product={product} onPress={() => navigation.navigate('Product', { listing: product, listingSequence: spotlightProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} />}
+          />
+        )}
+      </View>
 
     </AppScreen>
   );
@@ -150,6 +150,8 @@ function HomeProductCard({ product, onPress, onSellerPress }: { product: GemnPro
 
 const styles = StyleSheet.create({
   content: { paddingTop: 0, paddingBottom: spacing.xl, gap: spacing.sm, backgroundColor: colors.background },
+  paddedContent: { width: '100%', paddingHorizontal: spacing.md, gap: spacing.sm },
+  paddedContentWide: { paddingHorizontal: layout.desktopHorizontalPadding },
   mobileSafeArea: { backgroundColor: colors.brandDark },
   promoBanner: { width: '100%', height: '100%' },
   sectionHeaderRow: { minHeight: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
