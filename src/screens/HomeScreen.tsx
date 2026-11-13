@@ -22,9 +22,9 @@ function formatPrice(value: number) {
 export default function HomeScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
   const desktop = width >= layout.breakpoints.desktop;
+  const mobile = width < layout.breakpoints.tablet;
   const { marketplaceProducts, marketplaceLoading, marketplaceError } = useProducts();
   const spotlightProducts = marketplaceProducts.slice(0, 6);
-  const bannerHeight = desktop ? 320 : Math.min(250, Math.max(210, width * 0.58));
 
   function openMarketplace(params?: { category?: string; search?: string }) {
     navigation.navigate('Marketplace', { screen: 'MarketplaceHome', params });
@@ -32,19 +32,20 @@ export default function HomeScreen({ navigation }: any) {
 
   return (
     <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} maxWidth={desktop ? 1180 : layout.contentMaxWidth} contentContainerStyle={styles.content}>
-      <View style={[styles.promoBannerFrame, { height: bannerHeight }]}>
-        <Image
-          accessibilityLabel="Banner promocional do GEMN"
-          source={promotionalBanner}
-          resizeMode="contain"
-          style={styles.promoBanner}
-        />
-      </View>
-
-      <View style={styles.presentationSection}>
-        <Text style={styles.sectionTitle}>Conheça o GEMN</Text>
-        <Text style={styles.presentationSubtitle}>Uma comunidade de negócios, oportunidades e conexões.</Text>
-        <PresentationVideo />
+      <View accessibilityLabel="Apresentação do GEMN" style={[styles.presentationSection, mobile && { width, marginLeft: -layout.mobileHorizontalPadding }]}>
+        <View style={styles.presentationFrame}>
+          <View style={styles.presentationFrameInner}>
+            <View style={styles.promoBannerFrame}>
+              <Image
+                accessibilityLabel="Banner promocional do GEMN"
+                source={promotionalBanner}
+                resizeMode="contain"
+                style={styles.promoBanner}
+              />
+            </View>
+            <PresentationVideo />
+          </View>
+        </View>
       </View>
 
       <View style={styles.sectionHeaderRow}>
@@ -134,6 +135,7 @@ function PresentationVideo() {
   return (
     <View ref={frameRef} style={styles.videoFrame} onLayout={() => setMounted(true)}>
       {mounted ? <VideoView accessibilityLabel="Vídeo de apresentação do GEMN" player={player} nativeControls contentFit="contain" onFirstFrameRender={handleFirstFrameRender} style={styles.video} /> : null}
+      {!firstFrameReady ? <Image pointerEvents="none" accessibilityLabel="Poster do vídeo de apresentação do GEMN" source={promotionalBanner} resizeMode="contain" style={styles.videoPoster} /> : null}
       {!firstFrameReady ? <View pointerEvents="none" style={styles.videoLoading}><ActivityIndicator color={colors.white} /></View> : null}
     </View>
   );
@@ -146,7 +148,6 @@ function HomeProductCard({ product, onPress, onSellerPress }: { product: GemnPro
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.sm },
-  promoBannerFrame: { width: '100%', maxWidth: 820, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.brandDark, borderWidth: 1, borderColor: colors.brandDivider },
   promoBanner: { width: '100%', height: '100%' },
   sectionHeaderRow: { minHeight: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   sectionTitle: { ...typography.heading3, color: colors.text },
@@ -158,10 +159,13 @@ const styles = StyleSheet.create({
   emptyTitle: { ...typography.heading4, color: colors.text, textAlign: 'center' },
   helperText: { ...typography.bodySmall, color: colors.textSecondary, textAlign: 'center' },
   errorText: { ...typography.bodySmall, color: colors.error, textAlign: 'center' },
-  presentationSection: { width: '100%', maxWidth: 820, alignSelf: 'center', gap: spacing.xs },
-  presentationSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: -spacing.xxs },
-  videoFrame: { width: '100%', aspectRatio: 16 / 9, overflow: 'hidden', borderRadius: radius.lg, backgroundColor: colors.brandDark },
+  presentationSection: { width: '100%', maxWidth: 820, alignSelf: 'center' },
+  presentationFrame: { width: '100%', padding: 3, borderRadius: radius.xl, backgroundColor: colors.brandDark, borderWidth: 1, borderColor: colors.gemn },
+  presentationFrameInner: { overflow: 'hidden', borderRadius: radius.lg, backgroundColor: colors.brandDark },
+  promoBannerFrame: { width: '100%', aspectRatio: 1774 / 887, overflow: 'hidden', backgroundColor: colors.brandDark },
   video: { width: '100%', height: '100%' },
+  videoFrame: { width: '100%', aspectRatio: 16 / 9, overflow: 'hidden', backgroundColor: colors.brandDark },
+  videoPoster: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   videoLoading: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandDark },
   pressed: { opacity: 0.78 },
 });
