@@ -145,7 +145,7 @@ function PresentationVideo() {
 
 function HomeProductCard({ product, onPress, onSellerPress }: { product: GemnProduct; onPress: () => void; onSellerPress: (sellerId: string) => void }) {
   const eligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
-  return <ProductCard layout="marketplaceShowcase" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={formatPrice(product.price)} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} coinPrice={eligibility.enabled && eligibility.value !== undefined ? `${eligibility.value} GEMN` : undefined} acceptanceGemn={eligibility.enabled} onPress={onPress} />;
+  return <ProductCard layout="homeCompact" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={formatPrice(product.price)} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} coinPrice={eligibility.enabled && eligibility.value !== undefined ? `${eligibility.value} GEMN` : undefined} acceptanceGemn={eligibility.enabled} onPress={onPress} />;
 }
 
 const styles = StyleSheet.create({
