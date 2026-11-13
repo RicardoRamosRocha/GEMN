@@ -4,6 +4,9 @@
     "strict": true
   },
   "exclude": [
-    "supabase/functions"
+    "e2e",
+    "playwright.config.ts",
+    "supabase/functions",
+    "infra/e13-linux/supabase/functions"
   ]
 }

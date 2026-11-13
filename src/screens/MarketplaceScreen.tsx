@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppButton, AppCard, AppInput, AppScreen } from '../components/ui';
 import { CategoryChip } from '../components/CategoryChip';
@@ -15,6 +15,7 @@ import { colors, layout, radius, shadows, spacing, typography } from '../theme/t
 
 const allCategory = { icon: 'apps' as const, label: 'Todas' };
 const categoryIcons = ['food-apple-outline', 'tools', 'tshirt-crew-outline', 'home-outline', 'car-outline'] as const;
+const marketplaceBanner = require('../../assets/images/banner-gemn-marketplace.png');
 
 function categoryIcon(name: string, index: number) {
   const normalized = name.toLocaleLowerCase();
@@ -117,6 +118,15 @@ export default function MarketplaceScreen({ navigation, route }: any) {
 
   return (
     <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} contentContainerStyle={styles.content}>
+      <View style={styles.promoBannerFrame}>
+        <Image
+          accessibilityLabel="Banner promocional do Mercado GEMN"
+          source={marketplaceBanner}
+          resizeMode="contain"
+          style={styles.promoBanner}
+        />
+      </View>
+
       <View style={styles.marketHero}>
         <View style={styles.marketHeader}>
           <View style={styles.marketHeaderCopy}>
@@ -241,6 +251,8 @@ function ResponsiveGrid<T extends GridItem>({ items, columns, itemWidth, gap, re
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.md },
+  promoBannerFrame: { width: '100%', maxWidth: 820, aspectRatio: 1774 / 887, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.brandDark, borderWidth: 1, borderColor: colors.brandDivider },
+  promoBanner: { width: '100%', height: '100%' },
   marketHero: { padding: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.brandDark, gap: spacing.sm },
   marketHeader: { minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   marketHeaderCopy: { flex: 1, minWidth: 0 },
