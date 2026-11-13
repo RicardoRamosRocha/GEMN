@@ -237,13 +237,21 @@ function ProfileStack() {
 }
 
 function AuthenticatedApp() {
+  return (
+    <ProductsProvider>
+      <CartProvider>
+        <AuthenticatedTabs />
+      </CartProvider>
+    </ProductsProvider>
+  );
+}
+
+function AuthenticatedTabs() {
   const insets = useSafeAreaInsets();
   const { itemCount } = useCart();
 
   return (
-    <ProductsProvider>
-      <CartProvider>
-        <NavigationContainer>
+    <NavigationContainer>
         <Tab.Navigator
           screenOptions={{
             headerShown: false,
@@ -329,9 +337,7 @@ function AuthenticatedApp() {
           }}
         />
         </Tab.Navigator>
-        </NavigationContainer>
-      </CartProvider>
-    </ProductsProvider>
+    </NavigationContainer>
   );
 }
 
