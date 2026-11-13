@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { VideoView, useVideoPlayer } from 'expo-video';
 
 import { AppCard, AppScreen } from '../components/ui';
 import { HorizontalProductCarousel } from '../components/HorizontalProductCarousel';
@@ -12,6 +13,7 @@ import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
 const promotionalBanner = require('../../assets/images/gemn-banner-home.png');
+const presentationVideo = require('../../assets/videos/apresenta.mp4');
 
 function formatPrice(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -59,7 +61,28 @@ export default function HomeScreen({ navigation }: any) {
         />
       )}
 
+      <View style={styles.presentationSection}>
+        <Text style={styles.sectionTitle}>Conheça o GEMN</Text>
+        <Text style={styles.presentationSubtitle}>Uma comunidade de negócios, oportunidades e conexões.</Text>
+        <PresentationVideo />
+      </View>
+
     </AppScreen>
+  );
+}
+
+function PresentationVideo() {
+  const [mounted, setMounted] = React.useState(false);
+  const player = useVideoPlayer(mounted ? presentationVideo : null, (videoPlayer) => {
+    videoPlayer.loop = false;
+    videoPlayer.muted = false;
+    videoPlayer.pause();
+  });
+
+  return (
+    <View style={styles.videoFrame} onLayout={() => setMounted(true)}>
+      {mounted ? <VideoView accessibilityLabel="Vídeo de apresentação do GEMN" player={player} nativeControls contentFit="contain" style={styles.video} /> : null}
+    </View>
   );
 }
 
@@ -83,5 +106,9 @@ const styles = StyleSheet.create({
   emptyTitle: { ...typography.heading4, color: colors.text, textAlign: 'center' },
   helperText: { ...typography.bodySmall, color: colors.textSecondary, textAlign: 'center' },
   errorText: { ...typography.bodySmall, color: colors.error, textAlign: 'center' },
+  presentationSection: { width: '100%', maxWidth: 820, alignSelf: 'center', gap: spacing.xs },
+  presentationSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: -spacing.xxs },
+  videoFrame: { width: '100%', aspectRatio: 16 / 9, overflow: 'hidden', borderRadius: radius.lg, backgroundColor: colors.brandDark },
+  video: { width: '100%', height: '100%' },
   pressed: { opacity: 0.78 },
 });
