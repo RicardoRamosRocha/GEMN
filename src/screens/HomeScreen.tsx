@@ -8,7 +8,6 @@ import { HorizontalProductCarousel } from '../components/HorizontalProductCarous
 import { ProductCard } from '../components/ProductCard';
 import { WalletCard } from '../components/WalletCard';
 import { useProducts } from '../context/ProductsContext';
-import { useCart } from '../context/CartContext';
 import type { GemnProduct } from '../context/ProductsContext';
 import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
@@ -36,39 +35,17 @@ export default function HomeScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
   const desktop = width >= layout.breakpoints.desktop;
   const { marketplaceProducts, marketplaceLoading, marketplaceError, categories, categoriesLoading, categoriesError } = useProducts();
-  const { itemCount } = useCart();
   const spotlightProducts = marketplaceProducts.slice(0, 6);
   const visibleCategories = categories.slice(0, 5);
+  const bannerHeight = desktop ? 320 : Math.min(250, Math.max(210, width * 0.58));
 
   function openMarketplace(params?: { category?: string; search?: string }) {
     navigation.navigate('Marketplace', { screen: 'MarketplaceHome', params });
   }
 
-  function openProfile() {
-    navigation.navigate('Perfil', { screen: 'ProfileHome' });
-  }
-
   return (
     <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} maxWidth={desktop ? 1180 : layout.contentMaxWidth} contentContainerStyle={styles.content}>
-      <View style={[styles.greenHeader, desktop && styles.greenHeaderWide]}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerCopy}>
-            <Text style={styles.logo}>GEMN</Text>
-            <Text style={styles.headerSubtitle}>Nossa comunidade, nossos negócios.</Text>
-          </View>
-          <View style={styles.headerActions}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Abrir carrinho" onPress={() => navigation.navigate('Cart')} style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}>
-              <MaterialCommunityIcons name="cart-outline" size={23} color={colors.white} />
-              {itemCount > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount > 99 ? '99+' : itemCount}</Text></View> : null}
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Abrir minha conta" onPress={openProfile} style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}>
-              <MaterialCommunityIcons name="account-outline" size={23} color={colors.white} />
-            </Pressable>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.promoBannerFrame}>
+      <View style={[styles.promoBannerFrame, { height: bannerHeight }]}>
         <Image
           accessibilityLabel="Banner promocional do GEMN"
           source={promotionalBanner}
@@ -128,19 +105,9 @@ function HomeProductCard({ product, onPress, onSellerPress }: { product: GemnPro
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.smMd },
-  greenHeader: { minHeight: 0, paddingHorizontal: spacing.md, paddingTop: spacing.smMd, paddingBottom: spacing.smMd, borderRadius: radius.xl, backgroundColor: colors.brandDark, gap: spacing.sm },
-  greenHeaderWide: { paddingHorizontal: spacing.lg },
-  promoBannerFrame: { width: '100%', maxWidth: 820, aspectRatio: 2, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  promoBannerFrame: { width: '100%', maxWidth: 820, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.brandDark, borderWidth: 1, borderColor: colors.brandDivider },
   promoBanner: { width: '100%', height: '100%' },
   walletSection: { width: '100%', maxWidth: 820, alignSelf: 'center' },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerCopy: { flex: 1, minWidth: 0 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  logo: { ...typography.heading1, color: colors.white, fontSize: 30, lineHeight: 34, letterSpacing: 1.1 },
-  headerSubtitle: { ...typography.caption, color: colors.brandLight, marginTop: 2 },
-  profileButton: { width: 42, height: 42, borderRadius: radius.full, backgroundColor: colors.brandOverlay, alignItems: 'center', justifyContent: 'center' },
-  cartBadge: { position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, paddingHorizontal: 3, borderRadius: radius.full, backgroundColor: colors.gemn, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.brandDark },
-  cartBadgeText: { ...typography.caption, color: colors.brandDark, fontSize: 10, lineHeight: 12, fontWeight: '700' },
   sectionHeaderRow: { minHeight: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   sectionTitle: { ...typography.heading3, color: colors.text },
   seeAll: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },

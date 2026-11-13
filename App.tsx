@@ -32,7 +32,7 @@ import AdminCancellationRequestDetailScreen from './src/screens/AdminCancellatio
 import CartScreen from './src/screens/CartScreen';
 import PixCheckoutScreen from './src/screens/PixCheckoutScreen';
 import { ProductsProvider } from './src/context/ProductsContext';
-import { CartProvider } from './src/context/CartContext';
+import { CartProvider, useCart } from './src/context/CartContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -138,6 +138,15 @@ function MarketplaceStack() {
   );
 }
 
+function CartStack() {
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions}>
+      <Stack.Screen name="Cart" component={CartScreen} options={{ title: 'Carrinho', headerShown: false }} />
+      <Stack.Screen name="PixCheckout" component={PixCheckoutScreen} options={{ title: 'Checkout Pix', headerShown: false }} />
+    </Stack.Navigator>
+  );
+}
+
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions}>
@@ -229,6 +238,7 @@ function ProfileStack() {
 
 function AuthenticatedApp() {
   const insets = useSafeAreaInsets();
+  const { itemCount } = useCart();
 
   return (
     <ProductsProvider>
@@ -240,6 +250,8 @@ function AuthenticatedApp() {
             tabBarActiveTintColor: colors.brand,
             tabBarInactiveTintColor: colors.textMuted,
             tabBarLabelStyle: { ...typography.label, fontSize: 12 },
+            tabBarHideOnKeyboard: true,
+            tabBarBadgeStyle: { backgroundColor: colors.gemn, color: colors.brandDark, fontSize: 10, lineHeight: 16, minWidth: 18 },
             tabBarStyle: {
               // Keep the tab content above Android's navigation bar and iOS's home indicator.
               height: 64 + insets.bottom,
@@ -281,6 +293,22 @@ function AuthenticatedApp() {
             tabBarIcon: ({ color, focused }) => (
               <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
                 <MaterialCommunityIcons name="storefront-outline" size={22} color={color} />
+              </View>
+            ),
+          }}
+        />
+
+        <Tab.Screen
+          name="Carrinho"
+          component={CartStack}
+          listeners={({ navigation }) => ({
+            tabPress: () => navigation.navigate('Carrinho', { screen: 'Cart' }),
+          })}
+          options={{
+            tabBarBadge: itemCount > 0 ? (itemCount > 99 ? '99+' : itemCount) : undefined,
+            tabBarIcon: ({ color, focused }) => (
+              <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
+                <MaterialCommunityIcons name="cart-outline" size={22} color={color} />
               </View>
             ),
           }}
