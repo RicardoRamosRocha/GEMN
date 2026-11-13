@@ -5,6 +5,7 @@ import { AppButton, AppCard, AppInput, AppScreen } from '../components/ui';
 import { CategoryChip } from '../components/CategoryChip';
 import { ProductCard } from '../components/ProductCard';
 import { SellerDirectoryCard } from '../components/SellerDirectoryCard';
+import { WalletCard } from '../components/WalletCard';
 import { useProducts } from '../context/ProductsContext';
 import type { GemnProduct } from '../context/ProductsContext';
 import { getGemnPresentationEligibility } from '../services/gemnPresentation';
@@ -127,6 +128,10 @@ export default function MarketplaceScreen({ navigation, route }: any) {
           resizeMode="contain"
           style={styles.promoBanner}
         />
+      </View>
+
+      <View style={styles.walletSection}>
+        <WalletCard compact variant="home" onPress={() => navigation.navigate('Perfil', { screen: 'Wallet' })} />
       </View>
 
       <View style={styles.searchSection}>
@@ -264,6 +269,7 @@ const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.smMd },
   promoBannerFrame: { width: '100%', maxWidth: 820, aspectRatio: 1774 / 887, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.brandDark, borderWidth: 1, borderColor: colors.brandDivider },
   promoBanner: { width: '100%', height: '100%' },
+  walletSection: { width: '100%', maxWidth: 820, alignSelf: 'center' },
   searchSection: { width: '100%', paddingTop: spacing.xs },
   modeSwitcherOutside: { flexDirection: 'row', backgroundColor: colors.brandLight, borderRadius: radius.md, padding: spacing.xxs, gap: spacing.xs },
   modeButtonOutside: { flex: 1, minHeight: 38, borderRadius: radius.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm },

@@ -7,7 +7,6 @@ import { useIsFocused } from '@react-navigation/native';
 import { AppCard, AppScreen } from '../components/ui';
 import { HorizontalProductCarousel } from '../components/HorizontalProductCarousel';
 import { ProductCard } from '../components/ProductCard';
-import { WalletCard } from '../components/WalletCard';
 import { useProducts } from '../context/ProductsContext';
 import type { GemnProduct } from '../context/ProductsContext';
 import { getGemnPresentationEligibility } from '../services/gemnPresentation';
@@ -42,8 +41,10 @@ export default function HomeScreen({ navigation }: any) {
         />
       </View>
 
-      <View style={styles.walletSection}>
-        <WalletCard compact variant="home" onPress={() => navigation.navigate('Perfil', { screen: 'Wallet' })} />
+      <View style={styles.presentationSection}>
+        <Text style={styles.sectionTitle}>Conheça o GEMN</Text>
+        <Text style={styles.presentationSubtitle}>Uma comunidade de negócios, oportunidades e conexões.</Text>
+        <PresentationVideo />
       </View>
 
       <View style={styles.sectionHeaderRow}>
@@ -61,12 +62,6 @@ export default function HomeScreen({ navigation }: any) {
           renderItem={(product, index) => <HomeProductCard product={product} onPress={() => navigation.navigate('Product', { listing: product, listingSequence: spotlightProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} />}
         />
       )}
-
-      <View style={styles.presentationSection}>
-        <Text style={styles.sectionTitle}>Conheça o GEMN</Text>
-        <Text style={styles.presentationSubtitle}>Uma comunidade de negócios, oportunidades e conexões.</Text>
-        <PresentationVideo />
-      </View>
 
     </AppScreen>
   );
@@ -153,7 +148,6 @@ const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.sm },
   promoBannerFrame: { width: '100%', maxWidth: 820, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.brandDark, borderWidth: 1, borderColor: colors.brandDivider },
   promoBanner: { width: '100%', height: '100%' },
-  walletSection: { width: '100%', maxWidth: 820, alignSelf: 'center' },
   sectionHeaderRow: { minHeight: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   sectionTitle: { ...typography.heading3, color: colors.text },
   seeAll: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
