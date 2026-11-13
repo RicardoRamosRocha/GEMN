@@ -40,7 +40,7 @@ export function WalletCard({ onPress, refreshKey = 0, compact = false, embedded 
 
   const body = (
     <View style={[styles.body, embedded && styles.embeddedBody, compact && !embedded && styles.compactBody, homeVariant && styles.homeCompactBody]}>
-      <View style={styles.heading}>
+      <View style={[styles.heading, homeVariant && styles.homeHeading]}>
         <MaterialCommunityIcons name="wallet-outline" size={18} color={embedded ? colors.white : homeVariant ? colors.gemn : colors.brand} />
         <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={[styles.label, !embedded && (homeVariant ? styles.homeLabel : styles.labelSurface)]}>{embedded ? 'MINHA CARTEIRA' : homeVariant ? 'Minha carteira' : 'SUA CARTEIRA'}</Text>
         {homeVariant ? <MaterialCommunityIcons name="chevron-right" size={18} color={colors.gemn} /> : null}
@@ -52,7 +52,7 @@ export function WalletCard({ onPress, refreshKey = 0, compact = false, embedded 
       ) : (
         <>
           {homeVariant ? (
-            <>
+            <View style={styles.homeSummary}>
               <View style={[styles.balanceRow, styles.homeBalanceRow]}>
                 <View style={styles.balanceItem}>
                   <Text numberOfLines={1} style={[styles.moneyLabel, styles.homeMoneyLabel, styles.balanceMoneyLabel]}>Disponível</Text>
@@ -65,7 +65,7 @@ export function WalletCard({ onPress, refreshKey = 0, compact = false, embedded 
                 </View>
               </View>
               {(wallet?.saldoARecuperar ?? 0) > 0 ? <Text style={styles.homeRecovery}>A recuperar: {formatGemn(wallet?.saldoARecuperar ?? 0)}</Text> : null}
-            </>
+            </View>
           ) : compact && !embedded ? (
             <>
               <View style={styles.balanceRow}>
@@ -112,11 +112,12 @@ const styles = StyleSheet.create({
   walletCompact: { borderRadius: radius.lg },
   body: { padding: spacing.lg },
   compactBody: { padding: spacing.md },
-  homeCompactBody: { padding: spacing.smMd, paddingTop: spacing.smMd },
+  homeCompactBody: { padding: spacing.smMd, paddingTop: spacing.smMd, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   embeddedPressable: { borderTopWidth: 1, borderTopColor: colors.brandDivider },
   embeddedBody: { padding: spacing.lg, paddingTop: spacing.md },
   pressed: { opacity: 0.9 },
   heading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minWidth: 0 },
+  homeHeading: { width: 96, flexGrow: 0, flexShrink: 0 },
   label: { ...typography.caption, color: colors.brandLight, fontWeight: '700', letterSpacing: 0.8, flex: 1, minWidth: 0, flexShrink: 1 },
   labelSurface: { color: colors.brandDark },
   homeLabel: { color: colors.white, textTransform: 'none', letterSpacing: 0.2 },
@@ -130,7 +131,8 @@ const styles = StyleSheet.create({
   gemnPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: spacing.xs, minHeight: 20, borderRadius: radius.full, backgroundColor: colors.gemnLight },
   gemnPillText: { ...typography.caption, color: colors.brandDark, fontSize: 10, lineHeight: 13, fontWeight: '700' },
   balanceRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, gap: spacing.md },
-  homeBalanceRow: { gap: spacing.sm },
+  homeSummary: { flex: 1, minWidth: 0 },
+  homeBalanceRow: { gap: spacing.sm, marginTop: 0 },
   balanceItem: { flex: 1, minWidth: 0 },
   balanceDivider: { width: 1, height: 40, backgroundColor: colors.border },
   homeBalanceDivider: { backgroundColor: colors.brandDivider },
@@ -153,5 +155,5 @@ const styles = StyleSheet.create({
   homeFeedbackText: { color: colors.white },
   detailsAction: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.md },
   detailsText: { ...typography.caption, color: colors.white, fontWeight: '700' },
-  homeWallet: { backgroundColor: 'transparent', borderWidth: 0, borderTopWidth: 1, borderTopColor: colors.brandDivider, borderRadius: 0 },
+  homeWallet: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg },
 });

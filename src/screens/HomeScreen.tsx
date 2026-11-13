@@ -16,7 +16,7 @@ import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
 const categoryIcons = ['food-apple-outline', 'tools', 'tshirt-crew-outline', 'home-outline', 'heart-outline'] as const;
-const promotionalBanner = require('../../docs/design/gemn-home-referencia.png');
+const promotionalBanner = require('../../assets/images/gemn-banner-home.png');
 
 function categoryIcon(name: string, index: number): IconName {
   const normalized = name.toLocaleLowerCase();
@@ -66,7 +66,6 @@ export default function HomeScreen({ navigation }: any) {
             </Pressable>
           </View>
         </View>
-        <WalletCard compact variant="home" onPress={() => navigation.navigate('Perfil', { screen: 'Wallet' })} />
       </View>
 
       <View style={styles.promoBannerFrame}>
@@ -76,6 +75,10 @@ export default function HomeScreen({ navigation }: any) {
           resizeMode="contain"
           style={styles.promoBanner}
         />
+      </View>
+
+      <View style={styles.walletSection}>
+        <WalletCard compact variant="home" onPress={() => navigation.navigate('Perfil', { screen: 'Wallet' })} />
       </View>
 
       <View style={styles.sectionHeaderRow}>
@@ -124,11 +127,12 @@ function HomeProductCard({ product, onPress, onSellerPress }: { product: GemnPro
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.md },
+  content: { paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.smMd },
   greenHeader: { minHeight: 0, paddingHorizontal: spacing.md, paddingTop: spacing.smMd, paddingBottom: spacing.smMd, borderRadius: radius.xl, backgroundColor: colors.brandDark, gap: spacing.sm },
   greenHeaderWide: { paddingHorizontal: spacing.lg },
-  promoBannerFrame: { width: '100%', maxWidth: 720, aspectRatio: 2, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  promoBannerFrame: { width: '100%', maxWidth: 820, aspectRatio: 2, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   promoBanner: { width: '100%', height: '100%' },
+  walletSection: { width: '100%', maxWidth: 820, alignSelf: 'center' },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerCopy: { flex: 1, minWidth: 0 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
