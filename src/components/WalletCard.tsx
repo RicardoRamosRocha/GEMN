@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   walletCompact: { borderRadius: radius.lg },
   body: { padding: spacing.lg },
   compactBody: { padding: spacing.md },
-  homeCompactBody: { minHeight: 108, padding: spacing.smMd, paddingTop: spacing.smMd, gap: spacing.sm },
+  homeCompactBody: { padding: spacing.smMd, gap: spacing.sm },
   embeddedPressable: { borderTopWidth: 1, borderTopColor: colors.brandDivider },
   embeddedBody: { padding: spacing.lg, paddingTop: spacing.md },
   pressed: { opacity: 0.9 },
@@ -155,5 +155,5 @@ const styles = StyleSheet.create({
   homeFeedbackText: { color: colors.white },
   detailsAction: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.md },
   detailsText: { ...typography.caption, color: colors.white, fontWeight: '700' },
-  homeWallet: { minHeight: 128, backgroundColor: colors.brandDark, borderColor: colors.brandDivider, borderWidth: 1, borderRadius: radius.lg },
+  homeWallet: { minHeight: 0, backgroundColor: colors.brandDark, borderColor: colors.brandDivider, borderWidth: 1, borderRadius: radius.lg },
 });

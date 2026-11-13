@@ -73,6 +73,7 @@ export default function HomeScreen({ navigation }: any) {
 
 function PresentationVideo() {
   const [mounted, setMounted] = React.useState(false);
+  const [firstFrameReady, setFirstFrameReady] = React.useState(false);
   const player = useVideoPlayer(mounted ? presentationVideo : null, (videoPlayer) => {
     videoPlayer.loop = false;
     videoPlayer.muted = false;
@@ -81,7 +82,8 @@ function PresentationVideo() {
 
   return (
     <View style={styles.videoFrame} onLayout={() => setMounted(true)}>
-      {mounted ? <VideoView accessibilityLabel="Vídeo de apresentação do GEMN" player={player} nativeControls contentFit="contain" style={styles.video} /> : null}
+      {mounted ? <VideoView accessibilityLabel="Vídeo de apresentação do GEMN" player={player} nativeControls contentFit="contain" onFirstFrameRender={() => setFirstFrameReady(true)} style={styles.video} /> : null}
+      {!firstFrameReady ? <View pointerEvents="none" style={styles.videoLoading}><ActivityIndicator color={colors.white} /></View> : null}
     </View>
   );
 }
@@ -110,5 +112,6 @@ const styles = StyleSheet.create({
   presentationSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: -spacing.xxs },
   videoFrame: { width: '100%', aspectRatio: 16 / 9, overflow: 'hidden', borderRadius: radius.lg, backgroundColor: colors.brandDark },
   video: { width: '100%', height: '100%' },
+  videoLoading: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandDark },
   pressed: { opacity: 0.78 },
 });
