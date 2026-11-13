@@ -56,7 +56,9 @@ export const shadows = {
 
 export const layout = {
   contentMaxWidth: 1120,
-  mobileHorizontalPadding: 20,
+  mobileHorizontalPadding: 16,
   desktopHorizontalPadding: 32,
+  touchTarget: 48,
+  controlHeight: 52,
   breakpoints: { mobile: 0, tablet: 768, desktop: 1024 },
 } as const;

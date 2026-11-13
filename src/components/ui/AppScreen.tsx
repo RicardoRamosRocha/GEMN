@@ -33,5 +33,5 @@ export function AppScreen({ children, scroll = false, contentContainerStyle, sty
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   fill: { flex: 1, width: '100%' },
-  content: { width: '100%', alignSelf: 'center' },
+  content: { width: '100%', alignSelf: 'center', flexGrow: 1 },
 });

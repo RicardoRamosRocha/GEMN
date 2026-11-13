@@ -211,6 +211,6 @@ const styles = StyleSheet.create({
   errorText: { ...typography.bodySmall, color: colors.error },
   helperText: { ...typography.bodySmall, color: colors.textSecondary },
   retryButton: { alignSelf: 'flex-start' },
-  actionsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-  actionButton: { flex: 1, minHeight: 44, paddingHorizontal: spacing.sm },
+  actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  actionButton: { flex: 1, minWidth: 120, minHeight: 44, paddingHorizontal: spacing.sm },
 });

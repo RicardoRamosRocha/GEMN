@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
-import { colors, radius, spacing, typography } from '../../theme/tokens';
+import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
 
 export type AppButtonVariant = 'primary' | 'secondary' | 'accent' | 'outline';
 export type AppButtonProps = {
@@ -27,8 +27,8 @@ export function AppButton({ title, onPress, variant = 'primary', disabled = fals
 }
 
 const styles = StyleSheet.create({
-  button: { alignSelf: 'flex-start', minHeight: 48, paddingHorizontal: spacing.lg, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  compact: { minHeight: 48, paddingHorizontal: spacing.md },
+  button: { alignSelf: 'flex-start', maxWidth: '100%', minHeight: layout.touchTarget, paddingHorizontal: spacing.lg, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  compact: { minHeight: 44, paddingHorizontal: spacing.md },
   fullWidth: { alignSelf: 'stretch', width: '100%' },
   primary: { backgroundColor: colors.brand },
   secondary: { backgroundColor: colors.brandLight },

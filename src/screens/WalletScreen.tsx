@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   secondaryValue: { ...typography.heading4, color: colors.text, marginTop: spacing.xs },
   recoveryNote: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.sm },
   disclaimer: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.md },
-  quickActions: { flexDirection: 'row', gap: spacing.sm },
+  quickActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   quickAction: { flex: 1, minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
   quickActionActive: { backgroundColor: colors.brandLight, borderColor: colors.brand },
   quickIcon: { width: 34, height: 34, borderRadius: radius.md, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },

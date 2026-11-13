@@ -135,6 +135,6 @@ const styles = StyleSheet.create({
   modalCard: { width: '100%', maxWidth: 440, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
   modalTitle: { ...typography.heading3, color: colors.text },
   modalMessage: { ...typography.body, color: colors.textSecondary },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.sm },
-  modalButton: { flex: 1 },
+  modalActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.sm },
+  modalButton: { flex: 1, minWidth: 140 },
 });

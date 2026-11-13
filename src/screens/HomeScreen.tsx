@@ -83,9 +83,9 @@ export default function HomeScreen({ navigation }: any) {
       ) : visibleCategories.length === 0 ? (
         <AppCard style={styles.emptyCard}><Text style={styles.helperText}>As categorias da comunidade aparecerão aqui.</Text></AppCard>
       ) : (
-        <View style={styles.categoriesRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
           {visibleCategories.map((category, index) => <CategoryChip key={category.id} variant="home" icon={categoryIcon(category.name, index)} label={category.name} onPress={() => openMarketplace({ category: category.name })} />)}
-        </View>
+        </ScrollView>
       )}
 
       <View style={styles.sectionHeaderRow}>
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   sectionTitle: { ...typography.heading3, color: colors.text },
   seeAll: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   seeAllText: { ...typography.bodySmall, color: colors.textSecondary },
-  categoriesRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.xs },
+  categoriesRow: { flexDirection: 'row', gap: spacing.sm, paddingRight: spacing.md },
   inlineFeedback: { minHeight: 64, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   feedbackCard: { minHeight: 72, justifyContent: 'center' },
   emptyCard: { minHeight: 104, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },

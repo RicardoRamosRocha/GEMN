@@ -36,7 +36,7 @@ export function AppInput({ label, helperText, error, multiline = false, containe
 
 const styles = StyleSheet.create({
   label: { ...typography.label, color: colors.text, marginBottom: spacing.sm },
-  inputWrap: { minHeight: 52, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
+  inputWrap: { width: '100%', minHeight: 52, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
   searchInputWrap: { borderRadius: radius.full, borderColor: colors.surfaceMuted },
   marketplaceSearchWrap: { borderRadius: radius.full, backgroundColor: colors.background, borderColor: colors.border },
   input: { flex: 1, minHeight: 50, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, color: colors.text, backgroundColor: 'transparent', ...typography.body },
