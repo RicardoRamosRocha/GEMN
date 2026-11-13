@@ -9,6 +9,7 @@
     "web:e13": "bash scripts/start-e13-web.sh",
     "build:web:vercel": "node scripts/build-web-vercel.mjs",
     "test:e2e": "playwright test",
+    "test:seller-application": "node --test src/services/sellerApplications.contract.test.mjs",
     "test:auth-recovery": "node --experimental-strip-types --test scripts/test-auth-recovery.mjs",
     "typecheck": "tsc --noEmit",
     "typecheck:functions": "deno check --config supabase/functions/deno.json $(find supabase/functions -type f -name '*.ts' -print | sort)",

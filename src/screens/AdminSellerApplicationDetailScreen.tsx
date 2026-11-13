@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { AccessDenied } from './AdminHomeScreen';
 import type { SellerApplication } from './AdminSellerApplicationsScreen';
 import { colors, radius, spacing, typography } from '../theme/tokens';
+import { sellerApplicationErrorMessage } from '../services/sellerApplications';
 
 type Decision = 'aprovar' | 'recusar';
 
@@ -30,7 +31,7 @@ export default function AdminSellerApplicationDetailScreen({ route, navigation }
     if (profileError || !profile?.is_admin) { setIsAdmin(false); setLoading(false); return; }
     setIsAdmin(true);
     const { data, error } = await supabase.from('seller_applications').select('id, tipo_membro, nome_negocio, cpf, cnpj, responsavel, telefone, categoria, descricao, criado_em').eq('id', applicationId).maybeSingle();
-    if (error || !data) { setErrorMessage('Não foi possível carregar esta solicitação.'); setLoading(false); return; }
+    if (error || !data) { setErrorMessage(error ? sellerApplicationErrorMessage(error) : 'Solicitação não encontrada.'); setLoading(false); return; }
     setApplication(data as SellerApplication);
     setLoading(false);
   }, [applicationId, user]);
@@ -56,7 +57,7 @@ export default function AdminSellerApplicationDetailScreen({ route, navigation }
 
     setProcessing(false);
     if (error) {
-      setErrorMessage('Não foi possível concluir essa decisão. A solicitação pode já ter sido analisada.');
+      setErrorMessage(sellerApplicationErrorMessage(error));
       return;
     }
     navigation.goBack();

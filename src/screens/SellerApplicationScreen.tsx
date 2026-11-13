@@ -5,20 +5,21 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppBadge, AppButton, AppCard, AppInput, AppScreen } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { sellerApplicationErrorMessage, validateSellerApplication } from '../services/sellerApplications';
+import type { SellerApplicationFormValues, SellerApplicationMemberType } from '../services/sellerApplications';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
-type MemberType = 'empreendedor' | 'empresa';
 type ApplicationStatus = 'form' | 'pending' | 'approved' | 'rejected';
-type FormValues = { nomeNegocio: string; documento: string; responsavel: string; telefone: string; categoria: string; descricao: string };
+type FormValues = SellerApplicationFormValues;
 
-const initialValues: FormValues = { nomeNegocio: '', documento: '', responsavel: '', telefone: '', categoria: '', descricao: '' };
+const initialValues: SellerApplicationFormValues = { nomeNegocio: '', documento: '', responsavel: '', telefone: '', categoria: '', descricao: '' };
 
 export default function SellerApplicationScreen() {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const wide = width >= layout.breakpoints.tablet;
   const [status, setStatus] = React.useState<ApplicationStatus>('form');
-  const [memberType, setMemberType] = React.useState<MemberType>('empreendedor');
+  const [memberType, setMemberType] = React.useState<SellerApplicationMemberType>('empreendedor');
   const [values, setValues] = React.useState(initialValues);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [loading, setLoading] = React.useState(true);
@@ -35,6 +36,11 @@ export default function SellerApplicationScreen() {
         supabase.from('sellers').select('id, status').eq('user_id', user.id).eq('status', 'ativo').maybeSingle(),
       ]);
       if (!mounted) return;
+      if (applicationError || sellerError) {
+        setErrorMessage(sellerApplicationErrorMessage(applicationError ?? sellerError));
+        setLoading(false);
+        return;
+      }
       if (applicationError || sellerError) {
         setErrorMessage('Não foi possível consultar sua solicitação. Tente novamente.');
         setLoading(false);
@@ -53,12 +59,16 @@ export default function SellerApplicationScreen() {
     return () => { mounted = false; };
   }, [user]);
 
-  function updateValue(field: keyof FormValues, value: string) {
+  function updateValue(field: keyof SellerApplicationFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
     if (errors[field]) setErrors((current) => ({ ...current, [field]: '' }));
   }
 
   function validate() {
+    const helperErrors = validateSellerApplication(values, memberType);
+    setErrors(helperErrors);
+    return Object.keys(helperErrors).length === 0;
+    /*
     const nextErrors: Record<string, string> = {};
     const requiredFields: Array<[keyof FormValues, string]> = [
       ['nomeNegocio', 'Informe o nome do negócio.'],
@@ -69,6 +79,7 @@ export default function SellerApplicationScreen() {
     requiredFields.forEach(([field, message]) => { if (!values[field].trim()) nextErrors[field] = message; });
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
+    */
   }
 
   async function submitApplication() {
@@ -83,10 +94,15 @@ export default function SellerApplicationScreen() {
       : await supabase.from('seller_applications').insert({ ...commonFields, cnpj: values.documento.trim() });
     setSubmitting(false);
     if (error) {
+      if (error.code === '23505') setStatus('pending');
+      setErrorMessage(sellerApplicationErrorMessage(error));
+      return;
+    }
+    /* if (error) {
       if (error.code === '23505') { setStatus('pending'); setErrorMessage('Você já possui uma solicitação em análise.'); }
       else setErrorMessage('Não foi possível enviar sua solicitação. Confira os dados e tente novamente.');
       return;
-    }
+    } */
     setStatus('pending');
   }
 

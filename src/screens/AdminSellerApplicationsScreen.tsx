@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { AccessDenied } from './AdminHomeScreen';
 import { colors, radius, spacing, typography } from '../theme/tokens';
+import { sellerApplicationErrorMessage } from '../services/sellerApplications';
 
 export type SellerApplication = { id: string; tipo_membro: 'empreendedor' | 'empresa'; nome_negocio: string; cpf: string | null; cnpj: string | null; responsavel: string | null; telefone: string; categoria: string; descricao: string; criado_em: string; };
 
@@ -27,7 +28,7 @@ export default function AdminSellerApplicationsScreen({ navigation }: any) {
     if (profileError || profile?.is_admin !== true) { setIsAdmin(false); setLoading(false); setRefreshing(false); return; }
     setIsAdmin(true);
     const { data, error } = await supabase.from('seller_applications').select('id, tipo_membro, nome_negocio, cpf, cnpj, responsavel, telefone, categoria, descricao, criado_em').eq('status', 'pendente').order('criado_em', { ascending: true });
-    if (error) setErrorMessage('Não foi possível carregar as solicitações.');
+    if (error) setErrorMessage(sellerApplicationErrorMessage(error));
     else setApplications((data ?? []) as SellerApplication[]);
     setLoading(false);
     setRefreshing(false);
