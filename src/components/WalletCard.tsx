@@ -53,15 +53,15 @@ export function WalletCard({ onPress, refreshKey = 0, compact = false, embedded 
         <>
           {homeVariant ? (
             <>
-              <View style={styles.balanceRow}>
+              <View style={[styles.balanceRow, styles.homeBalanceRow]}>
                 <View style={styles.balanceItem}>
-                  <Text style={[styles.moneyLabel, styles.homeMoneyLabel, styles.balanceMoneyLabel]}>Disponível</Text>
-                  <View style={styles.valueRow}><Text style={[styles.money, styles.homeMoney, styles.moneyCompact]}>{formatGemnAmount(wallet?.saldoDisponivel ?? 0)}</Text><View style={styles.gemnPill}><MaterialCommunityIcons name="star-four-points" size={11} color={colors.gemn} /><Text style={styles.gemnPillText}>GEMN</Text></View></View>
+                  <Text numberOfLines={1} style={[styles.moneyLabel, styles.homeMoneyLabel, styles.balanceMoneyLabel]}>Disponível</Text>
+                  <View style={[styles.valueRow, styles.homeValueRow]}><Text style={[styles.money, styles.homeMoney, styles.moneyCompact, styles.homeMoneyCompact]}>{formatGemnAmount(wallet?.saldoDisponivel ?? 0)}</Text><View style={styles.gemnPill}><MaterialCommunityIcons name="star-four-points" size={11} color={colors.gemn} /><Text style={styles.gemnPillText}>GEMN</Text></View></View>
                 </View>
                 <View style={styles.balanceDivider} />
                 <View style={styles.balanceItem}>
-                  <Text style={[styles.moneyLabel, styles.homeMoneyLabel, styles.balanceMoneyLabel]}>Reservado</Text>
-                  <View style={styles.valueRow}><Text style={[styles.money, styles.homeMoney, styles.moneyCompact]}>{formatGemnAmount(wallet?.saldoReservado ?? 0)}</Text><View style={styles.gemnPill}><MaterialCommunityIcons name="star-four-points" size={11} color={colors.gemn} /><Text style={styles.gemnPillText}>GEMN</Text></View></View>
+                  <Text numberOfLines={1} style={[styles.moneyLabel, styles.homeMoneyLabel, styles.balanceMoneyLabel]}>Reservado</Text>
+                  <View style={[styles.valueRow, styles.homeValueRow]}><Text style={[styles.money, styles.homeMoney, styles.moneyCompact, styles.homeMoneyCompact]}>{formatGemnAmount(wallet?.saldoReservado ?? 0)}</Text><View style={styles.gemnPill}><MaterialCommunityIcons name="star-four-points" size={11} color={colors.gemn} /><Text style={styles.gemnPillText}>GEMN</Text></View></View>
                 </View>
               </View>
               {(wallet?.saldoARecuperar ?? 0) > 0 ? <Text style={styles.homeRecovery}>A recuperar: {formatGemn(wallet?.saldoARecuperar ?? 0)}</Text> : null}
@@ -130,10 +130,13 @@ const styles = StyleSheet.create({
   gemnPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: spacing.xs, minHeight: 20, borderRadius: radius.full, backgroundColor: colors.gemnLight },
   gemnPillText: { ...typography.caption, color: colors.brandDark, fontSize: 10, lineHeight: 13, fontWeight: '700' },
   balanceRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, gap: spacing.md },
+  homeBalanceRow: { gap: spacing.sm },
   balanceItem: { flex: 1, minWidth: 0 },
   balanceDivider: { width: 1, height: 40, backgroundColor: colors.border },
   homeBalanceDivider: { backgroundColor: colors.brandDivider },
   balanceMoneyLabel: { marginTop: 0 },
+  homeValueRow: { flexWrap: 'wrap', rowGap: spacing.xxs },
+  homeMoneyCompact: { fontSize: 22, lineHeight: 28 },
   homeMoneyLabel: { color: colors.brandLight, opacity: 0.82 },
   divider: { height: 1, backgroundColor: colors.brandDivider, marginVertical: spacing.md },
   gemnBlock: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

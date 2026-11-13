@@ -207,7 +207,7 @@ export async function listMyOrders(): Promise<Order[]> {
 export async function getMyOrder(orderId: string): Promise<Order> {
   await requireAuthenticatedUser();
 
-  if (!orderId.trim()) throw new OrderServiceError('unexpected', 'Identificador de pedido invÃ¡lido.');
+  if (!orderId.trim()) throw new OrderServiceError('unexpected', 'Identificador de pedido inválido.');
 
   const { data, error } = await supabase
     .from('orders')

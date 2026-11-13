@@ -19,11 +19,11 @@ export function CategoryChip({ icon, label, compact = false, onPress, selected =
 
 const styles = StyleSheet.create({
   chip: { minWidth: 96, minHeight: 84, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
-  homeChip: { minWidth: 58, minHeight: 76, paddingHorizontal: spacing.xxs, paddingVertical: spacing.xs, borderRadius: radius.md, backgroundColor: 'transparent', gap: spacing.sm },
+  homeChip: { minWidth: 64, minHeight: 76, paddingHorizontal: spacing.xxs, paddingVertical: spacing.xs, borderRadius: radius.md, backgroundColor: 'transparent', gap: spacing.sm },
   marketplaceChip: { backgroundColor: colors.brandLight, borderColor: colors.brandLight },
   compact: { minWidth: 0, minHeight: 44, flexDirection: 'row', paddingHorizontal: spacing.md, borderRadius: radius.full, gap: spacing.sm, borderWidth: 1, borderColor: 'transparent' },
   iconWrap: { width: 36, height: 36, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandLight },
-  homeIcon: { width: 58, height: 58, backgroundColor: colors.brandLight },
+  homeIcon: { width: 52, height: 52, backgroundColor: colors.brandLight },
   marketplaceIcon: { backgroundColor: colors.brandLight },
   compactIcon: { width: 22, height: 22, borderRadius: radius.full },
   label: { ...typography.caption, color: colors.text, fontWeight: '600' },

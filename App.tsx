@@ -277,6 +277,7 @@ function AuthenticatedApp() {
             tabPress: () => navigation.navigate('Marketplace', { screen: 'MarketplaceHome' }),
           })}
           options={{
+            tabBarLabel: 'Mercado',
             tabBarIcon: ({ color, focused }) => (
               <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
                 <MaterialCommunityIcons name="storefront-outline" size={22} color={color} />
