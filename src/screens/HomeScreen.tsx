@@ -3,6 +3,7 @@ import { ActivityIndicator, AppState, Image, Pressable, StyleSheet, Text, View, 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useIsFocused } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppCard, AppScreen } from '../components/ui';
 import { HorizontalProductCarousel } from '../components/HorizontalProductCarousel';
@@ -21,6 +22,7 @@ function formatPrice(value: number) {
 
 export default function HomeScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const desktop = width >= layout.breakpoints.desktop;
   const mobile = width < layout.breakpoints.tablet;
   const { marketplaceProducts, marketplaceLoading, marketplaceError } = useProducts();
@@ -31,8 +33,8 @@ export default function HomeScreen({ navigation }: any) {
   }
 
   return (
-    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} maxWidth={desktop ? 1180 : layout.contentMaxWidth} contentContainerStyle={styles.content}>
-      <View accessibilityLabel="Apresentação do GEMN" style={[styles.presentationSection, mobile && { width, marginLeft: -layout.mobileHorizontalPadding }]}>
+    <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} style={mobile ? styles.mobileSafeArea : undefined} maxWidth={desktop ? 1180 : layout.contentMaxWidth} contentContainerStyle={styles.content}>
+      <View accessibilityLabel="Apresentação do GEMN" style={[styles.presentationSection, mobile && { width: width - insets.left - insets.right, marginLeft: -layout.mobileHorizontalPadding }]}>
         <View style={styles.presentationFrame}>
           <View style={styles.presentationFrameInner}>
             <View style={styles.promoBannerFrame}>
@@ -135,7 +137,7 @@ function PresentationVideo() {
   return (
     <View ref={frameRef} style={styles.videoFrame} onLayout={() => setMounted(true)}>
       {mounted ? <VideoView accessibilityLabel="Vídeo de apresentação do GEMN" player={player} nativeControls contentFit="contain" onFirstFrameRender={handleFirstFrameRender} style={styles.video} /> : null}
-      {!firstFrameReady ? <Image pointerEvents="none" accessibilityLabel="Poster do vídeo de apresentação do GEMN" source={promotionalBanner} resizeMode="contain" style={styles.videoPoster} /> : null}
+      {!firstFrameReady ? <View pointerEvents="none" style={styles.videoPoster}><Image accessibilityLabel="Poster do vídeo de apresentação do GEMN" source={promotionalBanner} resizeMode="contain" style={styles.posterImage} /></View> : null}
       {!firstFrameReady ? <View pointerEvents="none" style={styles.videoLoading}><ActivityIndicator color={colors.white} /></View> : null}
     </View>
   );
@@ -147,7 +149,8 @@ function HomeProductCard({ product, onPress, onSellerPress }: { product: GemnPro
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.sm },
+  content: { paddingTop: 0, paddingBottom: spacing.xl, gap: spacing.sm, backgroundColor: colors.background },
+  mobileSafeArea: { backgroundColor: colors.brandDark },
   promoBanner: { width: '100%', height: '100%' },
   sectionHeaderRow: { minHeight: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   sectionTitle: { ...typography.heading3, color: colors.text },
@@ -165,7 +168,8 @@ const styles = StyleSheet.create({
   promoBannerFrame: { width: '100%', aspectRatio: 1774 / 887, overflow: 'hidden', backgroundColor: colors.brandDark },
   video: { width: '100%', height: '100%' },
   videoFrame: { width: '100%', aspectRatio: 16 / 9, overflow: 'hidden', backgroundColor: colors.brandDark },
-  videoPoster: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  videoPoster: { ...StyleSheet.absoluteFill, width: '100%', height: '100%' },
+  posterImage: { width: '100%', height: '100%' },
   videoLoading: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandDark },
   pressed: { opacity: 0.78 },
 });
