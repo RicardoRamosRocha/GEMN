@@ -6,7 +6,6 @@ import { CategoryChip } from '../components/CategoryChip';
 import { ProductCard } from '../components/ProductCard';
 import { SellerDirectoryCard } from '../components/SellerDirectoryCard';
 import { useProducts } from '../context/ProductsContext';
-import { useCart } from '../context/CartContext';
 import type { GemnProduct } from '../context/ProductsContext';
 import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { listActiveSellerDirectory, SellerDirectoryServiceError } from '../services/sellerDirectory';
@@ -31,17 +30,15 @@ export default function MarketplaceScreen({ navigation, route }: any) {
   const { width } = useWindowDimensions();
   const desktop = width >= layout.breakpoints.desktop;
   const tablet = width >= layout.breakpoints.tablet;
-  const mobile = !tablet;
   const columns = desktop ? 4 : tablet ? 3 : width >= 340 ? 2 : 1;
   const horizontalPadding = tablet ? layout.desktopHorizontalPadding : layout.mobileHorizontalPadding;
   const contentWidth = Math.min(width - horizontalPadding * 2, layout.contentMaxWidth - horizontalPadding * 2);
   const productGap = desktop ? spacing.lg : tablet ? spacing.md : 12;
   const productWidth = Math.floor((contentWidth - productGap * (columns - 1)) / columns);
-  const carouselGap = desktop ? spacing.lg : spacing.md;
-  const carouselVisibleCards = desktop ? 3.35 : tablet ? 2.35 : 1.35;
-  const carouselCardWidth = Math.floor(contentWidth / carouselVisibleCards);
+  const carouselGap = desktop ? spacing.lg : tablet ? spacing.md : spacing.smMd;
+  const carouselVisibleCards = desktop ? 4.1 : tablet ? 3.15 : width <= 375 ? 2.55 : 2.8;
+  const carouselCardWidth = Math.floor((contentWidth - carouselGap * (carouselVisibleCards - 1)) / carouselVisibleCards);
   const { marketplaceProducts, marketplaceLoading, marketplaceError, refreshMarketplaceProducts, categories: activeCategories } = useProducts();
-  const { itemCount } = useCart();
   const [mode, setMode] = React.useState<'products' | 'stores'>('products');
   const [search, setSearch] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('Todas');
@@ -66,6 +63,11 @@ export default function MarketplaceScreen({ navigation, route }: any) {
     return matchesCategory && (!query || `${product.name} ${product.description} ${product.sellerName ?? ''}`.toLocaleLowerCase().includes(query));
   });
   const marketplaceCategories = [allCategory, ...activeCategories.map((item, index) => ({ icon: categoryIcon(item.name, index), label: item.name }))];
+  const productGridMode = Boolean(search.trim()) || selectedCategory !== 'Todas';
+  const categorySections = Array.from(new Set(visibleProducts.map((product) => product.category))).map((category) => ({
+    category,
+    products: visibleProducts.filter((product) => product.category === category),
+  }));
   const hasActiveFilters = Boolean(search.trim()) || selectedCategory !== 'Todas';
   const categoryFilterActive = selectedCategory !== 'Todas';
   const searchValue = mode === 'stores' ? storeSearch : search;
@@ -127,15 +129,8 @@ export default function MarketplaceScreen({ navigation, route }: any) {
         />
       </View>
 
-      <View style={styles.marketHero}>
-        <View style={styles.marketHeader}>
-          <View style={styles.marketHeaderCopy}>
-            <Text style={styles.marketTitle}>Marketplace</Text>
-          </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Abrir carrinho" onPress={() => navigation.navigate('Cart')} style={({ pressed }) => [styles.cartButton, pressed && styles.pressed]}><MaterialCommunityIcons name="cart-outline" size={23} color={colors.white} />{itemCount > 0 ? <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount > 99 ? '99+' : itemCount}</Text></View> : null}</Pressable>
-        </View>
-
-      <View style={styles.searchRow}>
+      <View style={styles.searchSection}>
+        <View style={styles.searchRow}>
         <View style={styles.searchField}>
           <AppInput
             variant="marketplaceSearch"
@@ -172,7 +167,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
         </ScrollView>
       </View> : null}
 
-      {(mode === 'stores' || tablet) ? <View style={styles.resultsHeader}>
+      {(mode === 'stores' || tablet || productGridMode) ? <View style={styles.resultsHeader}>
         <View style={styles.resultsHeaderCopy}>
           <View style={styles.resultsTitleRow}>
             <Text style={styles.resultsTitle}>{mode === 'stores' ? 'Lojas' : 'Produtos e serviços'}</Text>
@@ -191,7 +186,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
         {marketplaceError ? <AppCard style={styles.errorCard}><Text style={styles.errorText}>{marketplaceError}</Text><AppButton title="Tentar novamente" variant="outline" onPress={() => { void refreshMarketplaceProducts(); }} /></AppCard> : null}
         {marketplaceLoading ? <View style={styles.loadingState}><ActivityIndicator color={colors.primary} /><Text style={styles.helperText}>Carregando anúncios publicados...</Text></View> : null}
         {!marketplaceLoading && !marketplaceError && visibleProducts.length === 0 ? <AppCard style={styles.emptyCard}><View style={styles.emptyIcon}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>{hasActiveFilters ? 'Nenhum anúncio encontrado' : 'Ainda não há anúncios publicados'}</Text><Text style={styles.emptyBody}>{hasActiveFilters ? 'Tente buscar por outro termo ou limpar os filtros.' : 'Em breve, novos produtos e serviços da comunidade aparecerão aqui.'}</Text>{hasActiveFilters ? <AppButton title="Limpar filtros" size="compact" variant="outline" onPress={clearFilters} /> : null}</AppCard> : null}
-        {visibleProducts.length > 0 ? mobile ? <MarketplaceProductList products={visibleProducts} onPress={(product, index) => navigation.navigate('Product', { listing: product, listingSequence: visibleProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} /> : <MarketplaceProductCarousel products={visibleProducts} cardWidth={carouselCardWidth} gap={carouselGap} desktop={desktop} onPress={(product, index) => navigation.navigate('Product', { listing: product, listingSequence: visibleProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} /> : null}
+        {visibleProducts.length > 0 ? productGridMode ? <MarketplaceProductGrid products={visibleProducts} columns={columns} itemWidth={productWidth} gap={productGap} onPress={(product, index) => navigation.navigate('Product', { listing: product, listingSequence: visibleProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} /> : <MarketplaceCategoryShowcase sections={categorySections} contentWidth={contentWidth} cardWidth={carouselCardWidth} gap={carouselGap} desktop={desktop} onViewAll={(category) => setSelectedCategory(category)} onPress={(product, index, sequence) => navigation.navigate('Product', { listing: product, listingSequence: sequence, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} /> : null}
       </> : <>
         {storesError ? <AppCard style={styles.errorCard}><Text style={styles.errorText}>{storesError}</Text><AppButton title="Tentar novamente" variant="outline" onPress={retryStores} /></AppCard> : null}
         {storesLoading ? <View style={styles.loadingState}><ActivityIndicator color={colors.primary} /><Text style={styles.helperText}>Carregando lojas...</Text></View> : null}
@@ -205,7 +200,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
 
 type GridItem = { id: string };
 
-function MarketplaceProductCarousel({ products, cardWidth, gap, desktop, onPress, onSellerPress }: { products: GemnProduct[]; cardWidth: number; gap: number; desktop: boolean; onPress: (product: GemnProduct, index: number) => void; onSellerPress: (sellerId: string) => void }) {
+function MarketplaceProductCarousel({ products, cardWidth, gap, desktop, showControls = products.length >= 3, showEndIndicator = products.length >= 3, onPress, onSellerPress }: { products: GemnProduct[]; cardWidth: number; gap: number; desktop: boolean; showControls?: boolean; showEndIndicator?: boolean; onPress: (product: GemnProduct, index: number) => void; onSellerPress: (sellerId: string) => void }) {
   const scrollRef = React.useRef<ScrollView>(null);
   const [offset, setOffset] = React.useState(0);
   const step = cardWidth + gap;
@@ -216,51 +211,61 @@ function MarketplaceProductCarousel({ products, cardWidth, gap, desktop, onPress
   }
 
   return <View style={styles.carouselWrap}>
-    {desktop ? <View style={styles.carouselControls}><Pressable accessibilityRole="button" accessibilityLabel="Anúncios anteriores" disabled={!canScrollBack} onPress={() => scrollBy(-1)} style={[styles.carouselArrow, !canScrollBack && styles.carouselArrowDisabled]}><MaterialCommunityIcons name="chevron-left" size={22} color={canScrollBack ? colors.brandDark : colors.textMuted} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Próximos anúncios" onPress={() => scrollBy(1)} style={styles.carouselArrow}><MaterialCommunityIcons name="chevron-right" size={22} color={colors.brandDark} /></Pressable></View> : null}
-    <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.carouselList, { gap }]} scrollEventThrottle={16} onScroll={(event) => setOffset(event.nativeEvent.contentOffset.x)}>
+    {desktop && showControls ? <View style={styles.carouselControls}><Pressable accessibilityRole="button" accessibilityLabel="Anúncios anteriores" disabled={!canScrollBack} onPress={() => scrollBy(-1)} style={[styles.carouselArrow, !canScrollBack && styles.carouselArrowDisabled]}><MaterialCommunityIcons name="chevron-left" size={22} color={canScrollBack ? colors.brandDark : colors.textMuted} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Próximos anúncios" onPress={() => scrollBy(1)} style={styles.carouselArrow}><MaterialCommunityIcons name="chevron-right" size={22} color={colors.brandDark} /></Pressable></View> : null}
+    <ScrollView ref={scrollRef} horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} style={styles.carouselScroll} contentContainerStyle={[styles.carouselList, { gap }]} scrollEventThrottle={16} onScroll={(event) => setOffset(event.nativeEvent.contentOffset.x)}>
       {products.map((product, index) => {
         const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
-        return <View key={product.id} style={[styles.carouselItem, { width: cardWidth }]}><ProductCard layout="marketplace" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} onPress={() => onPress(product, index)} /></View>;
+        return <View key={product.id} style={[styles.carouselItem, { width: cardWidth }]}><ProductCard layout="marketplaceShowcase" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} onPress={() => onPress(product, index)} /></View>;
       })}
-      <View style={styles.carouselEnd} accessibilityLabel="Mais anúncios à direita"><MaterialCommunityIcons name="arrow-right" size={20} color={colors.brand} /></View>
+      {showEndIndicator ? <View style={styles.carouselEnd} accessibilityLabel="Mais anúncios à direita"><MaterialCommunityIcons name="arrow-right" size={20} color={colors.brand} /></View> : null}
     </ScrollView>
   </View>;
 }
 
-function MarketplaceProductList({ products, onPress, onSellerPress }: { products: GemnProduct[]; onPress: (product: GemnProduct, index: number) => void; onSellerPress: (sellerId: string) => void }) {
-  return <View style={styles.mobileProductList}>
-    {products.map((product, index) => {
-      const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-      const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
-      return <ProductCard key={product.id} layout="marketplaceList" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} onPress={() => onPress(product, index)} />;
+function MarketplaceCategoryShowcase({ sections, contentWidth, cardWidth, gap, desktop, onViewAll, onPress, onSellerPress }: { sections: { category: string; products: GemnProduct[] }[]; contentWidth: number; cardWidth: number; gap: number; desktop: boolean; onViewAll: (category: string) => void; onPress: (product: GemnProduct, index: number, sequence: GemnProduct[]) => void; onSellerPress: (sellerId: string) => void }) {
+  return <View style={styles.categoryShowcaseList}>
+    {sections.map((section) => {
+      const sectionCardWidth = section.products.length === 1 ? Math.min(cardWidth, 180) : section.products.length === 2 ? Math.min(Math.floor((contentWidth - gap) / 2), 240) : cardWidth;
+      return <View key={section.category} style={styles.categoryShowcaseSection}>
+        <View style={styles.categoryShowcaseHeader}>
+          <Text style={styles.categoryShowcaseTitle}>{section.category}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Ver todos os produtos de ${section.category}`} onPress={() => onViewAll(section.category)} style={({ pressed }) => [styles.viewAllButton, pressed && styles.pressed]}>
+            <Text style={styles.viewAllText}>Ver todos</Text>
+            <MaterialCommunityIcons name="arrow-right" size={15} color={colors.brand} />
+          </Pressable>
+        </View>
+        <MarketplaceProductCarousel products={section.products} cardWidth={sectionCardWidth} gap={gap} desktop={desktop} showControls={section.products.length >= 3} showEndIndicator={section.products.length >= 3} onPress={(product, index) => onPress(product, index, section.products)} onSellerPress={onSellerPress} />
+      </View>;
     })}
   </View>;
 }
 
-function ResponsiveGrid<T extends GridItem>({ items, columns, itemWidth, gap, renderItem }: { items: T[]; columns: number; itemWidth: number; gap: number; renderItem: (item: T) => React.ReactNode }) {
+function MarketplaceProductGrid({ products, columns, itemWidth, gap, onPress, onSellerPress }: { products: GemnProduct[]; columns: number; itemWidth: number; gap: number; onPress: (product: GemnProduct, index: number) => void; onSellerPress: (sellerId: string) => void }) {
+  return <ResponsiveGrid items={products} columns={columns} itemWidth={itemWidth} gap={gap} renderItem={(product, index) => {
+    const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
+    return <ProductCard layout="marketplaceShowcase" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} onPress={() => onPress(product, index)} />;
+  }} />;
+}
+
+function ResponsiveGrid<T extends GridItem>({ items, columns, itemWidth, gap, renderItem }: { items: T[]; columns: number; itemWidth: number; gap: number; renderItem: (item: T, index: number) => React.ReactNode }) {
   const rows: T[][] = [];
   for (let index = 0; index < items.length; index += columns) rows.push(items.slice(index, index + columns));
 
   return (
     <View style={styles.productGrid}>
-      {rows.map((row, rowIndex) => <View key={`grid-row-${rowIndex}`} style={[styles.productRow, { gap }]}>{row.map((item) => <View key={item.id} style={[styles.productCell, { width: itemWidth }]}>{renderItem(item)}</View>)}</View>)}
+      {rows.map((row, rowIndex) => <View key={`grid-row-${rowIndex}`} style={[styles.productRow, { gap }]}>{row.map((item) => <View key={item.id} style={[styles.productCell, { width: itemWidth }]}>{renderItem(item, rowIndex * columns + row.indexOf(item))}</View>)}</View>)}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.md },
+  content: { paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.smMd },
   promoBannerFrame: { width: '100%', maxWidth: 820, aspectRatio: 1774 / 887, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: colors.brandDark, borderWidth: 1, borderColor: colors.brandDivider },
   promoBanner: { width: '100%', height: '100%' },
-  marketHero: { padding: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.brandDark, gap: spacing.sm },
-  marketHeader: { minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  marketHeaderCopy: { flex: 1, minWidth: 0 },
-  marketTitle: { ...typography.heading2, color: colors.white },
-  cartButton: { width: 38, height: 38, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandOverlay },
-  cartBadge: { position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, paddingHorizontal: 3, borderRadius: radius.full, backgroundColor: colors.gemn, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.surface },
-  cartBadgeText: { ...typography.caption, color: colors.brandDark, fontSize: 10, lineHeight: 12, fontWeight: '700' },
-  modeSwitcherOutside: { flexDirection: 'row', backgroundColor: colors.brandLight, borderRadius: radius.md, padding: spacing.xxs, gap: spacing.xs, marginTop: spacing.xs },
+  searchSection: { width: '100%', paddingTop: spacing.xs },
+  modeSwitcherOutside: { flexDirection: 'row', backgroundColor: colors.brandLight, borderRadius: radius.md, padding: spacing.xxs, gap: spacing.xs },
   modeButtonOutside: { flex: 1, minHeight: 38, borderRadius: radius.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm },
   modeButtonOutsideActive: { backgroundColor: colors.surface, ...shadows.subtle },
   modeButtonText: { ...typography.caption, color: colors.brand, textAlign: 'center' },
@@ -271,7 +276,7 @@ const styles = StyleSheet.create({
   searchInput: { paddingRight: spacing.xl },
   clearSearchButton: { position: 'absolute', top: 6, right: spacing.xs, width: 40, height: 40, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
   filterIndicator: { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: radius.full, backgroundColor: colors.gemn, borderWidth: 1, borderColor: colors.white },
-  filterSection: { gap: spacing.sm, paddingTop: spacing.xs },
+  filterSection: { gap: spacing.xs, paddingTop: 0 },
   categoryHeader: { minHeight: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   categoryFilterButton: { width: 34, height: 34, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceMuted },
   categoryFilterButtonActive: { backgroundColor: colors.brandDark },
@@ -284,14 +289,20 @@ const styles = StyleSheet.create({
   resultsCount: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
   resultsCountBadge: { minWidth: 28, height: 24, paddingHorizontal: spacing.xs, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
   resultsCountBadgeText: { ...typography.caption, color: colors.primary, fontWeight: '700' },
-  carouselWrap: { width: '100%', gap: spacing.sm },
+  carouselWrap: { width: '100%', gap: spacing.xs },
+  carouselScroll: { width: '100%', overflow: 'hidden' },
   carouselControls: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
   carouselArrow: { width: 40, height: 40, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, ...shadows.subtle },
   carouselArrowDisabled: { opacity: 0.5 },
-  carouselList: { paddingRight: spacing.lg, alignItems: 'stretch' },
+  carouselList: { paddingRight: spacing.lg, alignItems: 'stretch', flexGrow: 0 },
   carouselItem: { flexShrink: 0 },
   carouselEnd: { width: 36, minHeight: 48, alignSelf: 'center', borderRadius: radius.full, backgroundColor: colors.brandLight, alignItems: 'center', justifyContent: 'center' },
-  mobileProductList: { width: '100%', gap: spacing.sm },
+  categoryShowcaseList: { width: '100%', gap: spacing.md, overflow: 'hidden' },
+  categoryShowcaseSection: { width: '100%', gap: spacing.xs, overflow: 'hidden' },
+  categoryShowcaseHeader: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  categoryShowcaseTitle: { ...typography.heading4, color: colors.text, fontWeight: '600' },
+  viewAllButton: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: spacing.xxs, paddingHorizontal: spacing.xs },
+  viewAllText: { ...typography.caption, color: colors.brand, fontWeight: '600' },
   productGrid: { width: '100%', gap: spacing.md },
   productRow: { width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'flex-start' },
   productCell: { minWidth: 0, flexGrow: 0, flexShrink: 0 },
