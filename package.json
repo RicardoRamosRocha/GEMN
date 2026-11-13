@@ -7,6 +7,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "web:e13": "bash scripts/start-e13-web.sh",
+    "build:web:vercel": "node scripts/build-web-vercel.mjs",
     "test:e2e": "playwright test",
     "test:auth-recovery": "node --experimental-strip-types --test scripts/test-auth-recovery.mjs",
     "typecheck": "tsc --noEmit",

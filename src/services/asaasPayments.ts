@@ -4,6 +4,7 @@ import type {
   CreatePixPaymentResponse,
 } from '../types/asaasPayments';
 import { AsaasPaymentError } from '../types/asaasPayments';
+import { REAL_PAYMENTS_ENABLED } from '../config/features';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -53,6 +54,10 @@ function validateResponse(value: unknown): asserts value is CreatePixPaymentResp
 }
 
 export async function createPixPayment(request: CreatePixPaymentRequest): Promise<CreatePixPaymentResponse> {
+  if (!REAL_PAYMENTS_ENABLED) {
+    throw new AsaasPaymentError('PAYMENTS_DISABLED', 'Pagamentos reais não estão disponíveis nesta versão do GEMN.');
+  }
+
   if (!request.orderId || !request.idempotencyKey) {
     throw new AsaasPaymentError('INVALID_REQUEST', 'Pedido e chave de idempotência são obrigatórios.');
   }

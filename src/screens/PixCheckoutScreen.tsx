@@ -11,6 +11,7 @@ import { getPixCheckoutVisualState } from '../services/pixCheckoutPresentation';
 import type { CreatePixPaymentResponse } from '../types/asaasPayments';
 import type { OrderStatus } from '../types/orders';
 import { colors, layout, radius, shadows, spacing, typography } from '../theme/tokens';
+import { REAL_PAYMENTS_ENABLED } from '../config/features';
 
 const POLL_INTERVAL_MS = 5_000;
 const MAX_POLL_ATTEMPTS = 60;
@@ -189,6 +190,7 @@ export default function PixCheckoutScreen({ route, navigation }: PixCheckoutScre
           </AppCard>
 
           <AppCard elevated={wide} style={styles.pixCard}>
+            {!REAL_PAYMENTS_ENABLED ? <View style={styles.qrPlaceholder}><MaterialCommunityIcons name="lock-outline" size={58} color={colors.borderStrong} /><Text style={styles.placeholderTitle}>Pagamentos reais indisponíveis</Text><Text style={styles.feedbackText}>O checkout Pix será disponibilizado em uma versão futura.</Text></View> : null}
             <View style={styles.pixHeading}><View style={styles.pixIcon}><MaterialCommunityIcons name="qrcode" size={26} color={colors.white} /></View><View style={styles.pixHeadingCopy}><Text style={styles.sectionTitle}>Pix</Text><Text style={styles.pixDescription}>Pague usando o QR Code ou o código copia e cola.</Text></View></View>
             <View style={styles.statusLine}><AppBadge label={statusLabel} variant={statusVariant} /><MaterialCommunityIcons name={statusIcon} size={20} color={visualState === 'confirmed' ? colors.success : visualState === 'error' || terminal ? colors.error : hasPayment ? colors.warning : colors.brand} /></View>
 
@@ -203,7 +205,7 @@ export default function PixCheckoutScreen({ route, navigation }: PixCheckoutScre
             {visualState === 'confirmed' ? <View style={styles.confirmedBox}><MaterialCommunityIcons name="check-circle" size={24} color={colors.success} /><Text style={styles.confirmedText}>Pagamento confirmado pelo GEMN. Consulte o pedido para ver os detalhes.</Text></View> : null}
             {visualState === 'cancelled' || visualState === 'expired' ? <View style={styles.errorBox}><MaterialCommunityIcons name="alert-circle-outline" size={20} color={colors.error} /><Text style={styles.errorText}>Este pedido não aceita mais pagamento Pix.</Text></View> : null}
 
-            {!hasPayment && !terminal ? <AppButton title="Gerar QR Code Pix" fullWidth onPress={() => { void generatePix(); }} loading={loading} disabled={loading} /> : null}
+            {REAL_PAYMENTS_ENABLED && !hasPayment && !terminal ? <AppButton title="Gerar QR Code Pix" fullWidth onPress={() => { void generatePix(); }} loading={loading} disabled={loading} /> : null}
             <Text style={styles.securityNote}>A confirmação acontece automaticamente após a validação do pagamento. Não confirme manualmente nesta tela.</Text>
           </AppCard>
         </View>

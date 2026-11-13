@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { listMyOrders } from './orders';
 import type { Order } from '../types/orders';
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js';
+import { REAL_PAYMENTS_ENABLED } from '../config/features';
 
 const DEV_SUPABASE_HOST = 'lfsbjynpsgcvdtaeotho.supabase.co';
 const SAFE_ERROR_CODES = new Set([
@@ -79,7 +80,7 @@ function devProjectHost(): string | null {
 }
 
 export function isBillingIdentityTestAvailable(): boolean {
-  return __DEV__ === true && devProjectHost() === DEV_SUPABASE_HOST;
+  return REAL_PAYMENTS_ENABLED && __DEV__ === true && devProjectHost() === DEV_SUPABASE_HOST;
 }
 
 export async function listPendingBillingIdentityOrders(): Promise<Order[]> {

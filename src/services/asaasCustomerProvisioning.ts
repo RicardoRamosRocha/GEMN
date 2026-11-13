@@ -2,6 +2,7 @@ import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@s
 
 import { supabase } from '../lib/supabase';
 import { isBillingIdentityTestAvailable } from './billingIdentity';
+import { REAL_PAYMENTS_ENABLED } from '../config/features';
 
 const SAFE_ERROR_CODES = new Set([
   'IDENTITY_UNAVAILABLE',
@@ -68,6 +69,13 @@ async function functionErrorCode(error: unknown): Promise<string> {
 export async function provisionAsaasSandboxCustomer(): Promise<{
   outcome: AsaasCustomerProvisioningOutcome;
 }> {
+  if (!REAL_PAYMENTS_ENABLED) {
+    throw new AsaasCustomerProvisioningServiceError(
+      'PAYMENTS_DISABLED',
+      'Pagamentos reais e integrações Asaas não estão disponíveis nesta versão do GEMN.',
+    );
+  }
+
   if (!isBillingIdentityTestAvailable()) {
     throw new AsaasCustomerProvisioningServiceError(
       'DEV_ONLY',

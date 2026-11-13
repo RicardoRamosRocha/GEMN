@@ -21,6 +21,7 @@ import type { PixCheckoutParams } from './PixCheckoutScreen';
 import { orderItemNames, sortOrderItems, totalOrderUnits } from '../services/orderPresentation';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 import { cancellationUiFixtures, createFixtureCancellationRequest, fixtureRequestsByOrder, isGemnUiFixturesEnabled, ordersUiFixtures } from '../dev/ordersUiFixtures';
+import { REAL_PAYMENTS_ENABLED } from '../config/features';
 
 type OrdersScreenProps = {
   navigation?: { goBack: () => void; navigate?: (screen: 'PixCheckout', params: PixCheckoutParams) => void };
@@ -536,7 +537,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                   <AppButton title={expanded ? 'Ocultar detalhes' : 'Ver detalhes do pedido'} variant="outline" size="compact" onPress={() => toggleOrderDetails(order.id)} />
                   {expanded ? <OrderDetails order={order} items={orderedItems} /> : null}
                   {order.status === 'pendente' ? <Text style={styles.pendingNote}>Pedido pendente não significa pagamento realizado.</Text> : null}
-                  {isPixEligible(order) ? <AppButton title="Pagar com Pix" variant="primary" fullWidth onPress={() => navigation?.navigate ? navigation.navigate('PixCheckout', { orderId: order.id, itemName: orderItemNames(order.items), quantidade: totalOrderUnits(order.items), totalReal: order.totalReal, gemnUtilizado: order.gemnUtilizado, valorDevidoReal: order.valorDevidoReal }) : void submitPixPayment(order)} disabled={pixProcessing} loading={pixProcessing && pixOrder?.id === order.id} style={styles.pixButton} /> : null}
+                  {REAL_PAYMENTS_ENABLED && isPixEligible(order) ? <AppButton title="Pagar com Pix" variant="primary" fullWidth onPress={() => navigation?.navigate ? navigation.navigate('PixCheckout', { orderId: order.id, itemName: orderItemNames(order.items), quantidade: totalOrderUnits(order.items), totalReal: order.totalReal, gemnUtilizado: order.gemnUtilizado, valorDevidoReal: order.valorDevidoReal }) : void submitPixPayment(order)} disabled={pixProcessing} loading={pixProcessing && pixOrder?.id === order.id} style={styles.pixButton} /> : null}
                   {requestStatusPresentation(cancellationRequests[order.id]) ? (() => {
                     const requestStatus = requestStatusPresentation(cancellationRequests[order.id])!;
                     const request = cancellationRequests[order.id];
@@ -603,7 +604,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
         onCancel={() => { if (!provisioningTestProcessing) { setProvisioningTestModalOpen(false); setProvisioningTestError(null); } }}
         onConfirm={() => { void submitProvisioningTest(); }}
       />
-      <PixPaymentModal
+      {REAL_PAYMENTS_ENABLED ? <PixPaymentModal
         order={pixOrder}
         payment={pixPayment}
         processing={pixProcessing}
@@ -611,7 +612,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
         copied={pixCopied}
         onCopy={() => { void copyPixCode(); }}
         onClose={closePixModal}
-      />
+      /> : null}
     </AppScreen>
   );
 }

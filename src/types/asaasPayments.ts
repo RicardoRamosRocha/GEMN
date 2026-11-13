@@ -84,6 +84,7 @@ export interface CreatePixPaymentResponse {
 }
 
 export type AsaasPaymentErrorCode =
+  | 'PAYMENTS_DISABLED'
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
   | 'INVALID_REQUEST'
