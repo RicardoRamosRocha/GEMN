@@ -13,7 +13,7 @@ import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
 const promotionalBanner = require('../../assets/images/gemn-banner-home.png');
-const presentationVideo = require('../../assets/videos/apresenta.mp4');
+const presentationVideo = require('../../assets/videos/mercado-gemn.mp4');
 
 function formatPrice(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
