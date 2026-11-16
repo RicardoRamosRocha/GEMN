@@ -398,6 +398,10 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
     setCartFeedback(`${quantity} ${quantity === 1 ? 'unidade adicionada' : 'unidades adicionadas'} ao carrinho.`);
   }
 
+  function openLogin() {
+    (navigation.getParent?.() as any)?.navigate('Perfil', { screen: 'Login' });
+  }
+
   return (
     <AppScreen scroll edges={['top', 'right', 'bottom', 'left']} style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
@@ -474,7 +478,7 @@ export default function ProductScreen({ route, navigation }: ProductScreenProps)
           <Text style={styles.paymentNote}>A forma escolhida registra apenas sua intenção de pagamento. Nenhum pagamento ou débito GEMN é realizado nesta etapa.</Text>
           {cartFeedback ? <Text accessibilityRole="text" style={styles.cartFeedback}>{cartFeedback}</Text> : null}
           <AppButton title="Adicionar ao carrinho" variant="outline" fullWidth onPress={handleAddToCart} disabled={!listing} style={styles.cartButton} />
-          <AppButton title="Registrar pedido" fullWidth onPress={() => { void handleConfirmPurchase(); }} loading={isSubmitting} disabled={!listing} style={styles.confirmButton} />
+          <AppButton title={user ? 'Registrar pedido' : 'Entrar para finalizar'} fullWidth onPress={() => { if (user) void handleConfirmPurchase(); else openLogin(); }} loading={isSubmitting} disabled={!listing} style={styles.confirmButton} />
         </AppCard>
       </View>
       <Modal visible={fullscreenGallery} transparent animationType="fade" onRequestClose={closeGallery}>

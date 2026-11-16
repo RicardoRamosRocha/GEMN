@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { addCartItem, removeCartItem, updateCartItemQuantity } from '../services/cart';
-import { loadCart, saveCart } from '../services/cartStorage';
+import { clearCartStorage, loadCart, saveCart } from '../services/cartStorage';
 import type { CartItem } from '../types/cart';
 
 type CartContextValue = {
@@ -16,6 +16,7 @@ type CartContextValue = {
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
+const GUEST_CART_USER_ID = 'guest';
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -36,17 +37,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       return;
     }
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
-    void loadCart(userId)
-      .then((storedItems) => {
+    void Promise.all([
+      loadCart(userId ?? GUEST_CART_USER_ID),
+      userId ? loadCart(GUEST_CART_USER_ID) : Promise.resolve([]),
+    ])
+      .then(([storedItems, guestItems]) => {
         if (requestId !== loadRequestRef.current) return;
-        setItems(storedItems);
-        setLoadedUserId(userId);
+        const mergedItems = userId
+          ? guestItems.reduce((current, item) => addCartItem(current, item), storedItems)
+          : storedItems;
+        setItems(mergedItems);
+        setLoadedUserId(userId ?? GUEST_CART_USER_ID);
+        if (userId && guestItems.length > 0) {
+          void saveCart(userId, mergedItems);
+          void clearCartStorage(GUEST_CART_USER_ID);
+        }
       })
       .catch(() => {
         if (requestId !== loadRequestRef.current) return;
@@ -58,8 +64,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [authLoading, userId]);
 
   const persist = useCallback((nextItems: CartItem[]) => {
-    if (!userId) return;
-    const currentUserId = userId;
+    const currentUserId = userId ?? GUEST_CART_USER_ID;
     writeQueueRef.current = writeQueueRef.current
       .catch(() => undefined)
       .then(() => saveCart(currentUserId, nextItems))
@@ -99,7 +104,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, [persist]);
 
-  const visibleItems = loadedUserId === userId && !loading ? items : [];
+  const visibleItems = loadedUserId === (userId ?? GUEST_CART_USER_ID) && !loading ? items : [];
   const value = useMemo(() => ({
     items: visibleItems, loading, error, itemCount: visibleItems.reduce((total, item) => total + item.quantity, 0), addItem, removeItem, updateQuantity, clear,
   }), [addItem, clear, error, loading, removeItem, updateQuantity, visibleItems]);

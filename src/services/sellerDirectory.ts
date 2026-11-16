@@ -115,7 +115,6 @@ async function requireAuthenticatedUser() {
 
 export async function listActiveSellerDirectory(params: SellerDirectorySearchParams = {}): Promise<SellerDirectoryPage> {
   const normalized = normalizeParams(params);
-  await requireAuthenticatedUser();
 
   let query = supabase
     .from('sellers')

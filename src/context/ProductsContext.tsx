@@ -167,21 +167,19 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   }, [getCurrentSeller, user]);
 
   const refreshMarketplaceProducts = useCallback(async () => {
-    if (!user) { setMarketplaceProducts([]); setMarketplaceLoading(false); return; }
     setMarketplaceLoading(true); setMarketplaceError(null);
     // RLS is the source of truth for which listings the marketplace may show.
-    const { data, error } = await supabase.from('listings').select(listingSelect).order('criado_em', { ascending: false });
+    const { data, error } = await supabase.from('listings').select(listingSelect).order('id', { ascending: false });
     if (error) setMarketplaceError(friendlyError(error)); else setMarketplaceProducts((data as ListingRow[]).filter((row) => row.status === 'ativo').map(mapListing));
     setMarketplaceLoading(false);
-  }, [user]);
+  }, []);
 
   const refreshCategories = useCallback(async () => {
-    if (!user) { setCategories([]); setCategoriesLoading(false); return; }
     setCategoriesLoading(true); setCategoriesError(null);
     const { data, error } = await supabase.from('categories').select('id,nome').eq('ativo', true).order('nome');
     if (error) setCategoriesError(friendlyError(error)); else setCategories((data as { id: string; nome: string }[]).map((row) => ({ id: row.id, name: row.nome })));
     setCategoriesLoading(false);
-  }, [user]);
+  }, []);
 
   useEffect(() => { void refreshProducts(); void refreshMarketplaceProducts(); void refreshCategories(); }, [refreshProducts, refreshMarketplaceProducts, refreshCategories]);
 

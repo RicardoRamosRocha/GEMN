@@ -3,13 +3,14 @@ import { Image, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppButton, AppCard, AppHeader, AppScreen } from '../components/ui';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { useProducts, type GemnProduct } from '../context/ProductsContext';
 import { CartValidationError, createCheckoutIntent, validateCart } from '../services/cartValidation';
 import { CartCheckoutError, createOrderFromItems, getAvailableGemnBalance } from '../services/cartCheckout';
 import type { CartCheckoutIntent, CartCheckoutOrderResult, CartKnownListing, CartValidationItem, CartValidationResult } from '../types/cart';
 import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
-type CartScreenProps = { navigation: { goBack: () => void } };
+type CartScreenProps = { navigation: any };
 
 type ResolvedCartItem = {
   cartId: string;
@@ -45,6 +46,7 @@ export default function CartScreen({ navigation }: CartScreenProps) {
   const { width } = useWindowDimensions();
   const wide = width >= layout.breakpoints.tablet;
   const { items, loading, error, itemCount, removeItem, updateQuantity, clear } = useCart();
+  const { user } = useAuth();
   const { marketplaceProducts } = useProducts();
   const [validation, setValidation] = useState<CartValidationResult | null>(null);
   const [validationLoading, setValidationLoading] = useState(false);
@@ -68,7 +70,7 @@ export default function CartScreen({ navigation }: CartScreenProps) {
   }])), [marketplaceProducts]);
 
   const validateCurrentCart = useCallback(async () => {
-    if (loading || items.length === 0) {
+    if (!user || loading || items.length === 0) {
       setValidation(null);
       setValidationError(null);
       return;
@@ -84,7 +86,7 @@ export default function CartScreen({ navigation }: CartScreenProps) {
     } finally {
       setValidationLoading(false);
     }
-  }, [items, knownListings, loading]);
+  }, [items, knownListings, loading, user]);
 
   useEffect(() => { void validateCurrentCart(); }, [validateCurrentCart]);
 
@@ -137,6 +139,10 @@ export default function CartScreen({ navigation }: CartScreenProps) {
 
   async function handleCheckout() {
     if (checkoutLoading) return;
+    if (!user) {
+      navigation.getParent?.()?.navigate('Perfil', { screen: 'Login' });
+      return;
+    }
     setCheckoutLoading(true);
     setCheckoutError(null);
     try {
@@ -241,7 +247,7 @@ export default function CartScreen({ navigation }: CartScreenProps) {
           <AppCard style={styles.summaryCard}>
             <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Total estimado</Text><Text style={styles.totalValue}>{formatPrice(estimatedTotal)}</Text></View>
             <Text style={styles.summaryNote}>O preço final, a disponibilidade e as regras de pagamento serão validados novamente no checkout. O cashback será recalculado pelo servidor.</Text>
-            <AppButton title={checkoutLoading ? 'Processando pedidos...' : 'Finalizar compra'} fullWidth loading={checkoutLoading} disabled={checkoutLoading || validationLoading || !validation || blockingInvalidCount > 0 || !changesAccepted || Boolean(validationError) || checkoutGroups.length === 0} onPress={() => { void handleCheckout(); }} />
+            <AppButton title={checkoutLoading ? 'Processando pedidos...' : user ? 'Finalizar compra' : 'Entrar para finalizar compra'} fullWidth loading={checkoutLoading} disabled={checkoutLoading || validationLoading || Boolean(user && (!validation || blockingInvalidCount > 0 || !changesAccepted || validationError || checkoutGroups.length === 0))} onPress={() => { void handleCheckout(); }} />
             <Text style={styles.disabledNote}>Cada vendedor recebe um pedido separado. O pagamento em reais continua simulado nesta etapa.</Text>
             <Pressable accessibilityRole="button" accessibilityLabel="Limpar carrinho" onPress={clear} style={styles.clearButton}><Text style={styles.clearText}>Limpar carrinho</Text></Pressable>
           </AppCard>

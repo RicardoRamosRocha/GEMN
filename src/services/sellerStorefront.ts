@@ -177,7 +177,6 @@ async function requireAuthenticatedUser(): Promise<void> {
 
 export async function getSellerStorefront(sellerId: string): Promise<SellerStorefront> {
   const validatedSellerId = validateSellerId(sellerId);
-  await requireAuthenticatedUser();
 
   const { data: seller, error: sellerError } = await supabase
     .from('sellers')
@@ -188,7 +187,8 @@ export async function getSellerStorefront(sellerId: string): Promise<SellerStore
   if (sellerError) throw normalizeError(sellerError);
   if (!seller) throw new SellerStorefrontServiceError('not_found', 'Vendedor não encontrado.');
   const mappedSeller = mapSeller(seller as UnknownRecord);
-  const branding = await getSellerBranding(validatedSellerId);
+  const { data: sessionData } = await supabase.auth.getSession();
+  const branding = sessionData.session ? await getSellerBranding(validatedSellerId) : null;
 
   const { data: listings, error: listingsError } = await supabase
     .from('listings')
@@ -207,8 +207,8 @@ export async function getSellerStorefront(sellerId: string): Promise<SellerStore
   return {
     seller: {
       ...mappedSeller,
-      ...(branding.branding.logoUrl ? { logoUrl: branding.branding.logoUrl } : {}),
-      ...(branding.branding.bannerUrl ? { bannerUrl: branding.branding.bannerUrl } : {}),
+      ...(branding?.branding.logoUrl ? { logoUrl: branding.branding.logoUrl } : {}),
+      ...(branding?.branding.bannerUrl ? { bannerUrl: branding.branding.bannerUrl } : {}),
     },
     listings: mappedListings,
   };

@@ -38,6 +38,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
+import GuestProfileScreen from './src/screens/GuestProfileScreen';
 import { colors, layout, radius, shadows, spacing, typography } from './src/theme/tokens';
 
 const Stack = createNativeStackNavigator();
@@ -138,6 +139,11 @@ function MarketplaceStack() {
   );
 }
 
+function ProfileEntryScreen(props: any) {
+  const { user } = useAuth();
+  return user ? <ProfileScreen {...props} /> : <GuestProfileScreen {...props} />;
+}
+
 function CartStack() {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions}>
@@ -152,9 +158,13 @@ function ProfileStack() {
     <Stack.Navigator screenOptions={stackScreenOptions}>
       <Stack.Screen
         name="ProfileHome"
-        component={ProfileScreen}
+        component={ProfileEntryScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
 
       <Stack.Screen
         name="Orders"
@@ -354,7 +364,7 @@ function AppContent() {
 
   if (loading) return <AuthLoadingScreen />;
   if (passwordRecoveryState !== 'idle') return <AuthNavigator initialRouteName="ResetPassword" />;
-  return session ? <AuthenticatedApp /> : <AuthNavigator />;
+  return <AuthenticatedApp />;
 }
 
 export default function App() {

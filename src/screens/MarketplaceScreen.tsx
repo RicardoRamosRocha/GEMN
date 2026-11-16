@@ -7,6 +7,7 @@ import { ProductCard } from '../components/ProductCard';
 import { SellerDirectoryCard } from '../components/SellerDirectoryCard';
 import { WalletCard } from '../components/WalletCard';
 import { useProducts } from '../context/ProductsContext';
+import { useAuth } from '../context/AuthContext';
 import type { GemnProduct } from '../context/ProductsContext';
 import { getGemnPresentationEligibility } from '../services/gemnPresentation';
 import { listActiveSellerDirectory, SellerDirectoryServiceError } from '../services/sellerDirectory';
@@ -46,6 +47,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
   const productGap = desktop ? spacing.lg : tablet ? spacing.md : 12;
   const productWidth = Math.floor((contentWidth - productGap * (columns - 1)) / columns);
   const { marketplaceProducts, marketplaceLoading, marketplaceError, refreshMarketplaceProducts, categories: activeCategories } = useProducts();
+  const { user } = useAuth();
   const [mode, setMode] = React.useState<'products' | 'stores'>('products');
   const [search, setSearch] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('Todas');
@@ -136,7 +138,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
       </View>
 
       <View style={styles.walletSection}>
-        <WalletCard compact variant="home" onPress={() => navigation.navigate('Perfil', { screen: 'Wallet' })} />
+        <WalletCard compact variant="home" onPress={() => navigation.navigate('Perfil', { screen: user ? 'Wallet' : 'Login' })} />
       </View>
 
       <View style={styles.searchSection}>
