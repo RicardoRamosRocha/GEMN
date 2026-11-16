@@ -15,7 +15,7 @@ import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
 const promotionalBanner = require('../../assets/images/gemn-banner-home.png');
 const presentationVideo = require('../../assets/videos/mercado-gemn.mp4');
-const presentationPoster = require('../../assets/videos/mercado-gemn-poster.jpg');
+const presentationPoster = require('../../assets/images/capa.png');
 
 function formatPrice(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
