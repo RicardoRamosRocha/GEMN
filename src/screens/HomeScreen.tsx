@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, AppState, Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Asset } from 'expo-asset';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useIsFocused } from '@react-navigation/native';
 
@@ -83,8 +84,8 @@ function WebPresentationVideo() {
   const manualPauseRef = React.useRef(false);
   const commandRef = React.useRef<'play' | 'pause' | null>(null);
   const isFocused = useIsFocused();
-  const videoUri = Image.resolveAssetSource(presentationVideo)?.uri;
-  const posterUri = Image.resolveAssetSource(presentationPoster)?.uri;
+  const videoUri = Asset.fromModule(presentationVideo).uri;
+  const posterUri = Asset.fromModule(presentationPoster).uri;
 
   const playVideo = React.useCallback((withAudio: boolean) => {
     const video = videoRef.current;
