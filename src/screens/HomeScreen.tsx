@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, AppState, Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, AppState, Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useIsFocused } from '@react-navigation/native';
@@ -72,6 +72,121 @@ export default function HomeScreen({ navigation }: any) {
 }
 
 function PresentationVideo() {
+  return Platform.OS === 'web' ? <WebPresentationVideo /> : <NativePresentationVideo />;
+}
+
+function WebPresentationVideo() {
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const [hasStarted, setHasStarted] = React.useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = React.useState(false);
+  const [appActive, setAppActive] = React.useState(AppState.currentState === 'active');
+  const manualPauseRef = React.useRef(false);
+  const commandRef = React.useRef<'play' | 'pause' | null>(null);
+  const isFocused = useIsFocused();
+  const videoUri = Image.resolveAssetSource(presentationVideo)?.uri;
+  const posterUri = Image.resolveAssetSource(presentationPoster)?.uri;
+
+  const playVideo = React.useCallback((withAudio: boolean) => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (withAudio) {
+      video.defaultMuted = false;
+      video.muted = false;
+    } else {
+      video.defaultMuted = true;
+      video.muted = true;
+    }
+    const result = video.play();
+    if (result) {
+      result.catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'NotAllowedError') setAutoplayBlocked(true);
+      });
+    }
+  }, []);
+
+  const attemptAutoplay = React.useCallback(() => {
+    if (!isFocused || !appActive || manualPauseRef.current || videoRef.current?.paused === false) return;
+    commandRef.current = 'play';
+    playVideo(false);
+  }, [appActive, isFocused, playVideo]);
+
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => setAppActive(nextState === 'active'));
+    return () => subscription.remove();
+  }, []);
+
+  React.useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return undefined;
+    const handlePlaying = () => {
+      commandRef.current = null;
+      manualPauseRef.current = false;
+      setHasStarted(true);
+      setAutoplayBlocked(false);
+    };
+    const handlePause = () => {
+      if (commandRef.current) {
+        commandRef.current = null;
+      } else {
+        manualPauseRef.current = true;
+      }
+    };
+    video.addEventListener('playing', handlePlaying);
+    video.addEventListener('pause', handlePause);
+    attemptAutoplay();
+    return () => {
+      video.removeEventListener('playing', handlePlaying);
+      video.removeEventListener('pause', handlePause);
+    };
+  }, [attemptAutoplay]);
+
+  React.useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return undefined;
+    if (!isFocused || !appActive) {
+      if (!video.paused) {
+        commandRef.current = 'pause';
+        video.pause();
+      }
+      return undefined;
+    }
+    attemptAutoplay();
+    return undefined;
+  }, [appActive, attemptAutoplay, isFocused]);
+
+  function handleManualPlay() {
+    manualPauseRef.current = false;
+    commandRef.current = 'play';
+    playVideo(true);
+  }
+
+  return (
+    <View style={styles.videoFrame}>
+      {React.createElement('video', {
+        ref: videoRef,
+        src: videoUri,
+        autoPlay: true,
+        muted: true,
+        defaultMuted: true,
+        playsInline: true,
+        controls: true,
+        loop: true,
+        preload: 'auto',
+        'aria-label': 'Vídeo de apresentação do GEMN',
+        style: { width: '100%', height: '100%', objectFit: 'contain', display: 'block' } as React.CSSProperties,
+      })}
+      {!hasStarted ? <View pointerEvents="box-none" style={styles.videoPoster}>
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}><Image accessibilityLabel="Poster do vídeo de apresentação do GEMN" source={{ uri: posterUri }} resizeMode="cover" style={styles.posterImage} /></View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Reproduzir vídeo de apresentação do GEMN" onPress={handleManualPlay} style={styles.videoPlayButton}>
+          <MaterialCommunityIcons name="play-circle" size={42} color={colors.white} />
+          <Text style={styles.videoPlayText}>{autoplayBlocked ? 'Reproduzir vídeo' : 'Iniciar vídeo'}</Text>
+        </Pressable>
+      </View> : null}
+    </View>
+  );
+}
+
+function NativePresentationVideo() {
   const [firstFrameReady, setFirstFrameReady] = React.useState(false);
   const [hasStarted, setHasStarted] = React.useState(false);
   const [appActive, setAppActive] = React.useState(AppState.currentState === 'active');
@@ -121,6 +236,7 @@ function PresentationVideo() {
   function handleManualPlay() {
     manualPauseRef.current = false;
     commandRef.current = 'play';
+    player.muted = false;
     player.play();
   }
 
@@ -142,8 +258,8 @@ function PresentationVideo() {
         onFirstFrameRender={handleFirstFrameRender}
         style={styles.video}
       />
-      {showPoster ? <View style={styles.videoPoster}>
-        <Image accessibilityLabel="Poster do vídeo de apresentação do GEMN" source={presentationPoster} resizeMode="cover" style={styles.posterImage} />
+      {showPoster ? <View pointerEvents="box-none" style={styles.videoPoster}>
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}><Image accessibilityLabel="Poster do vídeo de apresentação do GEMN" source={presentationPoster} resizeMode="cover" style={styles.posterImage} /></View>
         <Pressable accessibilityRole="button" accessibilityLabel="Reproduzir vídeo de apresentação do GEMN" onPress={handleManualPlay} style={styles.videoPlayButton}>
           <MaterialCommunityIcons name="play-circle" size={42} color={colors.white} />
           <Text style={styles.videoPlayText}>Reproduzir vídeo</Text>
