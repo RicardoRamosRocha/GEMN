@@ -14,6 +14,7 @@ import { colors, layout, radius, spacing, typography } from '../theme/tokens';
 
 const promotionalBanner = require('../../assets/images/gemn-banner-home.png');
 const presentationVideo = require('../../assets/videos/mercado-gemn.mp4');
+const presentationPoster = require('../../assets/videos/mercado-gemn-poster.jpg');
 
 function formatPrice(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -71,20 +72,22 @@ export default function HomeScreen({ navigation }: any) {
 }
 
 function PresentationVideo() {
-  const { height: viewportHeight } = useWindowDimensions();
-  const [mounted, setMounted] = React.useState(false);
   const [firstFrameReady, setFirstFrameReady] = React.useState(false);
-  const [visible, setVisible] = React.useState(false);
+  const [hasStarted, setHasStarted] = React.useState(false);
   const [appActive, setAppActive] = React.useState(AppState.currentState === 'active');
-  const frameRef = React.useRef<View>(null);
   const manualPauseRef = React.useRef(false);
   const commandRef = React.useRef<'play' | 'pause' | null>(null);
   const isFocused = useIsFocused();
-  const player = useVideoPlayer(mounted ? presentationVideo : null, (videoPlayer) => {
+  const player = useVideoPlayer(presentationVideo, (videoPlayer) => {
     videoPlayer.loop = true;
     videoPlayer.muted = true;
-    videoPlayer.pause();
   });
+
+  const attemptAutoplay = React.useCallback(() => {
+    if (!isFocused || !appActive || manualPauseRef.current || player.playing) return;
+    commandRef.current = 'play';
+    player.play();
+  }, [appActive, isFocused, player]);
 
   React.useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => setAppActive(nextState === 'active'));
@@ -92,53 +95,60 @@ function PresentationVideo() {
   }, []);
 
   React.useEffect(() => {
-    if (!mounted) return undefined;
-    const element = frameRef.current as unknown as Element | null;
-    if (typeof IntersectionObserver === 'undefined' || !element) {
-      const checkNativeVisibility = () => {
-        frameRef.current?.measureInWindow((_x, y, _width, height) => setVisible(y < viewportHeight && y + height > 0));
-      };
-      checkNativeVisibility();
-      const timer = setInterval(checkNativeVisibility, 250);
-      return () => clearInterval(timer);
-    }
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting && entry.intersectionRatio >= 0.1), { threshold: [0, 0.1] });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [mounted, viewportHeight]);
-
-  React.useEffect(() => {
     const subscription = player.addListener('playingChange', ({ isPlaying }) => {
       if (commandRef.current) {
         commandRef.current = null;
-        return;
+      } else {
+        manualPauseRef.current = !isPlaying;
       }
-      manualPauseRef.current = !isPlaying;
+      if (isPlaying) setHasStarted(true);
     });
     return () => subscription.remove();
   }, [player]);
 
   React.useEffect(() => {
-    if (!firstFrameReady) return;
-    const canPlay = visible && isFocused && appActive && !manualPauseRef.current;
-    if (canPlay && !player.playing) {
-      commandRef.current = 'play';
-      player.play();
-    } else if (!canPlay && player.playing) {
-      commandRef.current = 'pause';
-      player.pause();
+    if (!isFocused || !appActive || manualPauseRef.current) {
+      if (player.playing) {
+        commandRef.current = 'pause';
+        player.pause();
+      }
+      return undefined;
     }
-  }, [appActive, firstFrameReady, isFocused, player, visible]);
+    const frame = requestAnimationFrame(attemptAutoplay);
+    return () => cancelAnimationFrame(frame);
+  }, [appActive, attemptAutoplay, isFocused, player]);
+
+  function handleManualPlay() {
+    manualPauseRef.current = false;
+    commandRef.current = 'play';
+    player.play();
+  }
 
   function handleFirstFrameRender() {
     setFirstFrameReady(true);
+    attemptAutoplay();
   }
 
+  const showPoster = !firstFrameReady || !hasStarted;
+
   return (
-    <View ref={frameRef} style={styles.videoFrame} onLayout={() => setMounted(true)}>
-      {mounted ? <VideoView accessibilityLabel="Vídeo de apresentação do GEMN" player={player} nativeControls contentFit="contain" onFirstFrameRender={handleFirstFrameRender} style={styles.video} /> : null}
-      {!firstFrameReady ? <View pointerEvents="none" style={styles.videoPoster}><Image accessibilityLabel="Poster do vídeo de apresentação do GEMN" source={promotionalBanner} resizeMode="contain" style={styles.posterImage} /></View> : null}
-      {!firstFrameReady ? <View pointerEvents="none" style={styles.videoLoading}><ActivityIndicator color={colors.white} /></View> : null}
+    <View style={styles.videoFrame}>
+      <VideoView
+        accessibilityLabel="Vídeo de apresentação do GEMN"
+        player={player}
+        nativeControls
+        playsInline
+        contentFit="contain"
+        onFirstFrameRender={handleFirstFrameRender}
+        style={styles.video}
+      />
+      {showPoster ? <View style={styles.videoPoster}>
+        <Image accessibilityLabel="Poster do vídeo de apresentação do GEMN" source={presentationPoster} resizeMode="cover" style={styles.posterImage} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Reproduzir vídeo de apresentação do GEMN" onPress={handleManualPlay} style={styles.videoPlayButton}>
+          <MaterialCommunityIcons name="play-circle" size={42} color={colors.white} />
+          <Text style={styles.videoPlayText}>Reproduzir vídeo</Text>
+        </Pressable>
+      </View> : null}
     </View>
   );
 }
@@ -170,8 +180,9 @@ const styles = StyleSheet.create({
   promoBannerFrame: { width: '100%', aspectRatio: 1774 / 887, overflow: 'hidden', backgroundColor: colors.brandDark },
   video: { width: '100%', height: '100%' },
   videoFrame: { width: '100%', aspectRatio: 16 / 9, overflow: 'hidden', backgroundColor: colors.brandDark },
-  videoPoster: { ...StyleSheet.absoluteFill, width: '100%', height: '100%' },
+  videoPoster: { ...StyleSheet.absoluteFill, width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandDark },
   posterImage: { width: '100%', height: '100%' },
-  videoLoading: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandDark },
+  videoPlayButton: { position: 'absolute', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.lg, backgroundColor: 'rgba(7, 32, 29, 0.82)' },
+  videoPlayText: { ...typography.bodySmall, color: colors.white },
   pressed: { opacity: 0.78 },
 });
