@@ -27,6 +27,15 @@ function categoryIcon(name: string, index: number) {
   return categoryIcons[index % categoryIcons.length];
 }
 
+function stableProductScore(id: string, seed: string) {
+  let hash = 2166136261;
+  for (const character of `${seed}:${id}`) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 export default function MarketplaceScreen({ navigation, route }: any) {
   const { width } = useWindowDimensions();
   const desktop = width >= layout.breakpoints.desktop;
@@ -36,9 +45,6 @@ export default function MarketplaceScreen({ navigation, route }: any) {
   const contentWidth = Math.min(width - horizontalPadding * 2, layout.contentMaxWidth - horizontalPadding * 2);
   const productGap = desktop ? spacing.lg : tablet ? spacing.md : 12;
   const productWidth = Math.floor((contentWidth - productGap * (columns - 1)) / columns);
-  const carouselGap = desktop ? spacing.lg : tablet ? spacing.md : spacing.smMd;
-  const carouselVisibleCards = desktop ? 4.1 : tablet ? 3.15 : width <= 375 ? 2.55 : 2.8;
-  const carouselCardWidth = Math.floor((contentWidth - carouselGap * (carouselVisibleCards - 1)) / carouselVisibleCards);
   const { marketplaceProducts, marketplaceLoading, marketplaceError, refreshMarketplaceProducts, categories: activeCategories } = useProducts();
   const [mode, setMode] = React.useState<'products' | 'stores'>('products');
   const [search, setSearch] = React.useState('');
@@ -51,6 +57,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
   const [storesPage, setStoresPage] = React.useState(1);
   const [storesHasMore, setStoresHasMore] = React.useState(false);
   const storesRequestRef = React.useRef(0);
+  const productOrderSeedRef = React.useRef(Math.random().toString(36).slice(2));
 
   React.useEffect(() => {
     const params = route?.params;
@@ -58,17 +65,15 @@ export default function MarketplaceScreen({ navigation, route }: any) {
     if (typeof params?.category === 'string') setSelectedCategory(params.category);
   }, [route?.params?.search, route?.params?.category]);
 
-  const visibleProducts = marketplaceProducts.filter((product) => {
-    const matchesCategory = selectedCategory === 'Todas' || product.category === selectedCategory;
+  const orderedProducts = React.useMemo(() => [...marketplaceProducts].sort((left, right) => stableProductScore(left.id, productOrderSeedRef.current) - stableProductScore(right.id, productOrderSeedRef.current)), [marketplaceProducts]);
+  const visibleProducts = React.useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
-    return matchesCategory && (!query || `${product.name} ${product.description} ${product.sellerName ?? ''}`.toLocaleLowerCase().includes(query));
-  });
+    return orderedProducts.filter((product) => {
+      const matchesCategory = selectedCategory === 'Todas' || product.category === selectedCategory;
+      return matchesCategory && (!query || `${product.name} ${product.description} ${product.sellerName ?? ''}`.toLocaleLowerCase().includes(query));
+    });
+  }, [orderedProducts, search, selectedCategory]);
   const marketplaceCategories = [allCategory, ...activeCategories.map((item, index) => ({ icon: categoryIcon(item.name, index), label: item.name }))];
-  const productGridMode = Boolean(search.trim()) || selectedCategory !== 'Todas';
-  const categorySections = Array.from(new Set(visibleProducts.map((product) => product.category))).map((category) => ({
-    category,
-    products: visibleProducts.filter((product) => product.category === category),
-  }));
   const hasActiveFilters = Boolean(search.trim()) || selectedCategory !== 'Todas';
   const categoryFilterActive = selectedCategory !== 'Todas';
   const searchValue = mode === 'stores' ? storeSearch : search;
@@ -172,7 +177,7 @@ export default function MarketplaceScreen({ navigation, route }: any) {
         </ScrollView>
       </View> : null}
 
-      {(mode === 'stores' || tablet || productGridMode) ? <View style={styles.resultsHeader}>
+      <View style={styles.resultsHeader}>
         <View style={styles.resultsHeaderCopy}>
           <View style={styles.resultsTitleRow}>
             <Text style={styles.resultsTitle}>{mode === 'stores' ? 'Lojas' : 'Produtos e serviços'}</Text>
@@ -185,13 +190,13 @@ export default function MarketplaceScreen({ navigation, route }: any) {
           </Text>
         </View>
         {mode === 'stores' ? <AppButton title="Atualizar" size="compact" variant="outline" loading={storesLoading && stores.length > 0} disabled={storesLoading || storesLoadingMore} onPress={() => { void loadStores(storeSearch.trim(), 1, false); }} /> : null}
-      </View> : null}
+      </View>
 
       {mode === 'products' ? <>
         {marketplaceError ? <AppCard style={styles.errorCard}><Text style={styles.errorText}>{marketplaceError}</Text><AppButton title="Tentar novamente" variant="outline" onPress={() => { void refreshMarketplaceProducts(); }} /></AppCard> : null}
         {marketplaceLoading ? <View style={styles.loadingState}><ActivityIndicator color={colors.primary} /><Text style={styles.helperText}>Carregando anúncios publicados...</Text></View> : null}
         {!marketplaceLoading && !marketplaceError && visibleProducts.length === 0 ? <AppCard style={styles.emptyCard}><View style={styles.emptyIcon}><MaterialCommunityIcons name="store-search-outline" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>{hasActiveFilters ? 'Nenhum anúncio encontrado' : 'Ainda não há anúncios publicados'}</Text><Text style={styles.emptyBody}>{hasActiveFilters ? 'Tente buscar por outro termo ou limpar os filtros.' : 'Em breve, novos produtos e serviços da comunidade aparecerão aqui.'}</Text>{hasActiveFilters ? <AppButton title="Limpar filtros" size="compact" variant="outline" onPress={clearFilters} /> : null}</AppCard> : null}
-        {visibleProducts.length > 0 ? productGridMode ? <MarketplaceProductGrid products={visibleProducts} columns={columns} itemWidth={productWidth} gap={productGap} onPress={(product, index) => navigation.navigate('Product', { listing: product, listingSequence: visibleProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} /> : <MarketplaceCategoryShowcase sections={categorySections} contentWidth={contentWidth} cardWidth={carouselCardWidth} gap={carouselGap} desktop={desktop} onViewAll={(category) => setSelectedCategory(category)} onPress={(product, index, sequence) => navigation.navigate('Product', { listing: product, listingSequence: sequence, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} /> : null}
+        {visibleProducts.length > 0 ? <MarketplaceProductGrid products={visibleProducts} columns={columns} itemWidth={productWidth} gap={productGap} onPress={(product, index) => navigation.navigate('Product', { listing: product, listingSequence: visibleProducts, listingIndex: index })} onSellerPress={(sellerId) => navigation.navigate('SellerStorefront', { sellerId })} /> : null}
       </> : <>
         {storesError ? <AppCard style={styles.errorCard}><Text style={styles.errorText}>{storesError}</Text><AppButton title="Tentar novamente" variant="outline" onPress={retryStores} /></AppCard> : null}
         {storesLoading ? <View style={styles.loadingState}><ActivityIndicator color={colors.primary} /><Text style={styles.helperText}>Carregando lojas...</Text></View> : null}
@@ -205,52 +210,11 @@ export default function MarketplaceScreen({ navigation, route }: any) {
 
 type GridItem = { id: string };
 
-function MarketplaceProductCarousel({ products, cardWidth, gap, desktop, showControls = products.length >= 3, showEndIndicator = products.length >= 3, onPress, onSellerPress }: { products: GemnProduct[]; cardWidth: number; gap: number; desktop: boolean; showControls?: boolean; showEndIndicator?: boolean; onPress: (product: GemnProduct, index: number) => void; onSellerPress: (sellerId: string) => void }) {
-  const scrollRef = React.useRef<ScrollView>(null);
-  const [offset, setOffset] = React.useState(0);
-  const step = cardWidth + gap;
-  const canScrollBack = offset > 4;
-
-  function scrollBy(direction: -1 | 1) {
-    scrollRef.current?.scrollTo({ x: Math.max(0, offset + direction * step * (desktop ? 2 : 1)), animated: true });
-  }
-
-  return <View style={styles.carouselWrap}>
-    {desktop && showControls ? <View style={styles.carouselControls}><Pressable accessibilityRole="button" accessibilityLabel="Anúncios anteriores" disabled={!canScrollBack} onPress={() => scrollBy(-1)} style={[styles.carouselArrow, !canScrollBack && styles.carouselArrowDisabled]}><MaterialCommunityIcons name="chevron-left" size={22} color={canScrollBack ? colors.brandDark : colors.textMuted} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Próximos anúncios" onPress={() => scrollBy(1)} style={styles.carouselArrow}><MaterialCommunityIcons name="chevron-right" size={22} color={colors.brandDark} /></Pressable></View> : null}
-    <ScrollView ref={scrollRef} horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} style={styles.carouselScroll} contentContainerStyle={[styles.carouselList, { gap }]} scrollEventThrottle={16} onScroll={(event) => setOffset(event.nativeEvent.contentOffset.x)}>
-      {products.map((product, index) => {
-        const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
-        return <View key={product.id} style={[styles.carouselItem, { width: cardWidth }]}><ProductCard layout="marketplaceShowcase" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} onPress={() => onPress(product, index)} /></View>;
-      })}
-      {showEndIndicator ? <View style={styles.carouselEnd} accessibilityLabel="Mais anúncios à direita"><MaterialCommunityIcons name="arrow-right" size={20} color={colors.brand} /></View> : null}
-    </ScrollView>
-  </View>;
-}
-
-function MarketplaceCategoryShowcase({ sections, contentWidth, cardWidth, gap, desktop, onViewAll, onPress, onSellerPress }: { sections: { category: string; products: GemnProduct[] }[]; contentWidth: number; cardWidth: number; gap: number; desktop: boolean; onViewAll: (category: string) => void; onPress: (product: GemnProduct, index: number, sequence: GemnProduct[]) => void; onSellerPress: (sellerId: string) => void }) {
-  return <View style={styles.categoryShowcaseList}>
-    {sections.map((section) => {
-      const sectionCardWidth = section.products.length === 1 ? Math.min(cardWidth, 180) : section.products.length === 2 ? Math.min(Math.floor((contentWidth - gap) / 2), 240) : cardWidth;
-      return <View key={section.category} style={styles.categoryShowcaseSection}>
-        <View style={styles.categoryShowcaseHeader}>
-          <Text style={styles.categoryShowcaseTitle}>{section.category}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Ver todos os produtos de ${section.category}`} onPress={() => onViewAll(section.category)} style={({ pressed }) => [styles.viewAllButton, pressed && styles.pressed]}>
-            <Text style={styles.viewAllText}>Ver todos</Text>
-            <MaterialCommunityIcons name="arrow-right" size={15} color={colors.brand} />
-          </Pressable>
-        </View>
-        <MarketplaceProductCarousel products={section.products} cardWidth={sectionCardWidth} gap={gap} desktop={desktop} showControls={section.products.length >= 3} showEndIndicator={section.products.length >= 3} onPress={(product, index) => onPress(product, index, section.products)} onSellerPress={onSellerPress} />
-      </View>;
-    })}
-  </View>;
-}
-
 function MarketplaceProductGrid({ products, columns, itemWidth, gap, onPress, onSellerPress }: { products: GemnProduct[]; columns: number; itemWidth: number; gap: number; onPress: (product: GemnProduct, index: number) => void; onSellerPress: (sellerId: string) => void }) {
   return <ResponsiveGrid items={products} columns={columns} itemWidth={itemWidth} gap={gap} renderItem={(product, index) => {
     const price = product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const gemnEligibility = getGemnPresentationEligibility({ sellerAcceptsGemn: product.sellerAcceptsGemn, listingAcceptsGemn: product.acceptsGemn, gemnValue: product.gemnValue });
-    return <ProductCard layout="marketplaceShowcase" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} onPress={() => onPress(product, index)} />;
+    return <ProductCard layout="marketplaceCompact" icon={product.icon} imageUrl={product.imageUrl} category={product.category} name={product.name} price={price} coinPrice={gemnEligibility.enabled && gemnEligibility.value !== undefined ? `${gemnEligibility.value.toLocaleString('pt-BR')} GEMN` : undefined} seller={product.sellerName ?? ''} sellerId={product.sellerId} onSellerPress={onSellerPress} onPress={() => onPress(product, index)} />;
   }} />;
 }
 
