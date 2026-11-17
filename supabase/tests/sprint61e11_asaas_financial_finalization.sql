@@ -4,13 +4,13 @@ begin;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
-  confirmed_at, created_at, updated_at,
+  created_at, updated_at,
   raw_app_meta_data, raw_user_meta_data, is_super_admin
 ) values (
   '00000000-0000-0000-0000-000000000000'::uuid,
   'e11f0000-0000-0000-0000-000000000001'::uuid,
   'authenticated', 'authenticated', 'e11-finalizer@example.local',
-  crypt(gen_random_uuid()::text, gen_salt('bf')), now(), now(), now(), '{}', '{}', false
+  crypt(gen_random_uuid()::text, gen_salt('bf')), now(), now(), '{}', '{}', false
 );
 
 insert into public.profiles (id, nome_completo, telefone)

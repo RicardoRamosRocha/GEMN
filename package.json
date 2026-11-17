@@ -12,8 +12,8 @@
     "test:seller-application": "node --test src/services/sellerApplications.contract.test.mjs",
     "test:auth-recovery": "node --experimental-strip-types --test scripts/test-auth-recovery.mjs",
     "typecheck": "tsc --noEmit",
-    "typecheck:functions": "deno check --config supabase/functions/deno.json $(find supabase/functions -type f -name '*.ts' -print | sort)",
-    "test:functions": "deno test --config supabase/functions/deno.json $(find supabase/functions -type f -name '*.test.ts' -print | sort)"
+    "typecheck:functions": "node scripts/run-deno-tests.mjs check",
+    "test:functions": "node scripts/run-deno-tests.mjs test"
   },
   "dependencies": {
     "@expo-google-fonts/geist": "^0.4.2",

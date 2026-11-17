@@ -70,14 +70,13 @@ begin;
 -- cashback ou reserva. Todos os registros ficam protegidos pelo ROLLBACK final.
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
-  confirmed_at, created_at, updated_at,
+  created_at, updated_at,
   raw_app_meta_data, raw_user_meta_data, is_super_admin
 ) values (
   '00000000-0000-0000-0000-000000000000'::uuid,
   'e8c10000-0000-0000-0000-000000000001'::uuid,
   'authenticated', 'authenticated', 'sprint61e8c1@example.local',
   crypt(gen_random_uuid()::text, gen_salt('bf')), now(), now(),
-  now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{}'::jsonb,
   false
